@@ -2,6 +2,10 @@
 
 ## [Master]
 
+### Added
+
+- Added drone-style teleoperation notebook (left stick steers, right stick controls wheel power)
+
 ## [0.4.3]
 
 ### Added
