@@ -3,3 +3,8 @@
 
 # MkDocs documentation
 site/
+
+# macOS junk. This repo is edited from a Mac and cloned onto the robot; without
+# this the Finder's metadata rides along to the device on every pull.
+.DS_Store
+._*
