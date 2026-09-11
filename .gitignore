@@ -8,3 +8,4 @@ site/
 # this the Finder's metadata rides along to the device on every pull.
 .DS_Store
 ._*
+/anaconda_projects
