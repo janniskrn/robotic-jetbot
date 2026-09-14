@@ -10,3 +10,26 @@ site/
 ._*
 /anaconda_projects
 CLAUDE.md
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# Data collected on the robot (camera snapshots, datasets, archives)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+!docs/images/**
+dataset*/
+*.zip
+
+# Trained models and TensorRT engines
+*.pth
+*.pt
+*.engine
+*.onnx
