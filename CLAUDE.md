@@ -60,6 +60,24 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Git Workflow
+
+**Commit, pull, and push on your own. No need to ask.**
+
+- Always work on `master` (the main branch). No feature branches.
+- Run `git pull` before starting any work.
+- Commit whenever it makes sense for the project: small, logical, self-contained steps.
+- Push immediately after every commit. Never leave a commit unpushed.
+
+## 6. Current Assignment: Mini Autonomous Vehicle Challenge
+
+**Never implement anything without explicit permission.**
+
+- The assignment is described in `PROJECT_GUIDE_1.md` (JetBot Project Guide #1, a 6-week project).
+- Analysis, explanations, plans, and suggestions are fine. Writing or changing code or notebooks for a task needs the user's approval first.
+- Propose the approach, wait for a clear "go", then implement only what was approved.
+- Coding policy from the guide: reuse existing notebooks as building blocks only. Steering, speed control, avoidance, recovery, intersection, state machine, cruise control, and parking logic must be team-written.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
