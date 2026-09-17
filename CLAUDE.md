@@ -78,6 +78,46 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Propose the approach, wait for a clear "go", then implement only what was approved.
 - Coding policy from the guide: reuse existing notebooks as building blocks only. Steering, speed control, avoidance, recovery, intersection, state machine, cruise control, and parking logic must be team-written.
 
+### 6.1 How We Work: Step by Step
+
+We build the robot in small steps. Each step must be tested and approved before the next one starts.
+
+1. **Propose** one small step: what it does, why, and how we will test it.
+2. **Wait** for the user's "go".
+3. **Implement** only that step, with minimal and easy code.
+4. **Test** it on the robot (or explain exactly how the user can test it).
+5. **Wait** for the user to approve the result. Never continue to the next step or task without approval.
+6. **Commit and push** the approved step.
+
+Code style:
+- Minimal, simple code that is easy to read and easy to explain in the presentation.
+- Short functions, clear names, a short comment where the "why" is not obvious. No clever tricks.
+- Follow best practices (clean structure, no magic numbers hidden in code: put tuning values as named constants at the top).
+- Keep perception, decision, and control clearly separated (required for the final program).
+- For every change, be ready to explain: problem → design → code change → test → result.
+
+### 6.2 The Plan (Follow Strictly, in This Order)
+
+Full details are in `PROJECT_GUIDE_1.md`. Do not skip ahead or mix tasks from later weeks.
+
+| Week | Task | Done when |
+| :--- | :--- | :--- |
+| 1 | **Task 1:** Adaptive Road Following | Stable steering via our own control layer; faster on straights, slower on sharp curves; tested on straight, gentle, and sharp curves |
+| 1 | **Task 2:** Road Following + Collision Avoidance | `ROAD_FOLLOWING → AVOIDANCE → ROAD_RECOVERY → ROAD_FOLLOWING` without manual steering |
+| 2 | **Task 3:** Traffic Sign Recognition | `STOP` / `LEFT` / `RIGHT` / `NONE` classifier; output goes to the decision layer, never directly to the motors |
+| 2 | **Task 4:** Intersection Navigation | Slow down → enter turn → reacquire road → resume road following, based on the sign |
+| 2 | **Task 5:** Parking | Starts in and returns to the parking space; stops fully inside the lines; has a retry behavior |
+| 3 | **Task 6:** State Machine / Integration | One program, explicit state machine with the required states; each state has entry condition, action, exit condition, priority |
+| 4 | **Task 7:** Adaptive Speed + ACC | `target_speed = min(curve_speed, safe_following_speed)`; smooth following, stopping, and restarting behind a lead JetBot |
+| 5–6 | **Task 8:** Final Challenge + Presentation | Full autonomous run on the unknown course from parking to parking; slides, graphs, tables, ZIP submission |
+
+Every week ends with a demonstration of that week's tasks.
+
+### 6.3 Professor's Advice (Not Mandatory, Keep in Mind)
+
+- **Use a lot of machine learning** in the project (e.g. learned perception for road, obstacles, signs, intersections, parking, the lead JetBot) where it makes sense.
+- **Use a state machine.** Keep each version of the code together with its matching state machine (a diagram or table of states and transitions), so code and state machine always fit together.
+
 ## 7. Storage: Images Only on the USB Stick
 
 - All images and image datasets must be saved on the USB stick, never on the SD card. See `STORAGE.md`.
