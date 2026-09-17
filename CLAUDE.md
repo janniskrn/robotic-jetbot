@@ -77,6 +77,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Analysis, explanations, plans, and suggestions are fine. Writing or changing code or notebooks for a task needs the user's approval first.
 - Propose the approach, wait for a clear "go", then implement only what was approved.
 - Coding policy from the guide: reuse existing notebooks as building blocks only. Steering, speed control, avoidance, recovery, intersection, state machine, cruise control, and parking logic must be team-written.
+- **All decisions are logged in `DECISIONS.md`.** Read it before proposing anything. Add every new decision there (keep it compact) and never contradict a decided entry without asking.
 
 ### 6.1 How We Work: Step by Step
 
@@ -124,6 +125,10 @@ Every week ends with a demonstration of that week's tasks.
 - Host path `/home/jetbot/usb/images/`, which Jupyter sees as `/workspace/usb/images/`.
 - Any new image folder is a symlink into `usb/images/` (or an absolute `/workspace/usb/images/...` path).
 - Model weights (`*.pth`) stay on the SD card.
+
+## 8. Never Use Emoji
+
+- Never use emoji anywhere: chat responses, documentation, code, comments, notebooks, commit messages.
 
 ---
 
