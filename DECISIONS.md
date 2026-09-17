@@ -32,7 +32,7 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 
 ## Open
 
-| ID | Question | Options (details in the planning chat) |
+| ID | Question | Options |
 | :--- | :--- | :--- |
 | D2 | Perception architecture and label schema | N1 one multi-task net (shared ResNet18, one head per task, masked losses) / N2 N1 + object detector for signs, obstacle position, lead JetBot / N3 one model per task. Proposed: N1, split a task out only if an experiment shows N1 fails |
 | D7 | Avoidance maneuver around an obstacle on the tape line | V1 timed bypass / V2 timed out + sensed return (line visible) / V3 offset line tracking / V4 obstacle-position guided. Proposed: V2, test V3 |
