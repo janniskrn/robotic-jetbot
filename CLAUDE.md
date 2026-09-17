@@ -78,6 +78,13 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Propose the approach, wait for a clear "go", then implement only what was approved.
 - Coding policy from the guide: reuse existing notebooks as building blocks only. Steering, speed control, avoidance, recovery, intersection, state machine, cruise control, and parking logic must be team-written.
 
+## 7. Storage: Images Only on the USB Stick
+
+- All images and image datasets must be saved on the USB stick, never on the SD card. See `STORAGE.md`.
+- Host path `/home/jetbot/usb/images/`, which Jupyter sees as `/workspace/usb/images/`.
+- Any new image folder is a symlink into `usb/images/` (or an absolute `/workspace/usb/images/...` path).
+- Model weights (`*.pth`) stay on the SD card.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

@@ -26,6 +26,9 @@ dist/
 !docs/images/**
 dataset*/
 *.zip
+# Symlinks into the USB stick (see STORAGE.md)
+dataset*
+snapshots
 
 # Trained models and TensorRT engines
 *.pth
