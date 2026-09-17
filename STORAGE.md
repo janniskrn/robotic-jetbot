@@ -92,6 +92,8 @@ df -h / /home/jetbot/usb                                     # free space
   df -h /                                          # should show ~59G
   ```
 
+- Done on 2026-09-16: root is now 59 GB (23 GB used, 34 GB free).
+
 - Keep the 4 GB swapfile (`/swfile`); training needs it with 4 GB RAM.
 - Docker images (~4.6 GB) are both in use by the running containers (`jetbot_jupyter`, `jetbot_display`). Do not prune them.
 
