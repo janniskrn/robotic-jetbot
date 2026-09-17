@@ -13,7 +13,7 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | Road | One colored tape line on the floor; the robot drives along the line |
 | Old collision dataset | Unusable: all 200 images are the same frame, blocked and free identical. Recollect on the track |
 | Our code location | Under `notebooks/` (mounted into Docker). The `jetbot/` package is baked into the image at build time, edits there are not seen |
-| Training | MacBook M4 24 GB (primary). Robot is the fallback; trainings under 40 min may run on the robot |
+| Training | Small trainings (under 40 min) run on the robot. Larger trainings run on the MacBook M4 24 GB; the robot is the fallback when the Mac is not available |
 
 ## Decided
 
@@ -34,8 +34,8 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 
 | ID | Question | Options (details in the planning chat) |
 | :--- | :--- | :--- |
-| D2 | Perception architecture and label schema | Multi-task net / multi-task net + detector / one model per task |
-| D7 | Avoidance maneuver around an obstacle on the tape line | Timed bypass / timed out + sensed return / offset line tracking / obstacle-guided |
-| D8 | "Line visible" signal for recovery | Learned head / classical color mask / learned head with auto labels |
-| D10 | Data collection and labeling workflow | Manual snapshots / record then label / auto-label + review / model-assisted from failures |
-| D11 | Mac training details and transfer to the robot | Transfer path, weight format, shared preprocessing |
+| D2 | Perception architecture and label schema | N1 one multi-task net (shared ResNet18, one head per task, masked losses) / N2 N1 + object detector for signs, obstacle position, lead JetBot / N3 one model per task. Proposed: N1, split a task out only if an experiment shows N1 fails |
+| D7 | Avoidance maneuver around an obstacle on the tape line | V1 timed bypass / V2 timed out + sensed return (line visible) / V3 offset line tracking / V4 obstacle-position guided. Proposed: V2, test V3 |
+| D8 | "Line visible" signal for recovery | R1 learned head / R2 classical color mask / R3 learned head with CV auto labels + review. Proposed: R3; exit recovery only when visible AND centered for N frames |
+| D10 | Data collection and labeling workflow | C1 manual snapshots / C2 record then label on Mac / C3 C2 + CV auto labels + review / C4 model-assisted from failures. Proposed: staged C2 -> C3 -> C4 with a hand-labeled gold test set |
+| D11 | Mac training details and transfer to the robot | Transfer rsync over WiFi or USB stick; legacy weight format; one shared preprocessing module; TensorRT conversion on the robot |

@@ -12,5 +12,6 @@ SHA=c6b8cafffa5f218a85f73d323e2a72b382194b84b39ff9a7804fffc1819638ec
 echo "$SHA  $SRC" | sha256sum -c -
 install -m 664 -o root -g root "$SRC" "$DST"
 systemctl restart nvargus-daemon
+echo "Restarting jetbot_jupyter: all running notebook kernels will stop."
 docker restart jetbot_jupyter   # notebooks must reopen the camera after the daemon restart
 echo "Installed $DST"
