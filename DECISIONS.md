@@ -33,6 +33,8 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | D8 | 2026-09-17 | Line visible: learned signal (R3), labels pre-computed by a color mask and human-reviewed. Recovery ends only when the line is visible AND near the center for N frames | Generalizes to changed lighting; a sideways line must not end recovery |
 | D10 | 2026-09-17 | Record while driving on the robot, label later on the Mac; hand-label about 300 images as a gold test set, automate labeling afterwards against that set | Fast collection, human-checked ground truth |
 | D11 | 2026-09-17 | Mac and robot are on the same WiFi: transfer data and models with rsync. USB stick only as backup | No mount and Jupyter restart per round trip |
+| SUDO | 2026-09-17 | Sudo on the robot is pre-approved; the password lives in Claude's local memory, not in the repo | The repo is pushed to GitHub |
+| STEP1 | 2026-09-17 | Datasets are recorded as sessions: `usb/images/datasets/<date>_<name>/` with frames at 4 Hz plus a `session.json` (tape color, lighting, section, obstacle, notes). Tool: `notebooks/mini_av/record_dataset.ipynb` with `recorder.py` | Labeling happens later on the Mac (D10) |
 | D12 | 2026-09-16 | Logging: one CSV row per control step per run (time, dt, mode, model outputs, steering, speed, FPS) plus a run metadata file (config constants, model version), on the USB stick. Every experiment recorded as problem -> hypothesis -> change -> test -> result | Graphs and tables are required deliverables |
 
 ## Open

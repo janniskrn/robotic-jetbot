@@ -126,7 +126,12 @@ Every week ends with a demonstration of that week's tasks.
 - Any new image folder is a symlink into `usb/images/` (or an absolute `/workspace/usb/images/...` path).
 - Model weights (`*.pth`) stay on the SD card.
 
-## 8. Never Use Emoji
+## 8. Sudo
+
+- Running `sudo` on the robot is pre-approved: do it without asking.
+- The password is stored in Claude's local memory on the robot, never in this repository (it is pushed to GitHub).
+
+## 9. Never Use Emoji
 
 - Never use emoji anywhere: chat responses, documentation, code, comments, notebooks, commit messages.
 
