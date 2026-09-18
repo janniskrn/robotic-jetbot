@@ -10,7 +10,7 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | Robot | Waveshare JetBot, Jetson Nano 4 GB, JetPack 4.5 (L4T 32.5.0), Docker Jupyter with PyTorch 1.6, TensorRT 7.1, torch2trt |
 | Motors | Can drive backward (-1..1). No wheel encoders: maneuvers without the camera are time-based |
 | Camera | IMX219-160 wide angle, fixed mount, cannot be adjusted |
-| Road | One colored tape line on the floor; the robot drives along the line |
+| Road | One colored tape line on the floor; the robot drives along the line. Track is built and drivable |
 | Old collision dataset | Unusable: all 200 images are the same frame, blocked and free identical. Recollect on the track |
 | Our code location | Under `notebooks/` (mounted into Docker). The `jetbot/` package is baked into the image at build time, edits there are not seen |
 | Training | Small trainings (under 40 min) run on the robot. Larger trainings run on the MacBook M4 24 GB; the robot is the fallback when the Mac is not available |
@@ -28,14 +28,13 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | D5 | 2026-09-16 | Speed: continuous map from curvature to speed, plus a speed rate limit | Smooth; same shape as week 4 `min(curve_speed, safe_following_speed)` |
 | D6 | 2026-09-16 | Obstacles: free/blocked classifier retrained on the track (O1), with debounce and hysteresis | Guide allows reuse as perception; old data unusable |
 | D9 | 2026-09-16 | No state machine for now | Keep Task 1 simple. **Revisit** before Task 2, which needs the FOLLOW -> AVOID -> RECOVER sequence |
+| D2 | 2026-09-17 | One model per task (N3): line model, obstacle model, curve model. One shared dataset and one label schema for all of them | Easier to debug and retrain separately; costs frames per second, fix with TensorRT if needed |
+| D7 | 2026-09-17 | Avoidance V2: leave the line and pass on timers, return guided by the camera until the line is found; timeout stops the robot. Pass side is a fixed constant | Only the blind part is timed; no encoders |
+| D8 | 2026-09-17 | Line visible: learned signal (R3), labels pre-computed by a color mask and human-reviewed. Recovery ends only when the line is visible AND near the center for N frames | Generalizes to changed lighting; a sideways line must not end recovery |
+| D10 | 2026-09-17 | Record while driving on the robot, label later on the Mac; hand-label about 300 images as a gold test set, automate labeling afterwards against that set | Fast collection, human-checked ground truth |
+| D11 | 2026-09-17 | Mac and robot are on the same WiFi: transfer data and models with rsync. USB stick only as backup | No mount and Jupyter restart per round trip |
 | D12 | 2026-09-16 | Logging: one CSV row per control step per run (time, dt, mode, model outputs, steering, speed, FPS) plus a run metadata file (config constants, model version), on the USB stick. Every experiment recorded as problem -> hypothesis -> change -> test -> result | Graphs and tables are required deliverables |
 
 ## Open
 
-| ID | Question | Options |
-| :--- | :--- | :--- |
-| D2 | Perception architecture and label schema | N1 one multi-task net (shared ResNet18, one head per task, masked losses) / N2 N1 + object detector for signs, obstacle position, lead JetBot / N3 one model per task. Proposed: N1, split a task out only if an experiment shows N1 fails |
-| D7 | Avoidance maneuver around an obstacle on the tape line | V1 timed bypass / V2 timed out + sensed return (line visible) / V3 offset line tracking / V4 obstacle-position guided. Proposed: V2, test V3 |
-| D8 | "Line visible" signal for recovery | R1 learned head / R2 classical color mask / R3 learned head with CV auto labels + review. Proposed: R3; exit recovery only when visible AND centered for N frames |
-| D10 | Data collection and labeling workflow | C1 manual snapshots / C2 record then label on Mac / C3 C2 + CV auto labels + review / C4 model-assisted from failures. Proposed: staged C2 -> C3 -> C4 with a hand-labeled gold test set |
-| D11 | Mac training details and transfer to the robot | Transfer rsync over WiFi or USB stick; legacy weight format; one shared preprocessing module; TensorRT conversion on the robot |
+Nothing blocking. Still needed from the team: tape color and width, curve radii of the built track, number of JetBots and batteries, team roles for the slides.
