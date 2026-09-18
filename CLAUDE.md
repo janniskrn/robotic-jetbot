@@ -129,7 +129,8 @@ Every week ends with a demonstration of that week's tasks.
 ## 8. Sudo
 
 - Running `sudo` on the robot is pre-approved: do it without asking.
-- The password is stored in Claude's local memory on the robot, never in this repository (it is pushed to GitHub).
+- User `jetbot`, password `jetbot` (the JetBot image default). Use it as `echo 'jetbot' | sudo -S -p '' <command>`.
+- Note: this repository is public on GitHub, so the password is public too. Do not reuse it anywhere else, and keep the robot off untrusted networks.
 
 ## 9. Never Use Emoji
 
