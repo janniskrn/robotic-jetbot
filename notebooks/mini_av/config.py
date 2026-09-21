@@ -9,6 +9,7 @@ LOG_ROOT = '/workspace/usb/logs'                # USB stick (inside the Jupyter 
 # Perception
 LANE_VISIBLE_THRESHOLD = 0.5  # probability above which the lane counts as visible
 CURVE_EVERY = 2               # run the curve model every Nth frame: the curvature changes slowly, saves time
+CURVE_SMOOTHING = 0.3         # weight of a new curve prediction in the running average (single frames flickered)
 
 # Steering (D4): smoothed PD on the lane center, lane_x -1 (left edge) .. 1 (right edge)
 LANE_SMOOTHING = 1.0    # weight of the new lane_x in the running average (1 = none: any smoothing delay made the robot oversteer)
@@ -26,6 +27,8 @@ MOTOR_TRIM = 0.0        # added to the left wheel, subtracted from the right; po
 SPEED_STRAIGHT = 0.40
 SPEED_GENTLE = 0.35
 SPEED_SHARP = 0.31      # the robot does not move below about 0.27
+TURN_SLOW_START = 0.10  # |lane_x| from which the robot counts as turning and slows down
+TURN_SLOW_FULL = 0.30   # |lane_x| from which it drives at SPEED_SHARP (it sped up while still turning out of the sharp curve)
 SPEED_UP_RATE = 0.10    # maximum speed increase per second (smooth acceleration)
 SPEED_DOWN_RATE = 0.40  # maximum speed decrease per second (brake faster than accelerate)
 

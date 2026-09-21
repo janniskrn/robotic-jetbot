@@ -49,7 +49,8 @@ class Perception(object):
         image = preprocess(frame).unsqueeze(0).cuda().half()
         lane = self.lane_model(image)[0].float()
         if self.curve_model is not None and self.frame_count % config.CURVE_EVERY == 0:
-            self.curve_probs = torch.softmax(self.curve_model(image)[0].float(), 0).tolist()
+            new = torch.softmax(self.curve_model(image)[0].float(), 0).tolist()
+            self.curve_probs = [old + config.CURVE_SMOOTHING * (n - old) for old, n in zip(self.curve_probs, new)]
         self.frame_count += 1
         return {
             'lane_visible': torch.sigmoid(lane[0]).item(),

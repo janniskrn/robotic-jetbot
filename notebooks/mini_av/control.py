@@ -29,9 +29,17 @@ class Controller(object):
         """Forget the past, for example after the robot stopped"""
         self.__init__(self.baseline, self.use_curve)
 
-    def target_speed(self, curve_probs):
-        """Speed blended by the curve probabilities: sure straight -> fast, sure sharp -> slow"""
-        return sum(p * v for p, v in zip(curve_probs, SPEEDS))
+    def target_speed(self, curve_probs, lane_x):
+        """Slower of two speeds: the curve model's (blended by its probabilities) and the steering's.
+
+        The steering part keeps the robot slow while it is still turning, also when the curve model
+        already sees the straight ahead.
+        """
+        model_speed = sum(p * v for p, v in zip(curve_probs, SPEEDS))
+        turning = (abs(lane_x) - config.TURN_SLOW_START) / (config.TURN_SLOW_FULL - config.TURN_SLOW_START)
+        turning = max(0.0, min(1.0, turning))
+        steering_speed = config.SPEED_STRAIGHT - turning * (config.SPEED_STRAIGHT - config.SPEED_SHARP)
+        return min(model_speed, steering_speed)
 
     def update(self, lane_x, curve_probs, dt):
         """Returns (left, right) wheel speeds"""
@@ -52,7 +60,7 @@ class Controller(object):
             wanted = schedule * (config.STEERING_KP * self.lane_x + config.STEERING_KD * change) + integral_part
             self.steering = limit_change(wanted, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
             if self.use_curve:
-                self.speed = limit_change(self.target_speed(curve_probs), self.speed,
+                self.speed = limit_change(self.target_speed(curve_probs, self.lane_x), self.speed,
                                           config.SPEED_UP_RATE, config.SPEED_DOWN_RATE, dt)
             else:
                 self.speed = config.BASELINE_SPEED  # same speed as the baseline: the runs differ only in steering
