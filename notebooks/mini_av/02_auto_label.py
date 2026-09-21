@@ -77,16 +77,32 @@ def curve_class(value):
 
 
 def centered_driving(session_dir):
-    """True if the session was driven on the lane center (no weaving, no turning in place)"""
+    """True if the session was driven on the lane center (no weaving, no turns in place while driving)"""
     with open(os.path.join(session_dir, 'session.json')) as f:
         session = json.load(f)
-    return not session.get('weave') and not session.get('spin_every') and not session.get('turn_around')
+    return not session.get('weave') and not session.get('spin_every')
+
+
+def turn_around_frames(session_dir):
+    """Names of the frames saved while the robot turned around at the start (no lane center in auto_labels.csv)"""
+    path = os.path.join(session_dir, 'auto_labels.csv')
+    with open(os.path.join(session_dir, 'session.json')) as f:
+        if not json.load(f).get('turn_around') or not os.path.exists(path):
+            return set()
+    names = set()
+    with open(path) as f:
+        for row in csv.DictReader(f):
+            if row['lane_center_x'] != '':
+                break
+            names.add(row['frame'])
+    return names
 
 
 def label_session(session_dir):
     """Writes labels.csv for one session and returns its rows"""
     frames = sorted(glob.glob(os.path.join(session_dir, 'frame_*.jpg')))
     curves_trusted = centered_driving(session_dir)
+    turning = turn_around_frames(session_dir)
     width = cv2.imread(frames[0]).shape[1]
     tracker = LaneTracker(width)
     curve_trackers = [LaneTracker(width, row, lane_width) for row, lane_width in CURVE_ROWS]
@@ -107,7 +123,7 @@ def label_session(session_dir):
         else:
             single_line_run = MAX_SINGLE_LINE_RUN
         visible = center is not None and single_line_run < MAX_SINGLE_LINE_RUN
-        if not visible or not curves_trusted:
+        if not visible or not curves_trusted or os.path.basename(path) in turning:
             bend = None
         if not visible:
             center = None

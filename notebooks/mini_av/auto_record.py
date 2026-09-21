@@ -39,6 +39,7 @@ SPIN_PULSES = 16      # pulses before looking for the lane again: most of a full
 TURN_AROUND_PULSES = 6  # pulses before looking for the lane again: roughly half a circle
 MAX_PULSES = 40       # give up after this many pulses without finding the lane
 ALIGN_TOLERANCE = 30  # pixels the lane center may be off the image center to count as aligned
+SAME_VIEW_DIFF = 20   # mean gray difference (0-255, 32x32 thumbnails) below which two views count as the same heading
 
 STALE_TIMEOUT = 0.5  # seconds without a new camera frame before the robot stops (the camera froze on 2026-09-20)
 
@@ -89,12 +90,18 @@ def lane_aligned(mask, width):
     return centered and is_left_line(mask, lines[0]) is True and is_left_line(mask, lines[1]) is False
 
 
-def spin(robot, camera, recorder, labels, min_pulses):
+def thumbnail(frame):
+    return cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), (32, 32)).astype(float)
+
+
+def spin(robot, camera, recorder, labels, min_pulses, new_heading=False):
     """Turns in place in pulses, saving a frame after each, until the lane is ahead again.
 
     Gives views with the lane at every angle and without it (negatives for "lane visible").
-    Returns False if the lane was not found again.
+    new_heading: only stop where the view differs from the start, so a turn-around cannot end after a
+    full circle (the lane looks aligned in both directions). Returns False if the lane was not found again.
     """
+    start_view = thumbnail(camera.value)
     for pulse in range(MAX_PULSES):
         robot.set_motors(PIVOT_SPEED, -PIVOT_SPEED)
         time.sleep(PIVOT_PULSE)
@@ -104,7 +111,8 @@ def spin(robot, camera, recorder, labels, min_pulses):
         frame = wait_for_new_frame(camera, before)
         mask = blue_mask(frame)
         save(recorder, labels, frame, line_centers(mask), None)
-        if pulse + 1 >= min_pulses and lane_aligned(mask, camera.width):
+        turned = not new_heading or abs(thumbnail(frame) - start_view).mean() > SAME_VIEW_DIFF
+        if pulse + 1 >= min_pulses and turned and lane_aligned(mask, camera.width):
             return True
     return False
 
@@ -204,7 +212,7 @@ def main():
             trace.writerow(['time', 'lane_center_x', 'turn', 'battery_v'])
             try:
                 wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
-                if args.turn_around and not spin(robot, camera, recorder, labels, TURN_AROUND_PULSES):
+                if args.turn_around and not spin(robot, camera, recorder, labels, TURN_AROUND_PULSES, new_heading=True):
                     reason = 'lane not found after turning around'
                 else:
                     reason = drive(robot, camera, recorder, args.seconds, labels, trace, args.weave, args.spin_every)
