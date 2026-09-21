@@ -10,7 +10,7 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | Robot | Waveshare JetBot, Jetson Nano 4 GB, JetPack 4.5 (L4T 32.5.0), Docker Jupyter with PyTorch 1.6, TensorRT 7.1, torch2trt |
 | Motors | Can drive backward (-1..1). No wheel encoders: maneuvers without the camera are time-based |
 | Camera | IMX219-160 wide angle, fixed mount, cannot be adjusted |
-| Road | Camera survey 2026-09-20 (`usb/images/track_survey/`): **two parallel blue tape lines forming a lane**, light speckled floor, sunlight from windows causes glare, tape wrinkled in the sharp curve. Track is built and drivable |
+| Road | Camera survey 2026-09-20 (`usb/images/track_survey/`): **two parallel blue tape lines forming a lane**, light speckled floor, sunlight from windows causes glare, tape wrinkled in the sharp curve. Shape: an oval, one lap is about 15 s at base speed 0.32: straight, long gentle curve, straight, sharp curve at the couch. Directions: **ccw** (counterclockwise seen from above, all curves turn left; the old session names say `_b`) and **cw** (the old plan said `_a`) |
 | Old collision dataset | Unusable: all 200 images are the same frame, blocked and free identical. Recollect on the track |
 | Our code location | Under `notebooks/` (mounted into Docker). The `jetbot/` package is baked into the image at build time, edits there are not seen |
 | Battery | 3S lithium-ion pack, INA219 at I2C bus 1 address 0x41. Check with `python3 ~/jetbot/notebooks/mini_av/battery.py` (host, container, or over ssh). Percent is only valid at rest; under load the voltage sags, while charging it reads high |
@@ -38,9 +38,10 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | SUDO | 2026-09-17 | Sudo on the robot is pre-approved; the password is in CLAUDE.md at the user's request, although the repo is public | The user does not want to run system commands by hand |
 | STEP1 | 2026-09-17 | Datasets are recorded as sessions: `usb/images/datasets/<date>_<name>/` with frames at 4 Hz plus a `session.json` (tape color, lighting, section, obstacle, notes, frame size, max speed). Tool: `notebooks/mini_av/01_record_dataset.ipynb` with `recorder.py` | Labeling happens later on the Mac (D10) |
 | STRUCT | 2026-09-17 | Our code lives in `notebooks/mini_av/`, files numbered in pipeline order (01 record, 02 label, 03 train, 04 drive). No week folders | The same files are reused in later weeks; a week is a deadline, not a component |
-| LANE | 2026-09-20 | The robot drives in the lane center between the two blue lines. Target point = lane center where it crosses the lookahead circle; "line visible" (D8) means "lane visible"; avoidance (D7) leaves the lane to the fixed side and returns into it | Confirmed by the user after the camera survey; replaces the earlier single-line note |
+| LANE | 2026-09-20 | The robot drives in the lane center between the two blue lines. Target point = lane center at a fixed lookahead row (65 % of the image height; replaces the earlier lookahead-circle idea, simpler and enough for a lane); "line visible" (D8) means "lane visible"; avoidance (D7) leaves the lane to the fixed side and returns into it | Confirmed by the user after the camera survey; replaces the earlier single-line note |
 | AUTOREC | 2026-09-20 | The robot records clean laps itself: `auto_record.py` drives with the classical blue-tape mask (`lane_mask.py`) and writes `auto_labels.csv` (lines seen, lane center) per frame as pre-labels | User choice; faster than gamepad driving, labels come for free. Data tool only, not the final controller |
 | POWER | 2026-09-20 | Motor sessions only with enough battery: `auto_record.py` refuses to start below 11.4 V at rest (about 50 %) and stops when the voltage stays below 10.8 V for 2 s under load; the voltage is logged in `trace.csv` and log files are line-buffered | Incident below |
+| LABELS | 2026-09-20 | `02_auto_label.py` labels every frame from the color mask: `lane_visible`, `lane_x` (-1..1 at the lookahead row), `curve_value`/`curve_class`, plus review sheets in `usb/images/review/`. Lane only counts as visible with two lines about one lane width apart (one line only briefly after that, with a small jump). Curve = bend of the lane center over three rows ahead; thresholds 0.02 (gentle) and 0.045 (sharp) from 3 labeled laps. Curve labels only from sessions driven on the center (no weave or spin), because at an angle the lens fakes a bend. Claude reviewed the sheets; a team member still spot-checks about 50 frames | Automatic, consistent labels; the rules were tuned on the review sheets |
 | D12 | 2026-09-16 | Logging: one CSV row per control step per run (time, dt, mode, model outputs, steering, speed, FPS) plus a run metadata file (config constants, model version), on the USB stick. Every experiment recorded as problem -> hypothesis -> change -> test -> result | Graphs and tables are required deliverables |
 
 ## Incidents
@@ -54,6 +55,8 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 ## Risks to measure
 
 - `auto_record.py` drives full laps stably since the damping fix (2026-09-20). A weave of 40 px left the lane in the couch curve; 25 px is the next test.
+- Sharp-curve labels are rare (34 of 443 curve-labeled frames so far): record more clean laps in both directions before training the curve model.
+- The battery percent is only meaningful at rest: while charging the voltage reads high (64 % before the run, a false 95 % on the charger).
 - D2 with one model per task means one network pass per model per frame. Measure the frame rate in phase 2 and convert to TensorRT if it is too low.
 - Recording at the camera's 224x224 keeps training and driving identical, but throws away detail. Revisit before Task 3, where signs are small and far away.
 - If the kernel dies mid-session, `session.json` keeps the frame count from the last write. The labeling tool counts the files on disk instead.

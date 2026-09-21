@@ -41,13 +41,13 @@ def line_centers(mask, row_frac=LOOKAHEAD_ROW):
     return [float(piece.mean()) for piece in pieces if piece[-1] - piece[0] <= MAX_LINE_WIDTH]
 
 
-def is_left_line(mask, x):
+def is_left_line(mask, x, row_frac=LOOKAHEAD_ROW):
     """True if the line at x leans like a left lane line ('/'), False if like a right one ('\\').
 
     A left line is further right the further away it is; a right line the opposite.
     Returns None if the line is not visible in the closer row.
     """
-    near = line_centers(mask, LOOKAHEAD_ROW + NEAR_OFFSET)
+    near = line_centers(mask, min(row_frac + NEAR_OFFSET, 0.97))
     if not near:
         return None
     near_x = min(near, key=lambda n: abs(n - x))
@@ -57,21 +57,22 @@ def is_left_line(mask, x):
 class LaneTracker(object):
     """Turns the visible lines into a lane center, remembering the lane width for when one line is missing"""
 
-    def __init__(self, width):
+    def __init__(self, width, row_frac=LOOKAHEAD_ROW, lane_width=LANE_WIDTH):
         self.image_width = width
+        self.row_frac = row_frac
         self.center = width / 2.0
-        self.lane_width = LANE_WIDTH
+        self.lane_width = lane_width
 
     def update(self, mask):
         """Returns the lane center x in pixels (clamped to the image), or None if no line is visible"""
-        lines = line_centers(mask)
+        lines = line_centers(mask, self.row_frac)
         if len(lines) >= 2:
             left, right = lines[0], lines[-1]
             self.lane_width = right - left
             self.center = (left + right) / 2.0
         elif len(lines) == 1:
             line = lines[0]
-            left = is_left_line(mask, line)
+            left = is_left_line(mask, line, self.row_frac)
             if left is None:
                 left = line < self.center  # no lean visible: keep the side from the last frame
             self.center = line + self.lane_width / 2.0 if left else line - self.lane_width / 2.0
