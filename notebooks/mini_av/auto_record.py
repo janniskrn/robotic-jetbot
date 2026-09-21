@@ -18,8 +18,9 @@ from jetbot import Camera, Robot
 from lane_mask import LaneTracker, blue_mask, line_centers
 from recorder import Recorder
 
-BASE_SPEED = 0.30     # wheel speed on the lane; below about 0.27 the motors do not move the robot
-STEERING_GAIN = 0.40  # wheel speed difference per unit of lane-center error (-1..1); high enough to pivot in sharp curves
+BASE_SPEED = 0.32     # wheel speed on the lane; below about 0.27 the motors do not move the robot
+STEERING_GAIN = 0.15  # P: wheel speed difference per unit of lane-center error (-1..1)
+STEERING_DAMPING = 0.03  # D: wheel speed difference per unit of error change per second; stops the weave from growing
 LOST_TIMEOUT = 0.5    # seconds without any tape line before the robot stops
 RECORD_HZ = 4.0       # frames saved per second, same as the gamepad recorder
 LOOP_PERIOD = 0.03    # seconds between control updates (camera runs at 30 Hz)
@@ -31,13 +32,14 @@ def steering_error(center, image_width):
     return (center - half) / half
 
 
-def drive(robot, camera, recorder, seconds, labels):
+def drive(robot, camera, recorder, seconds, labels, trace):
     """Follows the lane until the time is up or the lane is lost; returns the stop reason.
 
     For every saved frame, writes what the color mask saw: these are the automatic pre-labels (D10).
     """
     tracker = LaneTracker(camera.width)
-    start = last_seen = time.time()
+    start = last_seen = last_time = time.time()
+    last_error = None
     while time.time() - start < seconds:
         frame = camera.value
         mask = blue_mask(frame)
@@ -50,8 +52,13 @@ def drive(robot, camera, recorder, seconds, labels):
                 return 'lane lost'
         else:
             last_seen = now
-            turn = STEERING_GAIN * steering_error(center, camera.width)
+            error = steering_error(center, camera.width)
+            change = 0.0 if last_error is None else (error - last_error) / max(now - last_time, 1e-3)
+            turn = STEERING_GAIN * error + STEERING_DAMPING * change
             robot.set_motors(BASE_SPEED + turn, BASE_SPEED - turn)
+            trace.writerow([round(now - start, 3), round(center, 1), round(turn, 3)])
+            last_error = error
+        last_time = now
         if recorder.offer(bytes(cv2.imencode('.jpg', frame)[1])):
             labels.writerow(['frame_%05d.jpg' % (recorder.count - 1), len(lines),
                              '' if center is None else round(center, 1)])
@@ -78,13 +85,18 @@ def main():
         'notes': args.notes,
         'frame_width': camera.width,
         'frame_height': camera.height,
-        'max_speed': BASE_SPEED + STEERING_GAIN,
+        'base_speed': BASE_SPEED,
+        'steering_gain': STEERING_GAIN,
+        'steering_damping': STEERING_DAMPING,
     })
     try:
-        with open(os.path.join(recorder.session_dir, 'auto_labels.csv'), 'w') as f:
+        with open(os.path.join(recorder.session_dir, 'auto_labels.csv'), 'w') as f, \
+                open(os.path.join(recorder.session_dir, 'trace.csv'), 'w') as g:
             labels = csv.writer(f)
             labels.writerow(['frame', 'lines_seen', 'lane_center_x'])
-            reason = drive(robot, camera, recorder, args.seconds, labels)
+            trace = csv.writer(g)  # every control step, for tuning and the week 1 graphs
+            trace.writerow(['time', 'lane_center_x', 'turn'])
+            reason = drive(robot, camera, recorder, args.seconds, labels, trace)
     finally:
         robot.stop()
         session_dir = recorder.stop()
