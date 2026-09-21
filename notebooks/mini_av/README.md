@@ -18,6 +18,15 @@ folders would mean moving or copying files every week.
 | `vision.py` | Network and preprocessing shared by training and driving | Robot, workstation |
 | `03_train.py` | Trains one model (`--task lane` or `curve`) with whole sessions held out | Robot (never while driving) or Mac |
 | `02_manual_label.py` | Manual labeling on a computer with a screen (test only, see `MANUAL_TEST.md`) | Mac |
+| `config.py` | All tuning values of the driving program | Robot |
+| `safety.py` | Camera watchdog and battery guard, shared by every program that drives | Robot |
+| `perception.py` | Camera frame -> lane visible, lane position, curve probabilities (models) | Robot |
+| `decision.py` | FOLLOW or STOP (Task 1); AVOID and RECOVER come with Task 2 | Robot |
+| `control.py` | Smoothed PD steering, curve-based speed, rate limits, motor trim | Robot |
+| `logger.py` | One CSV row per control step plus run.json, in `usb/logs/` | Robot |
+| `drive.py` | Main loop: perception -> decision -> control -> motors (`--baseline`, `--no-curve`) | Robot (container) |
+| `04_drive.ipynb` | Start and stop buttons for `drive.py` | Robot (browser) |
+| `analyze_runs.py` | Task 1 table (`results/week1/`) and graphs (`usb/images/results/week1/`) from run logs | Robot host |
 | `battery.py` | Battery voltage and charge estimate; run it before any motor session | Robot host, container, or `ssh` from a PC |
 | `auto_record.py` | Robot drives the lane itself with `lane_mask` and records a session plus `auto_labels.csv` | Robot (`python3 auto_record.py --name lap --seconds 60` in the container) |
 

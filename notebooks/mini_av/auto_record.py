@@ -20,9 +20,9 @@ import time
 import cv2
 from jetbot import Camera, Robot
 
-from battery import read_voltage
 from lane_mask import LaneTracker, blue_mask, is_left_line, line_centers
 from recorder import Recorder
+from safety import BatteryGuard, BatteryLow, CameraFrozen, wait_for_new_frame
 
 BASE_SPEED = 0.32     # wheel speed on the lane; below about 0.27 the motors do not move the robot
 STEERING_GAIN = 0.15  # P: wheel speed difference per unit of lane-center error (-1..1)
@@ -41,37 +41,10 @@ MAX_PULSES = 40       # give up after this many pulses without finding the lane
 ALIGN_TOLERANCE = 30  # pixels the lane center may be off the image center to count as aligned
 SAME_VIEW_DIFF = 20   # mean gray difference (0-255, 32x32 thumbnails) below which two views count as the same heading
 
-STALE_TIMEOUT = 0.5  # seconds without a new camera frame before the robot stops (the camera froze on 2026-09-20)
-
-# Battery guard: on 2026-09-20 the Jetson lost power mid-session (voltage sag under motor load).
-MIN_START_VOLTAGE = 11.4  # volts at rest (about 50 %) needed to start a session
-MIN_RUN_VOLTAGE = 10.8    # volts under load; staying below this ends the session before the Jetson browns out
-LOW_VOLTAGE_TIME = 2.0    # seconds below MIN_RUN_VOLTAGE before stopping (short dips at start-up are normal)
-VOLTAGE_PERIOD = 0.5      # seconds between battery readings
-
-
 def steering_error(center, image_width):
     """Lane center offset from the image center, -1 (left edge) .. 1 (right edge)"""
     half = image_width / 2.0
     return (center - half) / half
-
-
-class CameraFrozen(Exception):
-    """The camera stopped delivering new frames: the robot must not drive on an old image"""
-
-
-def wait_for_new_frame(camera, old, timeout=STALE_TIMEOUT):
-    """Returns a frame newer than old; raises CameraFrozen if none arrives in time.
-
-    The JetBot camera thread ends silently on a read error and camera.value then keeps the last
-    image forever, so every new frame is a new array object: the same object means no new frame.
-    """
-    start = time.time()
-    while camera.value is old:
-        if time.time() - start > timeout:
-            raise CameraFrozen()
-        time.sleep(0.005)
-    return camera.value
 
 
 def save(recorder, labels, frame, lines, center):
@@ -117,7 +90,7 @@ def spin(robot, camera, recorder, labels, min_pulses, new_heading=False):
     return False
 
 
-def drive(robot, camera, recorder, seconds, labels, trace, weave=0.0, spin_every=0.0):
+def drive(robot, camera, recorder, seconds, labels, trace, battery, weave=0.0, spin_every=0.0):
     """Follows the lane until the time is up or the lane is lost; returns the stop reason.
 
     weave: pixels the steering target swings left and right of the image center (0 = drive centered).
@@ -125,17 +98,11 @@ def drive(robot, camera, recorder, seconds, labels, trace, weave=0.0, spin_every
     For every saved frame, writes what the color mask saw: these are the automatic pre-labels (D10).
     """
     tracker = LaneTracker(camera.width)
-    start = last_seen = last_time = last_spin = last_volt_time = time.time()
+    start = last_seen = last_time = last_spin = time.time()
     last_error = None
-    volts = read_voltage()
-    low_since = None
     frame = None
     while time.time() - start < seconds:
-        if time.time() - last_volt_time > VOLTAGE_PERIOD:
-            volts, last_volt_time = read_voltage(), time.time()
-            low_since = (low_since or last_volt_time) if volts < MIN_RUN_VOLTAGE else None
-            if low_since and last_volt_time - low_since > LOW_VOLTAGE_TIME:
-                return 'battery low (%.2f V)' % volts
+        volts = battery.check()
         if spin_every and time.time() - last_spin > spin_every:
             robot.stop()
             if not spin(robot, camera, recorder, labels, SPIN_PULSES):
@@ -177,9 +144,9 @@ def main():
     parser.add_argument('--turn-around', action='store_true', help='turn to the other lane direction first')
     args = parser.parse_args()
 
-    volts = read_voltage()
-    if volts < MIN_START_VOLTAGE:
-        print('battery %.2f V is below %.1f V: charge before recording' % (volts, MIN_START_VOLTAGE))
+    battery = BatteryGuard()
+    if not battery.start_ok():
+        print('battery %.2f V is too low: charge before recording' % battery.volts)
         return
 
     robot = Robot()
@@ -200,7 +167,7 @@ def main():
         'weave': args.weave,
         'spin_every': args.spin_every,
         'turn_around': args.turn_around,
-        'battery_start_v': round(volts, 2),
+        'battery_start_v': round(battery.volts, 2),
     })
     try:
         # line-buffered, so the files survive a sudden power loss
@@ -215,9 +182,11 @@ def main():
                 if args.turn_around and not spin(robot, camera, recorder, labels, TURN_AROUND_PULSES, new_heading=True):
                     reason = 'lane not found after turning around'
                 else:
-                    reason = drive(robot, camera, recorder, args.seconds, labels, trace, args.weave, args.spin_every)
+                    reason = drive(robot, camera, recorder, args.seconds, labels, trace, battery, args.weave, args.spin_every)
             except CameraFrozen:
                 reason = 'camera frozen'
+            except BatteryLow as low:
+                reason = str(low)
             except KeyboardInterrupt:
                 reason = 'stopped by hand'  # stop_robot.sh sends Ctrl-C (SIGINT), so the motors stop below
     finally:

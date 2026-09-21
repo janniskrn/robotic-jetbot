@@ -49,7 +49,7 @@ that Claude writes all of it and accepts that risk (DECISIONS.md, AUTHOR). No hu
 
 | Step | Who | What | Done when |
 | :--- | :--- | :--- | :--- |
-| 3.1 | Claude | Modules: `config.py` (all constants), `perception.py` (models -> lane_x, lane_visible, curve probabilities), `control.py` (smoothed PD steering, motor trim, rate limit; speed from curve probabilities with a speed rate limit), `decision.py` (follow, or stop when the lane is lost), `logger.py` (CSV per step plus run metadata), `04_drive.py` (command line) and `04_drive.ipynb` (thin, with a stop button) | Runs a lap in a test at low speed |
+| 3.1 | Claude | Modules: `config.py` (all constants), `perception.py` (models -> lane_x, lane_visible, curve probabilities), `control.py` (smoothed PD steering, motor trim, rate limit; speed from curve probabilities with a speed rate limit), `decision.py` (follow, or stop when the lane is lost), `logger.py` (CSV per step plus run metadata), `drive.py` (main loop, command line) and `04_drive.ipynb` (thin, with a stop button) | Runs a lap in a test at low speed |
 | 3.2 | HUMAN | Watch the first runs, put the robot back if needed | - |
 | 3.3 | Claude | Baseline run: constant speed, plain P steering, same logger | Baseline log saved |
 | 3.4 | Claude | Tune PD and the speed map; runs in both directions | Wobble on straights smaller than baseline, no lane loss in 3 laps each way |
