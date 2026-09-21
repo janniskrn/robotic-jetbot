@@ -17,6 +17,8 @@ STEERING_KI = 0.0       # integral (off: 0.25 added delay and a growing swing on
 STEERING_I_LEAK = 1.5   # seconds: the integral fades after a curve instead of carrying over into the straight
 STEERING_I_MAX = 0.12   # largest steering the integral may add (no wind-up)
 STEERING_KD = 0.03      # wheel speed difference per unit of lane_x change per second (damping)
+STEERING_REF_SPEED = 0.32  # speed the gains were tuned at; at other speeds they are scaled by REF/speed
+                           # (at 0.40 the unscaled gains made the robot swing on the straight)
 STEERING_RATE = 2.0     # maximum change of the steering command per second
 MOTOR_TRIM = 0.0        # added to the left wheel, subtracted from the right; positive corrects a drift to the left
 

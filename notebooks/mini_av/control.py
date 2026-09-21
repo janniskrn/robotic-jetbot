@@ -46,7 +46,10 @@ class Controller(object):
             # leaky integral: grows while the robot stays off-center in a curve, fades on the straight
             self.integral += self.lane_x * dt - self.integral * dt / config.STEERING_I_LEAK
             integral_part = max(-config.STEERING_I_MAX, min(config.STEERING_I_MAX, config.STEERING_KI * self.integral))
-            wanted = config.STEERING_KP * self.lane_x + integral_part + config.STEERING_KD * change
+            # gain scheduling: the faster the robot, the more a correction moves it before the next frame,
+            # so the gains shrink with speed and the steering has the same effect at every speed
+            schedule = config.STEERING_REF_SPEED / max(self.speed, config.STEERING_REF_SPEED)
+            wanted = schedule * (config.STEERING_KP * self.lane_x + config.STEERING_KD * change) + integral_part
             self.steering = limit_change(wanted, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
             if self.use_curve:
                 self.speed = limit_change(self.target_speed(curve_probs), self.speed,
