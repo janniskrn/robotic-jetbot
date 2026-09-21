@@ -20,6 +20,7 @@ class Controller(object):
         self.baseline = baseline
         self.use_curve = use_curve
         self.lane_x = 0.0      # smoothed lane position
+        self.integral = 0.0    # leaky sum of lane_x over time
         self.last_error = None
         self.steering = 0.0
         self.speed = config.SPEED_SHARP  # start at the slowest speed that moves the robot, then ramp up
@@ -42,9 +43,10 @@ class Controller(object):
             self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
             change = 0.0 if self.last_error is None else (self.lane_x - self.last_error) / dt
             self.last_error = self.lane_x
-            # progressive: linear for small deviations, the cubic term adds strength only for large ones
-            wanted = (config.STEERING_KP * self.lane_x + config.STEERING_K3 * self.lane_x ** 3
-                      + config.STEERING_KD * change)
+            # leaky integral: grows while the robot stays off-center in a curve, fades on the straight
+            self.integral += self.lane_x * dt - self.integral * dt / config.STEERING_I_LEAK
+            integral_part = max(-config.STEERING_I_MAX, min(config.STEERING_I_MAX, config.STEERING_KI * self.integral))
+            wanted = config.STEERING_KP * self.lane_x + integral_part + config.STEERING_KD * change
             self.steering = limit_change(wanted, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
             if self.use_curve:
                 self.speed = limit_change(self.target_speed(curve_probs), self.speed,
