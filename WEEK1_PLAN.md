@@ -40,11 +40,10 @@ Charge between blocks if the battery drops below 11.4 V at rest.
 Lane position and lane visible share one model (both describe "where is the lane"); curve and obstacle
 get their own models (D2). Training under 40 min stays on the robot (DECISIONS.md, Training).
 
-## Authorship of the control code (open, see question to the team)
+## Authorship of the control code (decided)
 
-PROJECT_GUIDE_1.md and CLAUDE.md section 6: steering, speed control, avoidance and recovery logic must be
-team-written. Phases 3 and 5 contain exactly that code. Until the team decides, Claude drafts it step by
-step and explains every line, and a team member reviews and signs off each step (see DECISIONS.md, AUTHOR).
+PROJECT_GUIDE_1.md asks for team-written steering, speed, avoidance and recovery logic. The team decided
+that Claude writes all of it and accepts that risk (DECISIONS.md, AUTHOR). No human gold set (GOLD).
 
 ## Phase 3: Driving program for Task 1 (about 2 h)
 
@@ -82,7 +81,6 @@ step and explains every line, and a team member reviews and signs off each step 
 | Step | Who | What |
 | :--- | :--- | :--- |
 | 6.1 | Claude | Mode diagram (FOLLOW / AVOID / RECOVER / STOP) matching the code, flow diagram camera -> perception -> decision -> control, experiment records (problem -> hypothesis -> change -> test -> result) |
-| 6.2 | HUMAN, optional | Spot-check 50 review images (a human-checked sample strengthens the dataset slide) |
 | 6.3 | HUMAN | Rehearse the demo once with a full battery |
 
 ## Manual way (test only)
