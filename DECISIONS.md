@@ -10,16 +10,17 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | Robot | Waveshare JetBot, Jetson Nano 4 GB, JetPack 4.5 (L4T 32.5.0), Docker Jupyter with PyTorch 1.6, TensorRT 7.1, torch2trt |
 | Motors | Can drive backward (-1..1). No wheel encoders: maneuvers without the camera are time-based |
 | Camera | IMX219-160 wide angle, fixed mount, cannot be adjusted |
-| Road | One colored tape line on the floor; the robot drives along the line. Track is built and drivable |
+| Road | Camera survey 2026-09-20 (`usb/images/track_survey/`): **two parallel blue tape lines forming a lane**, light speckled floor, sunlight from windows causes glare. Earlier note said one line: to be confirmed. Track is built and drivable |
 | Old collision dataset | Unusable: all 200 images are the same frame, blocked and free identical. Recollect on the track |
 | Our code location | Under `notebooks/` (mounted into Docker). The `jetbot/` package is baked into the image at build time, edits there are not seen |
+| Battery | 3S pack, INA219 at I2C bus 1 address 0x41, bus voltage register readable from the container (11.70 V on 2026-09-20). Usable later to scale timed maneuvers |
 | Training | Small trainings (under 40 min) run on the robot. Larger trainings run on the MacBook M4 24 GB; the robot is the fallback when the Mac is not available |
 
 ## Decided
 
 | ID | Date | Decision | Why |
 | :--- | :--- | :--- | :--- |
-| CAM | 2026-09-16 | Waveshare ISP calibration installed system-wide via `scripts/camera/install_camera_isp.sh` (run once with sudo; verify with a before/after photo in light) | Removes the pink cast for every program, permanently. Must be in place before any data collection |
+| CAM | 2026-09-16 | Waveshare ISP calibration installed system-wide via `scripts/camera/install_camera_isp.sh` (installed and verified 2026-09-20: colors natural, photo `usb/images/camera_calibration/after_isp_fix_lit.jpg`) | Removes the pink cast for every program, permanently. Must be in place before any data collection |
 | ML | 2026-09-16 | ML levels A + B + C, no D. ML measures the world, team code decides and controls. Start easy, build on top | Guide requires own control layer and explicit states; D breaks both |
 | STYLE | 2026-09-16 | Never use emoji (chat, docs, code, commits) | Team rule |
 | D1 | 2026-09-16 | Python modules (`config`, `perception`, `decision`, `control`, `logger`) plus one thin run notebook; own control loop thread with measured dt | Matches the required perception/decision/control separation |
