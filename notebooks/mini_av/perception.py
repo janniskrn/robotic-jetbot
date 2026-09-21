@@ -12,11 +12,22 @@ import config
 from vision import CURVE_CLASSES, build_model, preprocess
 
 
-def load(task):
-    """Trained model for the task on the GPU in half precision, or None if it was not trained yet"""
+def load(task, allow_trt=True):
+    """Trained model for the task on the GPU in half precision, or None if it was not trained yet.
+
+    Uses the TensorRT version (03_convert_trt.py, about 6x faster) when it is newer than the trained
+    weights; an older one belongs to a previous training and is ignored.
+    """
     path = os.path.join(config.MODEL_DIR, task + '.pth')
     if not os.path.exists(path):
         return None
+    trt_path = os.path.join(config.MODEL_DIR, task + '_trt.pth')
+    if allow_trt and os.path.exists(trt_path) and os.path.getmtime(trt_path) > os.path.getmtime(path):
+        from torch2trt import TRTModule
+        engine = TRTModule()
+        engine.load_state_dict(torch.load(trt_path))
+        return engine
+    torch.backends.cudnn.benchmark = True  # PyTorch fallback: lets cuDNN pick the fastest kernels (66 -> 41 ms)
     model = build_model(task)
     model.load_state_dict(torch.load(path, map_location='cpu'))
     return model.cuda().eval().half()

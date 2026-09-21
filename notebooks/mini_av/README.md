@@ -17,6 +17,7 @@ folders would mean moving or copying files every week.
 | `02_auto_label.py` | Labels recorded sessions with the color mask (`labels.csv`) and draws review sheets | Robot or workstation |
 | `vision.py` | Network and preprocessing shared by training and driving | Robot, workstation |
 | `03_train.py` | Trains one model (`--task lane` or `curve`) with whole sessions held out | Robot (never while driving) or Mac |
+| `03_convert_trt.py` | Converts a trained model to TensorRT (about 6x faster); run on the robot after every training | Robot (container) |
 | `02_manual_label.py` | Manual labeling on a computer with a screen (test only, see `MANUAL_TEST.md`) | Mac |
 | `config.py` | All tuning values of the driving program | Robot |
 | `safety.py` | Camera watchdog and battery guard, shared by every program that drives | Robot |
