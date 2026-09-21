@@ -8,6 +8,8 @@ Or from 04_drive.ipynb with start and stop buttons. Stop from a terminal: script
 """
 
 import argparse
+import queue
+import threading
 import time
 
 import cv2
@@ -20,10 +22,30 @@ from decision import FOLLOW, Decision
 from logger import RunLogger
 from perception import Perception
 from recorder import Recorder
-from safety import BatteryGuard, BatteryLow, CameraFrozen, wait_for_new_frame
+from safety import BatteryGuard, BatteryLow, CameraFrozen, MotorWatchdog, wait_for_new_frame
 
 
 RECORD_HZ = 4.0  # camera frames saved per second as a dataset session, to see what went wrong and to retrain
+WARMUP_FRAMES = 5  # model calls with the motors off before driving (the first call took up to 1.1 s)
+
+
+def start_frame_saver(recorder):
+    """Saves frames in a background thread, so a slow USB write never blocks the control loop.
+
+    Put camera frames into the returned queue (full queue: the frame is skipped); put None to finish.
+    """
+    frames = queue.Queue(maxsize=8)
+
+    def save():
+        while True:
+            frame = frames.get()
+            if frame is None:
+                return
+            recorder.offer(bytes(cv2.imencode('.jpg', frame)[1]))
+
+    thread = threading.Thread(target=save, daemon=True)
+    thread.start()
+    return frames, thread
 
 
 def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
@@ -44,10 +66,16 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
     recorder = Recorder(period=1.0 / RECORD_HZ)
     recorder.start('drive_' + name, {'mode': 'drive', 'log': log.dir, 'baseline': baseline, 'use_curve': use_curve,
                                      'frame_width': camera.width, 'frame_height': camera.height})
+    frames, saver = start_frame_saver(recorder)
+    watchdog = MotorWatchdog(robot)
     reason = 'time up'
     try:
         frame = wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
-        start = last = time.time()
+        for _ in range(WARMUP_FRAMES):
+            frame = wait_for_new_frame(camera, frame)
+            perception.observe(frame)
+        watchdog.start()
+        start = last = last_saved = time.time()
         while time.time() - start < seconds:
             if stop_event is not None and stop_event.is_set():
                 reason = 'stopped by hand'
@@ -56,11 +84,17 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
             now = time.time()
             dt, last = max(now - last, 1e-3), now
             percept = perception.observe(frame)
-            recorder.offer(bytes(cv2.imencode('.jpg', frame)[1]))
+            if now - last_saved >= 1.0 / RECORD_HZ:
+                last_saved = now
+                try:
+                    frames.put_nowait(frame)
+                except queue.Full:
+                    pass
             mode = decision.update(percept, now)
             if mode == FOLLOW:
                 left, right = controller.update(percept['lane_x'], percept['curve_probs'], dt)
                 robot.set_motors(left, right)
+                watchdog.feed()
             else:
                 robot.stop()
                 reason = 'lane lost'
@@ -79,8 +113,11 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
     except KeyboardInterrupt:
         reason = 'stopped by hand'  # scripts/stop_robot.sh sends Ctrl-C (SIGINT)
     finally:
+        watchdog.running = False
         robot.stop()
         camera.stop()
+        frames.put(None)
+        saver.join(timeout=2.0)
         recorder.stop()
         log.close(reason)
     return reason, log.dir

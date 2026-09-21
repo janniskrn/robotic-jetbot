@@ -1,9 +1,11 @@
 """Safety checks shared by every program that drives the motors (DECISIONS.md, SAFETY)."""
 
+import threading
 import time
 
 from battery import read_voltage
 
+MOTOR_TIMEOUT = 0.25  # seconds without a motor update before the watchdog stops the motors (the loop stalled up to 1.1 s)
 STALE_TIMEOUT = 0.5  # seconds without a new camera frame before the robot stops (the camera froze on 2026-09-20)
 
 # On 2026-09-20 the Jetson lost power mid-session (voltage sag under motor load).
@@ -58,3 +60,27 @@ class BatteryGuard(object):
         elif now - self._low_since > LOW_VOLTAGE_TIME:
             raise BatteryLow('battery low (%.2f V)' % self.volts)
         return self.volts
+
+
+class MotorWatchdog(threading.Thread):
+    """Stops the motors when the control loop has not updated them for MOTOR_TIMEOUT seconds.
+
+    The loop can stall (first model call, a slow write): then the robot must wait, not drive blind.
+    """
+
+    def __init__(self, robot, timeout=MOTOR_TIMEOUT):
+        threading.Thread.__init__(self, daemon=True)
+        self.robot = robot
+        self.timeout = timeout
+        self.last_feed = time.time()
+        self.running = True
+
+    def feed(self):
+        """Called by the control loop every time it sets the motors"""
+        self.last_feed = time.time()
+
+    def run(self):
+        while self.running:
+            if time.time() - self.last_feed > self.timeout:
+                self.robot.stop()
+            time.sleep(0.05)
