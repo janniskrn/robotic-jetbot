@@ -46,4 +46,5 @@ def charge_percent(voltage):
 
 if __name__ == '__main__':
     volts = read_voltage()
-    print('battery %.2f V  about %d %%' % (volts, charge_percent(volts)))
+    print('battery %.2f V  about %d %%  (only valid at rest: unplug the charger and wait 5 minutes)'
+          % (volts, charge_percent(volts)))
