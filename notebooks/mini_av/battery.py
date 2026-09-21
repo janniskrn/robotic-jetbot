@@ -5,7 +5,8 @@ Standard library only, so it runs on the robot host and inside the Jupyter conta
 From the robot:    python3 ~/jetbot/notebooks/mini_av/battery.py
 From your PC:      ssh jetbot@<robot-ip> python3 jetbot/notebooks/mini_av/battery.py
 
-The estimate is only valid at rest: under motor load the voltage sags, while charging it reads high.
+The estimate is valid with the charger unplugged and the motors off (checked by the user: correct right after
+unplugging): under motor load the voltage sags, while charging it reads high.
 """
 
 import fcntl
@@ -46,5 +47,5 @@ def charge_percent(voltage):
 
 if __name__ == '__main__':
     volts = read_voltage()
-    print('battery %.2f V  about %d %%  (only valid at rest: unplug the charger and wait 5 minutes)'
+    print('battery %.2f V  about %d %%  (valid with the charger unplugged and the motors off)'
           % (volts, charge_percent(volts)))

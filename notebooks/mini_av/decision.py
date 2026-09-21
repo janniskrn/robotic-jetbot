@@ -13,12 +13,16 @@ STOP = 'STOP'
 class Decision(object):
     def __init__(self):
         self.lost_since = None
+        self.lane_seen = False
 
     def update(self, percept, now):
         """Returns the mode for this frame"""
         if percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD:
             self.lost_since = None
+            self.lane_seen = True
             return FOLLOW
+        if not self.lane_seen:
+            return STOP  # never start without seeing the lane (the grace time is only for short gaps)
         if self.lost_since is None:
             self.lost_since = now
         # a short gap (one or two bad frames) keeps following on the last steering

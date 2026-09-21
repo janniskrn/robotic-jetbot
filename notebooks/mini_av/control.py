@@ -16,8 +16,9 @@ def limit_change(target, current, up_rate, down_rate, dt):
 
 
 class Controller(object):
-    def __init__(self, baseline=False):
+    def __init__(self, baseline=False, use_curve=True):
         self.baseline = baseline
+        self.use_curve = use_curve
         self.lane_x = 0.0      # smoothed lane position
         self.last_error = None
         self.steering = 0.0
@@ -25,7 +26,7 @@ class Controller(object):
 
     def reset(self):
         """Forget the past, for example after the robot stopped"""
-        self.__init__(self.baseline)
+        self.__init__(self.baseline, self.use_curve)
 
     def target_speed(self, curve_probs):
         """Speed blended by the curve probabilities: sure straight -> fast, sure sharp -> slow"""
@@ -43,8 +44,11 @@ class Controller(object):
             self.last_error = self.lane_x
             wanted = config.STEERING_KP * self.lane_x + config.STEERING_KD * change
             self.steering = limit_change(wanted, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
-            self.speed = limit_change(self.target_speed(curve_probs), self.speed,
-                                      config.SPEED_UP_RATE, config.SPEED_DOWN_RATE, dt)
+            if self.use_curve:
+                self.speed = limit_change(self.target_speed(curve_probs), self.speed,
+                                          config.SPEED_UP_RATE, config.SPEED_DOWN_RATE, dt)
+            else:
+                self.speed = config.BASELINE_SPEED  # same speed as the baseline: the runs differ only in steering
         left = self.speed + self.steering + config.MOTOR_TRIM
         right = self.speed - self.steering - config.MOTOR_TRIM
         return max(-1.0, min(1.0, left)), max(-1.0, min(1.0, right))

@@ -2,13 +2,15 @@
 
     python3 drive.py --name adaptive --seconds 60            # our controller (Task 1)
     python3 drive.py --name baseline --seconds 60 --baseline # stock-style comparison run
-    python3 drive.py --name nocurve --seconds 60 --no-curve  # our steering, constant speed
+    python3 drive.py --name nocurve --seconds 60 --no-curve  # our steering, baseline speed
 
 Or from 04_drive.ipynb with start and stop buttons. Stop from a terminal: scripts/stop_robot.sh.
 """
 
 import argparse
 import time
+
+import cv2
 
 from jetbot import Camera, Robot
 
@@ -17,24 +19,31 @@ from control import Controller
 from decision import FOLLOW, Decision
 from logger import RunLogger
 from perception import Perception
+from recorder import Recorder
 from safety import BatteryGuard, BatteryLow, CameraFrozen, wait_for_new_frame
+
+
+RECORD_HZ = 4.0  # camera frames saved per second as a dataset session, to see what went wrong and to retrain
 
 
 def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
     """Drives until the time is up, the lane is lost, a safety check fails or stop_event is set.
 
-    Returns the stop reason and the log folder.
+    Returns the stop reason and the log folder. The camera frames go to a dataset session drive_<name>.
     """
     battery = BatteryGuard()
     if not battery.start_ok():
         return 'battery %.2f V is too low: charge first' % battery.volts, None
     perception = Perception(use_curve=use_curve and not baseline)
-    controller = Controller(baseline=baseline)
+    controller = Controller(baseline=baseline, use_curve=use_curve)
     decision = Decision()
     robot = Robot()
     camera = Camera.instance()
     log = RunLogger(name, {'baseline': baseline, 'use_curve': use_curve, 'seconds': seconds,
                            'battery_start_v': round(battery.volts, 2)})
+    recorder = Recorder(period=1.0 / RECORD_HZ)
+    recorder.start('drive_' + name, {'mode': 'drive', 'log': log.dir, 'baseline': baseline, 'use_curve': use_curve,
+                                     'frame_width': camera.width, 'frame_height': camera.height})
     reason = 'time up'
     try:
         frame = wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
@@ -47,6 +56,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
             now = time.time()
             dt, last = max(now - last, 1e-3), now
             percept = perception.observe(frame)
+            recorder.offer(bytes(cv2.imencode('.jpg', frame)[1]))
             mode = decision.update(percept, now)
             if mode == FOLLOW:
                 left, right = controller.update(percept['lane_x'], percept['curve_probs'], dt)
@@ -71,6 +81,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
     finally:
         robot.stop()
         camera.stop()
+        recorder.stop()
         log.close(reason)
     return reason, log.dir
 
@@ -80,7 +91,7 @@ def main():
     parser.add_argument('--name', default='drive')
     parser.add_argument('--seconds', type=float, default=30.0)
     parser.add_argument('--baseline', action='store_true', help='constant speed, plain P steering')
-    parser.add_argument('--no-curve', action='store_true', help='our steering, but constant speed')
+    parser.add_argument('--no-curve', action='store_true', help='our steering at the baseline speed')
     args = parser.parse_args()
     reason, log_dir = run(args.name, args.seconds, args.baseline, not args.no_curve)
     print('%s, log in %s' % (reason, log_dir))
