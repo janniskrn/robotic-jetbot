@@ -22,7 +22,7 @@ robot), `04_drive` plus the driving modules `config.py`, `perception.py`, `decis
 
 | Week | Task | Files |
 | :--- | :--- | :--- |
-| 1 | Task 1 adaptive line following | `01_record_dataset`, `02_label_dataset`, `03_train_line`, `04_drive` |
+| 1 | Task 1 adaptive lane following | `01_record_dataset`, `02_label_dataset`, `03_train_lane`, `04_drive` |
 | 1 | Task 2 obstacle avoidance and recovery | same files, plus the obstacle model and the avoidance logic |
 
 ## Rules
