@@ -1,0 +1,49 @@
+{
+  "task": "lane",
+  "best_epoch": 0,
+  "best": {
+    "epoch": 0,
+    "train": {
+      "loss": 0.5312487918897515,
+      "accuracy": 0.8370786516853933,
+      "lane_x_mean_error": 0.2542027577660865
+    },
+    "val": {
+      "loss": 0.14880853926229198,
+      "accuracy": 1.0,
+      "lane_x_mean_error": 0.21896415844298245
+    }
+  },
+  "history": [
+    {
+      "epoch": 0,
+      "train": {
+        "loss": 0.5312487918897515,
+        "accuracy": 0.8370786516853933,
+        "lane_x_mean_error": 0.2542027577660865
+      },
+      "val": {
+        "loss": 0.14880853926229198,
+        "accuracy": 1.0,
+        "lane_x_mean_error": 0.21896415844298245
+      }
+    }
+  ],
+  "train_sessions": [
+    "2026-09-21_02-43-14_tune_a",
+    "2026-09-21_02-47-01_lap_b",
+    "2026-09-21_02-48-10_weave_b",
+    "2026-09-21_02-49-34_spin_b",
+    "2026-09-21_02-50-53_weave_b2"
+  ],
+  "val_sessions": [
+    "2026-09-21_02-43-48_tune_b"
+  ],
+  "train_frames": 534,
+  "val_frames": 171,
+  "minutes": 1.4824232101440429,
+  "device": "cuda",
+  "epochs": 1,
+  "batch_size": 16,
+  "learning_rate": 0.0001
+}

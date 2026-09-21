@@ -7,7 +7,7 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 
 | Fact | Detail |
 | :--- | :--- |
-| Robot | Waveshare JetBot, Jetson Nano 4 GB, JetPack 4.5 (L4T 32.5.0), Docker Jupyter with PyTorch 1.6, TensorRT 7.1, torch2trt |
+| Robot | Waveshare JetBot, Jetson Nano 4 GB, JetPack 4.5 (L4T 32.5.0), Docker Jupyter with PyTorch 1.7.0 / torchvision 0.8, TensorRT 7.1, torch2trt |
 | Motors | Can drive backward (-1..1). No wheel encoders: maneuvers without the camera are time-based |
 | Camera | IMX219-160 wide angle, fixed mount, cannot be adjusted |
 | Road | Camera survey 2026-09-20 (`usb/images/track_survey/`): **two parallel blue tape lines forming a lane**, light speckled floor, sunlight from windows causes glare, tape wrinkled in the sharp curve. Shape: an oval, one lap is about 15 s at base speed 0.32: straight, long gentle curve, straight, sharp curve at the couch. Directions: **ccw** (counterclockwise seen from above, all curves turn left; the old session names say `_b`) and **cw** (the old plan said `_a`) |
@@ -42,6 +42,7 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | AUTOREC | 2026-09-20 | The robot records clean laps itself: `auto_record.py` drives with the classical blue-tape mask (`lane_mask.py`) and writes `auto_labels.csv` (lines seen, lane center) per frame as pre-labels | User choice; faster than gamepad driving, labels come for free. Data tool only, not the final controller |
 | POWER | 2026-09-20 | Motor sessions only with enough battery: `auto_record.py` refuses to start below 11.4 V at rest (about 50 %) and stops when the voltage stays below 10.8 V for 2 s under load; the voltage is logged in `trace.csv` and log files are line-buffered | Incident below |
 | LABELS | 2026-09-20 | `02_auto_label.py` labels every frame from the color mask: `lane_visible`, `lane_x` (-1..1 at the lookahead row), `curve_value`/`curve_class`, plus review sheets in `usb/images/review/`. Lane only counts as visible with two lines about one lane width apart (one line only briefly after that, with a small jump). Curve = bend of the lane center over three rows ahead; thresholds 0.02 (gentle) and 0.045 (sharp) from 3 labeled laps. Curve labels only from sessions driven on the center (no weave or spin), because at an angle the lens fakes a bend. Claude reviewed the sheets; a team member still spot-checks about 50 frames | Automatic, consistent labels; the rules were tuned on the review sheets |
+| LANEMODEL | 2026-09-20 | The lane model has two outputs, `lane_x` and `lane_visible`; curve and obstacle get their own models. Training and driving share `vision.py` (network and preprocessing). Torch in the container is 1.7.0 (not 1.6) | Both lane outputs describe "where is the lane" (reading of D2); one preprocessing source prevents train/drive mismatch |
 | D12 | 2026-09-16 | Logging: one CSV row per control step per run (time, dt, mode, model outputs, steering, speed, FPS) plus a run metadata file (config constants, model version), on the USB stick. Every experiment recorded as problem -> hypothesis -> change -> test -> result | Graphs and tables are required deliverables |
 
 ## Incidents
