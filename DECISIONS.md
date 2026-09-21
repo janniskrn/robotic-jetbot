@@ -14,6 +14,7 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | Old collision dataset | Unusable: all 200 images are the same frame, blocked and free identical. Recollect on the track |
 | Our code location | Under `notebooks/` (mounted into Docker). The `jetbot/` package is baked into the image at build time, edits there are not seen |
 | Battery | 3S pack, INA219 at I2C bus 1 address 0x41, bus voltage register readable from the container (11.70 V on 2026-09-20). Usable later to scale timed maneuvers |
+| Motors (measured) | Robot does not move below about 0.27 wheel speed; 0.30 moves it. Driving straight open-loop drifts to the right, so a motor trim is needed (D4) |
 | Training | Small trainings (under 40 min) run on the robot. Larger trainings run on the MacBook M4 24 GB; the robot is the fallback when the Mac is not available |
 
 ## Decided
@@ -38,9 +39,12 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | STEP1 | 2026-09-17 | Datasets are recorded as sessions: `usb/images/datasets/<date>_<name>/` with frames at 4 Hz plus a `session.json` (tape color, lighting, section, obstacle, notes, frame size, max speed). Tool: `notebooks/mini_av/01_record_dataset.ipynb` with `recorder.py` | Labeling happens later on the Mac (D10) |
 | STRUCT | 2026-09-17 | Our code lives in `notebooks/mini_av/`, files numbered in pipeline order (01 record, 02 label, 03 train, 04 drive). No week folders | The same files are reused in later weeks; a week is a deadline, not a component |
 | LANE | 2026-09-20 | The robot drives in the lane center between the two blue lines. Target point = lane center where it crosses the lookahead circle; "line visible" (D8) means "lane visible"; avoidance (D7) leaves the lane to the fixed side and returns into it | Confirmed by the user after the camera survey; replaces the earlier single-line note |
+| AUTOREC | 2026-09-20 | The robot records clean laps itself: `auto_record.py` drives with the classical blue-tape mask (`lane_mask.py`) and writes `auto_labels.csv` (lines seen, lane center) per frame as pre-labels | User choice; faster than gamepad driving, labels come for free. Data tool only, not the final controller |
 | D12 | 2026-09-16 | Logging: one CSV row per control step per run (time, dt, mode, model outputs, steering, speed, FPS) plus a run metadata file (config constants, model version), on the USB stick. Every experiment recorded as problem -> hypothesis -> change -> test -> result | Graphs and tables are required deliverables |
 
 ## Risks to measure
+
+- `auto_record.py` handles straights, gentle curves and the curve at the couch, but not yet the sharp curves: there the tape crosses the view sideways and the robot overshoots at the minimum speed (tested 2026-09-20).
 
 - D2 with one model per task means one network pass per model per frame. Measure the frame rate in phase 2 and convert to TensorRT if it is too low.
 - Recording at the camera's 224x224 keeps training and driving identical, but throws away detail. Revisit before Task 3, where signs are small and far away.

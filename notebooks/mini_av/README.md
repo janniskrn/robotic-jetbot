@@ -13,6 +13,8 @@ folders would mean moving or copying files every week.
 | :--- | :--- | :--- |
 | `recorder.py` | Saves camera frames into dataset sessions | Robot |
 | `01_record_dataset.ipynb` | Drive with the gamepad and record a session | Robot |
+| `lane_mask.py` | Classical blue-tape lane detection (color mask); data tool and pre-labels only | Robot, workstation |
+| `auto_record.py` | Robot drives the lane itself with `lane_mask` and records a session plus `auto_labels.csv` | Robot (`python3 auto_record.py --name lap --seconds 60` in the container) |
 
 Planned next, same numbering: `02_label_dataset` (workstation), `03_train_*` (workstation or
 robot), `04_drive` plus the driving modules `config.py`, `perception.py`, `decision.py`,
