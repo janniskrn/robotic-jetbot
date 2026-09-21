@@ -41,6 +41,14 @@ class Controller(object):
         steering_speed = config.SPEED_STRAIGHT - turning * (config.SPEED_STRAIGHT - config.SPEED_SHARP)
         return min(model_speed, steering_speed)
 
+    def feedforward(self, curve_probs):
+        """Base turn from the curve model: a curve needs a sustained turn that P alone only gives with a
+        large error. The direction comes from the lane position (the lane center moves to the inside)."""
+        if abs(self.lane_x) < config.FEEDFORWARD_MIN_X:
+            return 0.0
+        size = curve_probs[1] * config.FEEDFORWARD_GENTLE + curve_probs[2] * config.FEEDFORWARD_SHARP
+        return size if self.lane_x > 0 else -size
+
     def update(self, lane_x, curve_probs, dt):
         """Returns (left, right) wheel speeds"""
         if self.baseline:
@@ -57,7 +65,8 @@ class Controller(object):
             # gain scheduling: the faster the robot, the more a correction moves it before the next frame,
             # so the gains shrink with speed and the steering has the same effect at every speed
             schedule = config.STEERING_REF_SPEED / max(self.speed, config.STEERING_REF_SPEED)
-            wanted = schedule * (config.STEERING_KP * self.lane_x + config.STEERING_KD * change) + integral_part
+            wanted = (schedule * (config.STEERING_KP * self.lane_x + config.STEERING_KD * change) + integral_part
+                      + self.feedforward(curve_probs))
             self.steering = limit_change(wanted, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
             if self.use_curve:
                 self.speed = limit_change(self.target_speed(curve_probs, self.lane_x), self.speed,
