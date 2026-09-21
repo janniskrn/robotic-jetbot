@@ -26,7 +26,7 @@ the motors starts with a battery check (CLAUDE.md section 9).
 
 Charge between blocks if the battery drops below 11.4 V at rest.
 
-## Phase 2: Models for Task 1 (about 1 h, runs on the robot while it charges)
+## Phase 2: Models for Task 1 (about 1 h, runs on the robot while it charges, never while it drives)
 
 | Step | Who | What | Done when |
 | :--- | :--- | :--- | :--- |

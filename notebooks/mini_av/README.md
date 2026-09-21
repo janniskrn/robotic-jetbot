@@ -15,6 +15,9 @@ folders would mean moving or copying files every week.
 | `01_record_dataset.ipynb` | Drive with the gamepad and record a session | Robot |
 | `lane_mask.py` | Classical blue-tape lane detection (color mask); data tool and pre-labels only | Robot, workstation |
 | `02_auto_label.py` | Labels recorded sessions with the color mask (`labels.csv`) and draws review sheets | Robot or workstation |
+| `vision.py` | Network and preprocessing shared by training and driving | Robot, workstation |
+| `03_train.py` | Trains one model (`--task lane` or `curve`) with whole sessions held out | Robot (never while driving) or Mac |
+| `02_manual_label.py` | Manual labeling on a computer with a screen (test only, see `MANUAL_TEST.md`) | Mac |
 | `battery.py` | Battery voltage and charge estimate; run it before any motor session | Robot host, container, or `ssh` from a PC |
 | `auto_record.py` | Robot drives the lane itself with `lane_mask` and records a session plus `auto_labels.csv` | Robot (`python3 auto_record.py --name lap --seconds 60` in the container) |
 

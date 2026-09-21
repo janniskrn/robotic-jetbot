@@ -45,6 +45,7 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | LANEMODEL | 2026-09-20 | The lane model has two outputs, `lane_x` and `lane_visible`; curve and obstacle get their own models. Training and driving share `vision.py` (network and preprocessing). Torch in the container is 1.7.0 (not 1.6) | Both lane outputs describe "where is the lane" (reading of D2); one preprocessing source prevents train/drive mismatch |
 | AUTHOR | 2026-09-20 | Claude writes all code, including steering, speed, avoidance and recovery logic. The reviewer pointed out that PROJECT_GUIDE_1.md asks for team-written control logic; the user decided this knowingly and accepts that risk | User decision |
 | GOLD | 2026-09-20 | No human-labeled gold set: Claude labels automatically and checks the review sheets. The manual labeling tool exists for testing only. Replaces the gold-set part of D10 | User decision, fastest path |
+| SAFETY | 2026-09-20 | Every program that drives the motors has: battery guard, camera watchdog (stop after 0.5 s without a new frame), stop on Ctrl-C, motors stopped in `finally`. No training or other heavy job runs while the robot drives. Emergency stop: `scripts/stop_robot.sh` | Chair incident below |
 | D12 | 2026-09-16 | Logging: one CSV row per control step per run (time, dt, mode, model outputs, steering, speed, FPS) plus a run metadata file (config constants, model version), on the USB stick. Every experiment recorded as problem -> hypothesis -> change -> test -> result | Graphs and tables are required deliverables |
 
 ## Incidents
@@ -54,6 +55,10 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 - **Most likely cause:** the battery voltage sagged under motor load (turning in place and starting from standstill draw the most current), and the Jetson browned out. The WiFi crash is a typical early sign of supply dips. Not proven: the voltage was not logged during the run.
 - **Fix:** battery guard, voltage logging and line-buffered files in `auto_record.py` (POWER). Start motor sessions with a charged battery, and check it between sessions.
 - **Still to verify:** the thresholds are first guesses; the new voltage log will show the real sag. If it happens with a full battery, check the cells and consider the Jetson 5 W power mode.
+
+**2026-09-20, robot drove into a chair.**
+- **What happened:** a lane training ran on the robot while `auto_record.py` drove (session `lap_cw`, deleted). Free memory fell to about 120 MB, and the camera delivered one frame at the start and then none. The JetBot camera thread ends silently on a read error, so `camera.value` kept returning that one image. The robot turned around and drove 47 s on the frozen image with a constant steering command, into a chair. The first emergency stop (`pkill -f auto_record.py` inside `bash -c`) killed its own shell, so the motors stopped only with the second command.
+- **Fixes:** (1) never train or run other heavy jobs while the robot drives; (2) `auto_record.py` stops when no new camera frame arrives for 0.5 s (`wait_for_new_frame`), and checks the camera before moving; (3) `scripts/stop_robot.sh` sends Ctrl-C (SIGINT) so the script's clean-up stops the motors, then stops them directly as a backup. A plain kill (SIGTERM) skips the clean-up and leaves the motors running.
 
 ## Risks to measure
 

@@ -40,6 +40,8 @@ TURN_AROUND_PULSES = 6  # pulses before looking for the lane again: roughly half
 MAX_PULSES = 40       # give up after this many pulses without finding the lane
 ALIGN_TOLERANCE = 30  # pixels the lane center may be off the image center to count as aligned
 
+STALE_TIMEOUT = 0.5  # seconds without a new camera frame before the robot stops (the camera froze on 2026-09-20)
+
 # Battery guard: on 2026-09-20 the Jetson lost power mid-session (voltage sag under motor load).
 MIN_START_VOLTAGE = 11.4  # volts at rest (about 50 %) needed to start a session
 MIN_RUN_VOLTAGE = 10.8    # volts under load; staying below this ends the session before the Jetson browns out
@@ -51,6 +53,24 @@ def steering_error(center, image_width):
     """Lane center offset from the image center, -1 (left edge) .. 1 (right edge)"""
     half = image_width / 2.0
     return (center - half) / half
+
+
+class CameraFrozen(Exception):
+    """The camera stopped delivering new frames: the robot must not drive on an old image"""
+
+
+def wait_for_new_frame(camera, old, timeout=STALE_TIMEOUT):
+    """Returns a frame newer than old; raises CameraFrozen if none arrives in time.
+
+    The JetBot camera thread ends silently on a read error and camera.value then keeps the last
+    image forever, so every new frame is a new array object: the same object means no new frame.
+    """
+    start = time.time()
+    while camera.value is old:
+        if time.time() - start > timeout:
+            raise CameraFrozen()
+        time.sleep(0.005)
+    return camera.value
 
 
 def save(recorder, labels, frame, lines, center):
@@ -79,8 +99,9 @@ def spin(robot, camera, recorder, labels, min_pulses):
         robot.set_motors(PIVOT_SPEED, -PIVOT_SPEED)
         time.sleep(PIVOT_PULSE)
         robot.stop()
+        before = camera.value
         time.sleep(PIVOT_SETTLE)
-        frame = camera.value
+        frame = wait_for_new_frame(camera, before)
         mask = blue_mask(frame)
         save(recorder, labels, frame, line_centers(mask), None)
         if pulse + 1 >= min_pulses and lane_aligned(mask, camera.width):
@@ -100,6 +121,7 @@ def drive(robot, camera, recorder, seconds, labels, trace, weave=0.0, spin_every
     last_error = None
     volts = read_voltage()
     low_since = None
+    frame = None
     while time.time() - start < seconds:
         if time.time() - last_volt_time > VOLTAGE_PERIOD:
             volts, last_volt_time = read_voltage(), time.time()
@@ -113,7 +135,7 @@ def drive(robot, camera, recorder, seconds, labels, trace, weave=0.0, spin_every
             tracker = LaneTracker(camera.width)
             last_error = None
             last_spin = last_seen = last_time = time.time()
-        frame = camera.value
+        frame = wait_for_new_frame(camera, frame)
         mask = blue_mask(frame)
         lines = line_centers(mask)
         center = tracker.update(mask)
@@ -180,10 +202,16 @@ def main():
             labels.writerow(['frame', 'lines_seen', 'lane_center_x'])
             trace = csv.writer(g)  # every control step, for tuning and the week 1 graphs
             trace.writerow(['time', 'lane_center_x', 'turn', 'battery_v'])
-            if args.turn_around and not spin(robot, camera, recorder, labels, TURN_AROUND_PULSES):
-                reason = 'lane not found after turning around'
-            else:
-                reason = drive(robot, camera, recorder, args.seconds, labels, trace, args.weave, args.spin_every)
+            try:
+                wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
+                if args.turn_around and not spin(robot, camera, recorder, labels, TURN_AROUND_PULSES):
+                    reason = 'lane not found after turning around'
+                else:
+                    reason = drive(robot, camera, recorder, args.seconds, labels, trace, args.weave, args.spin_every)
+            except CameraFrozen:
+                reason = 'camera frozen'
+            except KeyboardInterrupt:
+                reason = 'stopped by hand'  # stop_robot.sh sends Ctrl-C (SIGINT), so the motors stop below
     finally:
         robot.stop()
         session_dir = recorder.stop()

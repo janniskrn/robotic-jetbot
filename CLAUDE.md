@@ -137,6 +137,12 @@ Every week ends with a demonstration of that week's tasks.
 - Before any session that drives the motors, check the battery: `python3 ~/jetbot/notebooks/mini_av/battery.py`. Do not start below 11.4 V at rest (about 50 %), and check again between sessions.
 - The robot browned out on 2026-09-20 after about 4 minutes of driving from 68 %. See the incident in `DECISIONS.md`.
 
+## 9b. Driving Safety
+
+- Never run a training or any other heavy job while the robot drives: low memory froze the camera and the robot drove blind into a chair (2026-09-20, `DECISIONS.md`).
+- Every program that drives the motors needs: battery guard, camera watchdog (stop after 0.5 s without a new frame), stop on Ctrl-C, motors stopped in `finally`.
+- Emergency stop: `~/jetbot/scripts/stop_robot.sh`. Stop driving scripts with Ctrl-C (`pkill -INT`), never with a plain kill.
+
 ## 10. Never Use Emoji
 
 - Never use emoji anywhere: chat responses, documentation, code, comments, notebooks, commit messages.
