@@ -8,7 +8,7 @@ around an obstacle without manual steering (Task 2). Decisions behind this plan:
 coding, testing, graphs). Steps marked **HUMAN** need hands, eyes or a decision. Every step that drives
 the motors starts with a battery check (CLAUDE.md section 9).
 
-## State now (2026-09-20)
+## State now (2026-09-20, see HANDOVER.md for the latest)
 
 - Camera fix, battery check, self-driving recorder (`auto_record.py`), automatic labels (`02_auto_label.py`) done.
 - 867 labeled frames, counterclockwise only; only 34 sharp-curve frames.
