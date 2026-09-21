@@ -11,9 +11,9 @@ LANE_VISIBLE_THRESHOLD = 0.5  # probability above which the lane counts as visib
 CURVE_EVERY = 2               # run the curve model every Nth frame: the curvature changes slowly, saves time
 
 # Steering (D4): smoothed PD on the lane center, lane_x -1 (left edge) .. 1 (right edge)
-LANE_SMOOTHING = 0.7    # weight of the new lane_x in the running average (1 = no smoothing; 0.5 lagged too much)
+LANE_SMOOTHING = 1.0    # weight of the new lane_x in the running average (1 = none: any smoothing delay made the robot oversteer)
 STEERING_KP = 0.15      # wheel speed difference per unit of lane_x (0.35 and a cubic term made the robot swing)
-STEERING_KI = 0.25      # integral: builds up the sustained turn a curve needs, without a high KP
+STEERING_KI = 0.0       # integral (off: 0.25 added delay and a growing swing on the track, 2026-09-20)
 STEERING_I_LEAK = 1.5   # seconds: the integral fades after a curve instead of carrying over into the straight
 STEERING_I_MAX = 0.12   # largest steering the integral may add (no wind-up)
 STEERING_KD = 0.03      # wheel speed difference per unit of lane_x change per second (damping)
