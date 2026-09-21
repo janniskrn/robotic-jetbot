@@ -10,7 +10,7 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | Robot | Waveshare JetBot, Jetson Nano 4 GB, JetPack 4.5 (L4T 32.5.0), Docker Jupyter with PyTorch 1.6, TensorRT 7.1, torch2trt |
 | Motors | Can drive backward (-1..1). No wheel encoders: maneuvers without the camera are time-based |
 | Camera | IMX219-160 wide angle, fixed mount, cannot be adjusted |
-| Road | Camera survey 2026-09-20 (`usb/images/track_survey/`): **two parallel blue tape lines forming a lane**, light speckled floor, sunlight from windows causes glare. Earlier note said one line: to be confirmed. Track is built and drivable |
+| Road | Camera survey 2026-09-20 (`usb/images/track_survey/`): **two parallel blue tape lines forming a lane**, light speckled floor, sunlight from windows causes glare, tape wrinkled in the sharp curve. Track is built and drivable |
 | Old collision dataset | Unusable: all 200 images are the same frame, blocked and free identical. Recollect on the track |
 | Our code location | Under `notebooks/` (mounted into Docker). The `jetbot/` package is baked into the image at build time, edits there are not seen |
 | Battery | 3S pack, INA219 at I2C bus 1 address 0x41, bus voltage register readable from the container (11.70 V on 2026-09-20). Usable later to scale timed maneuvers |
@@ -37,6 +37,7 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | SUDO | 2026-09-17 | Sudo on the robot is pre-approved; the password lives in Claude's local memory, not in the repo | The repo is pushed to GitHub |
 | STEP1 | 2026-09-17 | Datasets are recorded as sessions: `usb/images/datasets/<date>_<name>/` with frames at 4 Hz plus a `session.json` (tape color, lighting, section, obstacle, notes, frame size, max speed). Tool: `notebooks/mini_av/01_record_dataset.ipynb` with `recorder.py` | Labeling happens later on the Mac (D10) |
 | STRUCT | 2026-09-17 | Our code lives in `notebooks/mini_av/`, files numbered in pipeline order (01 record, 02 label, 03 train, 04 drive). No week folders | The same files are reused in later weeks; a week is a deadline, not a component |
+| LANE | 2026-09-20 | The robot drives in the lane center between the two blue lines. Target point = lane center where it crosses the lookahead circle; "line visible" (D8) means "lane visible"; avoidance (D7) leaves the lane to the fixed side and returns into it | Confirmed by the user after the camera survey; replaces the earlier single-line note |
 | D12 | 2026-09-16 | Logging: one CSV row per control step per run (time, dt, mode, model outputs, steering, speed, FPS) plus a run metadata file (config constants, model version), on the USB stick. Every experiment recorded as problem -> hypothesis -> change -> test -> result | Graphs and tables are required deliverables |
 
 ## Risks to measure
@@ -47,4 +48,4 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 
 ## Open
 
-Nothing blocking. Still needed from the team: tape color and width, curve radii of the built track, number of JetBots and batteries, team roles for the slides.
+Nothing blocking. Still needed from the team: tape width, lane width, radius of the sharpest curve, number of JetBots and batteries, team roles for the slides.
