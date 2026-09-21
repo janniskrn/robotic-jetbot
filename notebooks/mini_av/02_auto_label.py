@@ -80,6 +80,8 @@ def centered_driving(session_dir):
     """True if the session was driven on the lane center (no weaving, no turns in place while driving)"""
     with open(os.path.join(session_dir, 'session.json')) as f:
         session = json.load(f)
+    if session.get('curves_trusted') is False:  # set by hand for driving runs where the robot swung
+        return False
     return not session.get('weave') and not session.get('spin_every')
 
 
