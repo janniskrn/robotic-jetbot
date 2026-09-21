@@ -55,6 +55,8 @@ def metrics(steps):
         'lane_lost_steps': sum(1 for s in steps if s['lane_visible'] < 0.5),
         'mean_speed': mean([s['speed'] for s in steps]),
     }
+    # curves pull the lane center to their inside: mostly positive lane_x = right curves = clockwise
+    result['direction'] = 'cw' if mean(lane_x) > 0 else 'ccw'
     for cls in ('straight', 'gentle', 'sharp'):
         result['speed_' + cls] = mean([s['speed'] for s in steps if s['curve_class'] == cls])
     return result
@@ -121,11 +123,11 @@ def main():
         rows.append((name, kind, metrics(steps), info.get('stop_reason', '')))
         plot_run(name, steps, kind)
     plot_comparison(rows)
-    header = ['run', 'mode', 'duration s', 'loop Hz', 'inference ms', 'wobble (lane_x std)', 'mean abs lane_x',
+    header = ['run', 'mode', 'direction', 'duration s', 'loop Hz', 'inference ms', 'wobble (lane_x std)', 'mean abs lane_x',
               'steering jitter', 'lane lost steps', 'mean speed', 'speed straight', 'speed gentle', 'speed sharp', 'stop']
     lines = ['| ' + ' | '.join(header) + ' |', '|' + ' :--- |' * len(header)]
     for name, kind, m, reason in rows:
-        cells = [name, kind] + ['%.3f' % m[k] if k != 'lane_lost_steps' else str(m[k]) for k in
+        cells = [name, kind, m['direction']] + ['%.3f' % m[k] if k != 'lane_lost_steps' else str(m[k]) for k in
                                 ('duration_s', 'loop_hz', 'inference_ms', 'lane_x_std', 'lane_x_mean_abs',
                                  'steering_jitter', 'lane_lost_steps', 'mean_speed', 'speed_straight',
                                  'speed_gentle', 'speed_sharp')] + [reason]
