@@ -42,7 +42,9 @@ class Controller(object):
             self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
             change = 0.0 if self.last_error is None else (self.lane_x - self.last_error) / dt
             self.last_error = self.lane_x
-            wanted = config.STEERING_KP * self.lane_x + config.STEERING_KD * change
+            # progressive: linear for small deviations, the cubic term adds strength only for large ones
+            wanted = (config.STEERING_KP * self.lane_x + config.STEERING_K3 * self.lane_x ** 3
+                      + config.STEERING_KD * change)
             self.steering = limit_change(wanted, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
             if self.use_curve:
                 self.speed = limit_change(self.target_speed(curve_probs), self.speed,
