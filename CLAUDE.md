@@ -132,7 +132,12 @@ Every week ends with a demonstration of that week's tasks.
 - User `jetbot`, password `jetbot` (the JetBot image default). Use it as `echo 'jetbot' | sudo -S -p '' <command>`.
 - Note: this repository is public on GitHub, so the password is public too. Do not reuse it anywhere else, and keep the robot off untrusted networks.
 
-## 9. Never Use Emoji
+## 9. Battery
+
+- Before any session that drives the motors, check the battery: `python3 ~/jetbot/notebooks/mini_av/battery.py`. Do not start below 11.4 V at rest (about 50 %), and check again between sessions.
+- The robot browned out on 2026-09-20 after about 4 minutes of driving from 68 %. See the incident in `DECISIONS.md`.
+
+## 10. Never Use Emoji
 
 - Never use emoji anywhere: chat responses, documentation, code, comments, notebooks, commit messages.
 
