@@ -16,10 +16,17 @@ risks and bugs in the Task 2 plan and the current code. Fix what it finds, then 
 - **Task 2 (obstacle avoidance) not started.** Decided: minimal modes FOLLOW / AVOID / RECOVER / STOP (D9b),
   pass on the inside of the oval, default left (PASS).
 
+## Running when the session ended (2026-09-21 22:30)
+
+A detached curve-model training (with class weights, 3276 frames incl. the new `lap_ccw7-9` and the 4 trusted
+drive runs) followed by the TensorRT conversion. Log: USB stick `logs/train_curve_2026-09-21_22-30.log`; it ends
+with `FINISHED`. Compare with the old model (86.6 %, sharp 21/37 on `lap_ccw4` + `lap_cw3`); the new metrics are in
+`models/curve.json`. If the conversion line is missing from the log, run `03_convert_trt.py --task curve`.
+
 ## Next steps, in order
 
 1. **Critical review:** done on 2026-09-21 (DECISIONS.md, REVIEW2, PASS2, Open list). The open items there must be handled before or while building Task 2.
-2. **More counterclockwise sharp-curve data (CCWGAP):** clean laps counterclockwise with `auto_record.py`,
+2. **More counterclockwise sharp-curve data (CCWGAP):** 3 sessions recorded on 2026-09-21 (`lap_ccw7-9`, evening light, +54 sharp). clean laps counterclockwise with `auto_record.py`,
    plus the frames every `drive.py` run records (`drive_*` sessions). Label with `02_auto_label.py`.
    Drive sessions get curve labels only after setting `"curves_trusted": true` in their `session.json`
    by hand, for runs that did not swing (check the log first).
