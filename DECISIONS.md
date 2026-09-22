@@ -62,6 +62,8 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 | D9b | 2026-09-20 | Task 2 gets a minimal explicit mode variable in `decision.py`: FOLLOW / AVOID / RECOVER / STOP (replaces D9 "no state machine for now"; the full week 3 state machine with entry/exit/priority per state comes later) | Task 2 requires the sequence ROAD_FOLLOWING -> AVOIDANCE -> ROAD_RECOVERY -> ROAD_FOLLOWING |
 | PASS | 2026-09-20 | The robot passes an obstacle on the inside of the oval: counterclockwise = left, clockwise = right. If the direction cannot be detected, pass left. Direction can be taken from the recent sign of lane_x or the curve feedforward (curves pull the lane center to their inside) | User decision |
 | CCWGAP | 2026-09-20 | Before Task 2: collect more counterclockwise sharp-curve data and retrain the curve model (and possibly the lane model). The counterclockwise sharp curve is marginal: adaptive_ccw_5 passed with lane_x down to -0.48 and lane visible 0.47; our steering without the curve model lost the lane there after 10.9 s; the curve model's sharp recall is 21/37 and it rarely says "sharp" clockwise | User decision after watching the runs |
+| REVIEW2 | 2026-09-21 | Fixes from the critical review before Task 2: (1) during the 0.5 s lane-lost grace time `drive.py` holds the last command instead of steering on lane_x (lane_x is not trained on frames without a lane); (2) the motor watchdog and the control loop share a lock around motor writes, and the watchdog survives a transient I2C error; (3) drive sessions give curve labels only when `curves_trusted` is set true by hand after checking the log (4 stable 60 s runs so far; opt-in instead of opt-out); (4) `03_convert_trt.py` refuses a conversion that changes outputs by more than 0.05; (5) curve training weights classes by inverse frequency (sharp is 8 % of the data) | Review verdict: good to go after fixes |
+| PASS2 | 2026-09-21 | Refines PASS: the driving direction (and so the inside of the oval) is decided once per run, not live at each obstacle: from a command-line setting, or measured over the first laps. Obstacle triggers are suppressed or need higher confidence while the curve model says "sharp"; for week 1, obstacles stand on straights or gentle curves | lane_x is noisy near obstacles and curves; a false trigger in the marginal sharp curve is the worst case |
 | D12 | 2026-09-16 | Logging: one CSV row per control step per run (time, dt, mode, model outputs, steering, speed, FPS) plus a run metadata file (config constants, model version), on the USB stick. Every experiment recorded as problem -> hypothesis -> change -> test -> result | Graphs and tables are required deliverables |
 
 ## Incidents
@@ -86,5 +88,11 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 - If the kernel dies mid-session, `session.json` keeps the frame count from the last write. The labeling tool counts the files on disk instead.
 
 ## Open
+
+- **MOTOR_TRIM** is still 0.0 although the robot drifts right open-loop: measure it before the timed AVOID maneuver.
+- **RECOVER "centered"** needs a number (for example abs(lane_x) < 0.15 for 5 frames).
+- **AVOID timing vs. battery:** calibrate the timed segments over the battery range actually used (for example 11.5-12.4 V), or scale them by the measured voltage; keep the blind segment short.
+- **Mode table** for FOLLOW / AVOID / RECOVER / STOP (entry, action, exit, priority) before coding Task 2; the lane-lost rule must not fire during AVOID's deliberate excursion.
+- **Curvature feedforward depends only on the curve model:** consider adding a non-ML curvature sign (trend of lane_x / steering) so a missed "sharp" is not a single point of failure.
 
 Nothing blocking. Still needed from the team: tape width, lane width, radius of the sharpest curve, number of JetBots and batteries, team roles for the slides.

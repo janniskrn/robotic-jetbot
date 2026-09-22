@@ -15,6 +15,7 @@ from torch2trt import torch2trt
 
 from perception import load
 
+MAX_DIFFERENCE = 0.05  # largest allowed output difference to PyTorch (measured: 0.002 and below)
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 
 
@@ -27,6 +28,8 @@ def main():
     engine = torch2trt(model, [example], fp16_mode=True)
     with torch.no_grad():
         difference = (model(example).float() - engine(example).float()).abs().max().item()
+    if difference > MAX_DIFFERENCE:
+        raise SystemExit('conversion changed the outputs by %.4f: not saved' % difference)
     torch.save(engine.state_dict(), os.path.join(MODEL_DIR, args.task + '_trt.pth'))
     print('saved models/%s_trt.pth, largest output difference to PyTorch %.4f' % (args.task, difference))
 

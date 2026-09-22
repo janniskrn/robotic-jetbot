@@ -64,7 +64,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
     log = RunLogger(name, {'baseline': baseline, 'use_curve': use_curve, 'seconds': seconds,
                            'battery_start_v': round(battery.volts, 2)})
     recorder = Recorder(period=1.0 / RECORD_HZ)
-    recorder.start('drive_' + name, {'mode': 'drive', 'log': log.dir, 'baseline': baseline, 'use_curve': use_curve,
+    recorder.start('drive_' + name, {'mode': 'drive', 'curves_trusted': False, 'log': log.dir, 'baseline': baseline, 'use_curve': use_curve,
                                      'frame_width': camera.width, 'frame_height': camera.height})
     frames, saver = start_frame_saver(recorder)
     watchdog = MotorWatchdog(robot)
@@ -75,6 +75,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
             frame = wait_for_new_frame(camera, frame)
             perception.observe(frame)
         watchdog.start()
+        left = right = 0.0
         start = last = last_saved = time.time()
         while time.time() - start < seconds:
             if stop_event is not None and stop_event.is_set():
@@ -92,8 +93,11 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
                     pass
             mode = decision.update(percept, now)
             if mode == FOLLOW:
-                left, right = controller.update(percept['lane_x'], percept['curve_probs'], dt)
-                robot.set_motors(left, right)
+                if percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD:
+                    left, right = controller.update(percept['lane_x'], percept['curve_probs'], dt)
+                # else: short gap, keep the last command; lane_x is not trained on frames without a lane
+                with watchdog.lock:
+                    robot.set_motors(left, right)
                 watchdog.feed()
             else:
                 robot.stop()

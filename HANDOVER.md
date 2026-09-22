@@ -18,10 +18,11 @@ risks and bugs in the Task 2 plan and the current code. Fix what it finds, then 
 
 ## Next steps, in order
 
-1. **Critical review** (see above).
+1. **Critical review:** done on 2026-09-21 (DECISIONS.md, REVIEW2, PASS2, Open list). The open items there must be handled before or while building Task 2.
 2. **More counterclockwise sharp-curve data (CCWGAP):** clean laps counterclockwise with `auto_record.py`,
    plus the frames every `drive.py` run records (`drive_*` sessions). Label with `02_auto_label.py`.
-   Drive sessions where the robot swung must get `"curves_trusted": false` in their `session.json`.
+   Drive sessions get curve labels only after setting `"curves_trusted": true` in their `session.json`
+   by hand, for runs that did not swing (check the log first).
 3. **Retrain the curve model** (and consider the lane model) with the new data; always run
    `03_convert_trt.py` afterwards, otherwise the old TensorRT engine is used. Check sharp recall.
 4. **Re-run the Task 1 comparison** with the final configuration (baseline, nocurve, adaptive, both directions)

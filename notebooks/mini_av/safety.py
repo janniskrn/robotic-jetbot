@@ -74,6 +74,7 @@ class MotorWatchdog(threading.Thread):
         self.timeout = timeout
         self.last_feed = time.time()
         self.running = True
+        self.lock = threading.Lock()  # the control loop holds it too: no interleaved I2C motor writes
 
     def feed(self):
         """Called by the control loop every time it sets the motors"""
@@ -82,5 +83,9 @@ class MotorWatchdog(threading.Thread):
     def run(self):
         while self.running:
             if time.time() - self.last_feed > self.timeout:
-                self.robot.stop()
+                try:
+                    with self.lock:
+                        self.robot.stop()
+                except Exception as error:  # a transient I2C error must not end the watchdog
+                    print('motor watchdog: %s' % error)
             time.sleep(0.05)

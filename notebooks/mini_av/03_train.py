@@ -33,6 +33,7 @@ MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')  
 EPOCHS = 15
 BATCH_SIZE = 16
 LEARNING_RATE = 1e-4   # small: the pretrained backbone only needs fine-tuning
+CLASS_WEIGHTS = None   # curve task: set in main() to the inverse class frequency, so sharp curves count as much
 BRIGHTNESS = 0.25      # random brightness change of up to +-25 %, for changing daylight
 CONTRAST = 0.25        # random contrast change of up to +-25 %
 
@@ -110,7 +111,8 @@ def loss_and_stats(task, out, y):
         correct = ((out[:, 0] > 0).float() == visible).sum().item()
         return loss, {'correct': correct, 'x_error_sum': x_error.sum().item(), 'x_count': int(mask.sum().item())}
     labels = y[:, 0].long()
-    loss = F.cross_entropy(out, labels)
+    weight = None if CLASS_WEIGHTS is None else CLASS_WEIGHTS.to(out.device)
+    loss = F.cross_entropy(out, labels, weight=weight)
     predicted = out.argmax(1)
     confusion = np.zeros((3, 3), dtype=int)
     for t, p in zip(labels.tolist(), predicted.tolist()):
@@ -156,6 +158,11 @@ def main():
     print('train %d frames from %d sessions, validation %d frames from %s' % (
         len(train), len(set(r[1] for r in train)), len(val), sorted(set(r[1] for r in val))))
 
+    if args.task == 'curve':
+        global CLASS_WEIGHTS
+        counts = [sum(1 for r in train if r[2]['curve_class'] == c) for c in CURVE_CLASSES]
+        CLASS_WEIGHTS = torch.tensor([len(train) / (3.0 * max(n, 1)) for n in counts])
+        print('class counts %s, weights %s' % (counts, [round(w, 2) for w in CLASS_WEIGHTS.tolist()]))
     dev = device()
     model = build_model(args.task, pretrained=True).to(dev)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
