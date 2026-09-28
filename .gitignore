@@ -35,3 +35,5 @@ snapshots
 *.pt
 *.engine
 *.onnx
+# Backups of earlier model versions for replay comparisons (metrics of each version are in git history)
+notebooks/mini_av/models/old/

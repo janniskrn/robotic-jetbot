@@ -100,10 +100,12 @@ def turn_around_frames(session_dir):
     return names
 
 
-def label_session(session_dir):
-    """Writes labels.csv for one session and returns its rows"""
+def compute_labels(session_dir, curves_trusted):
+    """Label rows for every frame of a session (nothing is written).
+
+    curves_trusted: give curve labels at all (replay.py uses the bend of every session to find the section)
+    """
     frames = sorted(glob.glob(os.path.join(session_dir, 'frame_*.jpg')))
-    curves_trusted = centered_driving(session_dir)
     turning = turn_around_frames(session_dir)
     width = cv2.imread(frames[0]).shape[1]
     tracker = LaneTracker(width)
@@ -141,6 +143,12 @@ def label_session(session_dir):
             'label_source': 'color_mask',
             'reviewed': 0,
         })
+    return rows
+
+
+def label_session(session_dir):
+    """Writes labels.csv for one session and returns its rows"""
+    rows = compute_labels(session_dir, centered_driving(session_dir))
     with open(os.path.join(session_dir, 'labels.csv'), 'w') as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         writer.writeheader()

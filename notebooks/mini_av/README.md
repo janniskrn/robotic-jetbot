@@ -27,6 +27,7 @@ folders would mean moving or copying files every week.
 | `logger.py` | One CSV row per control step plus run.json, in `usb/logs/` | Robot |
 | `drive.py` | Main loop: perception -> decision -> control -> motors (`--baseline`, `--no-curve`) | Robot (container) |
 | `04_drive.ipynb` | Start and stop buttons for `drive.py` | Robot (browser) |
+| `replay.py` | Runs the trained models over recorded sessions offline and compares them with the color mask per section and direction (DATA2); judge a model before driving | Robot (container) |
 | `analyze_runs.py` | Task 1 table (`results/week1/`) and graphs (`usb/images/results/week1/`) from run logs | Robot host |
 | `battery.py` | Battery voltage and charge estimate; run it before any motor session | Robot host, container, or `ssh` from a PC |
 | `auto_record.py` | Robot drives the lane itself with `lane_mask` and records a session plus `auto_labels.csv` | Robot (`python3 auto_record.py --name lap --seconds 60` in the container) |
