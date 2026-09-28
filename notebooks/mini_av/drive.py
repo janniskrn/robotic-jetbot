@@ -106,8 +106,9 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
             mode = decision.update(percept, now)
             if mode == FOLLOW:
                 if percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD:
-                    left, right = controller.update(percept['lane_x'], percept['curve_probs'], dt)
-                # else: short gap, keep the last command; lane_x is not trained on frames without a lane
+                    left, right = controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'], dt)
+                else:  # short gap: steer without lane_x, which is not trained on frames without a lane
+                    left, right = controller.hold(percept['curve_probs'], percept['curve_dir'], dt)
                 with watchdog.lock:
                     robot.set_motors(left, right)
                 watchdog.feed()
@@ -118,6 +119,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
             probs = percept['curve_probs']
             log.step(time=now - start, dt=dt, mode=mode, lane_visible=percept['lane_visible'],
                      lane_x=percept['lane_x'], p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2],
+                     curve_dir=percept['curve_dir'],
                      curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
                      left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'])
             if mode != FOLLOW:

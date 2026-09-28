@@ -19,7 +19,7 @@ import cv2
 import torch
 
 from perception import load
-from vision import preprocess
+from vision import preprocess, split_curve_probs
 
 DATASET_ROOT = '/workspace/usb/images/datasets'
 MIN_LANE_X = 0.05     # |lane_x| below which lane_x gives no direction (the old FEEDFORWARD_MIN_X)
@@ -35,9 +35,8 @@ def model_outputs(lane_model, curve_model, bgr):
     image = preprocess(bgr).unsqueeze(0).cuda().half()
     lane = lane_model(image)[0].float()
     probs = torch.softmax(curve_model(image)[0].float(), 0).tolist()
-    if len(probs) == 5:  # straight, gentle_left, sharp_left, gentle_right, sharp_right
-        magnitude = [probs[0], probs[1] + probs[3], probs[2] + probs[4]]
-        curve_dir = probs[3] + probs[4] - probs[1] - probs[2]
+    if len(probs) == 5:
+        magnitude, curve_dir = split_curve_probs(probs)
     else:  # old 3-class model: straight, gentle, sharp, no direction
         magnitude, curve_dir = probs, None
     return {'lane_visible': torch.sigmoid(lane[0]).item(), 'lane_x': lane[1].item(),

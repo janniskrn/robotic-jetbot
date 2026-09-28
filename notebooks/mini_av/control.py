@@ -21,7 +21,6 @@ class Controller(object):
         self.use_curve = use_curve
         self.lane_x = 0.0      # smoothed lane position
         self.integral = 0.0    # leaky sum of lane_x over time
-        self.curve_side = 0.0  # smoothed lane_x: which way the curve bends
         self.last_error = None
         self.steering = 0.0
         self.speed = config.SPEED_SHARP  # start at the slowest speed that moves the robot, then ramp up
@@ -42,15 +41,15 @@ class Controller(object):
         steering_speed = config.SPEED_STRAIGHT - turning * (config.SPEED_STRAIGHT - config.SPEED_SHARP)
         return min(model_speed, steering_speed)
 
-    def feedforward(self, curve_probs):
+    def feedforward(self, curve_probs, curve_dir):
         """Base turn from the curve model: a curve needs a sustained turn that P alone only gives with a
-        large error. The direction comes from the lane position (the lane center moves to the inside)."""
-        if abs(self.curve_side) < config.FEEDFORWARD_MIN_X:
+        large error. Size from how sharp the curve is, direction from which way it bends (both curve model)."""
+        if abs(curve_dir) < config.FEEDFORWARD_MIN_DIR:
             return 0.0
         size = curve_probs[1] * config.FEEDFORWARD_GENTLE + curve_probs[2] * config.FEEDFORWARD_SHARP
-        return size if self.curve_side > 0 else -size
+        return size if curve_dir > 0 else -size
 
-    def update(self, lane_x, curve_probs, dt):
+    def update(self, lane_x, curve_probs, curve_dir, dt):
         """Returns (left, right) wheel speeds"""
         if self.baseline:
             # stock JetBot style: raw model output, plain P steering, constant speed
@@ -58,7 +57,6 @@ class Controller(object):
             self.speed = config.BASELINE_SPEED
         else:
             self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
-            self.curve_side += config.FEEDFORWARD_SIDE_SMOOTHING * (self.lane_x - self.curve_side)
             change = 0.0 if self.last_error is None else (self.lane_x - self.last_error) / dt
             self.last_error = self.lane_x
             # leaky integral: grows while the robot stays off-center in a curve, fades on the straight
@@ -68,13 +66,27 @@ class Controller(object):
             # so the gains shrink with speed and the steering has the same effect at every speed
             schedule = config.STEERING_REF_SPEED / max(self.speed, config.STEERING_REF_SPEED)
             wanted = (schedule * (config.STEERING_KP * self.lane_x + config.STEERING_KD * change) + integral_part
-                      + self.feedforward(curve_probs))
+                      + self.feedforward(curve_probs, curve_dir))
             self.steering = limit_change(wanted, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
             if self.use_curve:
                 self.speed = limit_change(self.target_speed(curve_probs, self.lane_x), self.speed,
                                           config.SPEED_UP_RATE, config.SPEED_DOWN_RATE, dt)
             else:
                 self.speed = config.BASELINE_SPEED  # same speed as the baseline: the runs differ only in steering
+        return self.wheels()
+
+    def hold(self, curve_probs, curve_dir, dt):
+        """Returns (left, right) for a short gap in which the lane is not visible (lane_x is not trained on
+        such frames). In a curve the robot keeps turning into it, at least as hard as the feedforward: holding
+        the last raw command held a turn out of the sharp ccw curve in both failed runs (DATA2). On a straight
+        the last command is kept."""
+        turn = self.feedforward(curve_probs, curve_dir)
+        if turn != 0.0 and (self.steering * turn <= 0.0 or abs(self.steering) < abs(turn)):
+            self.steering = limit_change(turn, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
+        return self.wheels()
+
+    def wheels(self):
+        """(left, right) wheel speeds from the current speed and steering"""
         left = self.speed + self.steering + config.MOTOR_TRIM
         right = self.speed - self.steering - config.MOTOR_TRIM
         return max(-1.0, min(1.0, left)), max(-1.0, min(1.0, right))

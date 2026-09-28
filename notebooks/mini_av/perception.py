@@ -9,7 +9,7 @@ import time
 import torch
 
 import config
-from vision import CURVE_CLASSES, build_model, preprocess
+from vision import CURVE_CLASSES, build_model, preprocess, split_curve_probs
 
 
 def load(task, allow_trt=True):
@@ -40,22 +40,26 @@ class Perception(object):
             raise RuntimeError('no lane model: train it first with 03_train.py --task lane')
         self.curve_model = load('curve') if use_curve else None
         self.frame_count = 0
-        self.curve_probs = [1.0, 0.0, 0.0]  # straight until the curve model says otherwise
+        self.curve_model_probs = [1.0, 0.0, 0.0, 0.0, 0.0]  # straight until the curve model says otherwise
 
     @torch.no_grad()
     def observe(self, frame):
-        """Returns a dict: lane_visible (probability), lane_x (-1..1), curve_probs, inference_ms"""
+        """Returns a dict: lane_visible (probability), lane_x (-1..1), curve_probs (straight, gentle, sharp),
+        curve_dir (-1 left .. 1 right), curve_class, inference_ms"""
         start = time.time()
         image = preprocess(frame).unsqueeze(0).cuda().half()
         lane = self.lane_model(image)[0].float()
         if self.curve_model is not None and self.frame_count % config.CURVE_EVERY == 0:
             new = torch.softmax(self.curve_model(image)[0].float(), 0).tolist()
-            self.curve_probs = [old + config.CURVE_SMOOTHING * (n - old) for old, n in zip(self.curve_probs, new)]
+            self.curve_model_probs = [old + config.CURVE_SMOOTHING * (n - old)
+                                      for old, n in zip(self.curve_model_probs, new)]
         self.frame_count += 1
+        curve_probs, curve_dir = split_curve_probs(self.curve_model_probs)
         return {
             'lane_visible': torch.sigmoid(lane[0]).item(),
             'lane_x': max(-1.0, min(1.0, lane[1].item())),
-            'curve_probs': list(self.curve_probs),
-            'curve_class': CURVE_CLASSES[max(range(3), key=lambda i: self.curve_probs[i])],
+            'curve_probs': curve_probs,
+            'curve_dir': curve_dir,
+            'curve_class': CURVE_CLASSES[max(range(3), key=lambda i: curve_probs[i])],
             'inference_ms': (time.time() - start) * 1000.0,
         }

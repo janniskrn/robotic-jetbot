@@ -21,7 +21,7 @@ folders would mean moving or copying files every week.
 | `02_manual_label.py` | Manual labeling on a computer with a screen (test only, see `MANUAL_TEST.md`) | Mac |
 | `config.py` | All tuning values of the driving program | Robot |
 | `safety.py` | Camera watchdog and battery guard, shared by every program that drives | Robot |
-| `perception.py` | Camera frame -> lane visible, lane position, curve probabilities (models) | Robot |
+| `perception.py` | Camera frame -> lane visible, lane position, curve probabilities and curve direction (models) | Robot |
 | `decision.py` | FOLLOW or STOP (Task 1); AVOID and RECOVER come with Task 2 | Robot |
 | `control.py` | Smoothed PD steering, curve-based speed, rate limits, motor trim | Robot |
 | `logger.py` | One CSV row per control step plus run.json, in `usb/logs/` | Robot |

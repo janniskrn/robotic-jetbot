@@ -4,7 +4,8 @@
     python3 03_train.py --task curve --val <session name part>
 
 lane:  outputs lane_visible (yes/no) and lane_x; lane_x only counts on frames where the lane is visible.
-curve: straight / gentle / sharp, only frames that have a curve class.
+curve: straight / gentle / sharp, and left or right for a curve (vision.CURVE_MODEL_CLASSES); only frames
+       that have a curve class. A mirrored image swaps left and right.
 
 Whole sessions are held out for validation (--val), never single frames: neighboring frames look
 almost the same, so a random split would make the result look better than it is.
@@ -25,7 +26,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from vision import CURVE_CLASSES, build_model, preprocess
+from vision import CURVE_MODEL_CLASSES, build_model, curve_model_class, preprocess
 
 DATASET_ROOT = '/workspace/usb/images/datasets'  # inside the Jupyter container
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')  # SD card, *.pth is not in git
@@ -34,6 +35,9 @@ EPOCHS = 15
 BATCH_SIZE = 16
 LEARNING_RATE = 1e-4   # small: the pretrained backbone only needs fine-tuning
 CLASS_WEIGHTS = None   # curve task: set in main() to the inverse class frequency, so sharp curves count as much
+CLASSES = len(CURVE_MODEL_CLASSES)
+MIRRORED = {'straight': 'straight', 'gentle_left': 'gentle_right', 'sharp_left': 'sharp_right',
+            'gentle_right': 'gentle_left', 'sharp_right': 'sharp_left'}  # a mirrored curve bends the other way
 BRIGHTNESS = 0.25      # random brightness change of up to +-25 %, for changing daylight
 CONTRAST = 0.25        # random contrast change of up to +-25 %
 
@@ -68,7 +72,10 @@ def target(task, row, flipped):
         visible = float(row['lane_visible'])
         x = float(row['lane_x']) if row['lane_x'] != '' else 0.0
         return [visible, -x if flipped else x]  # a mirrored image mirrors the lane center
-    return [float(CURVE_CLASSES.index(row['curve_class']))]  # a curve stays the same class when mirrored
+    name = curve_model_class(row['curve_class'], float(row['curve_value']))
+    if flipped:
+        name = MIRRORED[name]
+    return [float(CURVE_MODEL_CLASSES.index(name))]
 
 
 def augment(bgr):
@@ -114,7 +121,7 @@ def loss_and_stats(task, out, y):
     weight = None if CLASS_WEIGHTS is None else CLASS_WEIGHTS.to(out.device)
     loss = F.cross_entropy(out, labels, weight=weight)
     predicted = out.argmax(1)
-    confusion = np.zeros((3, 3), dtype=int)
+    confusion = np.zeros((CLASSES, CLASSES), dtype=int)
     for t, p in zip(labels.tolist(), predicted.tolist()):
         confusion[t][p] += 1
     return loss, {'correct': (predicted == labels).sum().item(), 'confusion': confusion}
@@ -123,7 +130,7 @@ def loss_and_stats(task, out, y):
 def run_epoch(model, rows, task, dev, optimizer=None):
     """One pass over rows; trains if an optimizer is given. Returns the metrics."""
     model.train(optimizer is not None)
-    total = {'loss': 0.0, 'correct': 0, 'x_error_sum': 0.0, 'x_count': 0, 'confusion': np.zeros((3, 3), dtype=int)}
+    total = {'loss': 0.0, 'correct': 0, 'x_error_sum': 0.0, 'x_count': 0, 'confusion': np.zeros((CLASSES, CLASSES), dtype=int)}
     with torch.set_grad_enabled(optimizer is not None):
         for images, y in batches(rows, task, train=optimizer is not None):
             images, y = images.to(dev), y.to(dev)
@@ -160,8 +167,11 @@ def main():
 
     if args.task == 'curve':
         global CLASS_WEIGHTS
-        counts = [sum(1 for r in train if r[2]['curve_class'] == c) for c in CURVE_CLASSES]
-        CLASS_WEIGHTS = torch.tensor([len(train) / (3.0 * max(n, 1)) for n in counts])
+        names = [curve_model_class(r[2]['curve_class'], float(r[2]['curve_value'])) for r in train]
+        counts = [names.count(c) for c in CURVE_MODEL_CLASSES]
+        # mirroring makes left and right equally frequent on average, so both sides get the same weight
+        pairs = [counts[0], (counts[1] + counts[3]) / 2.0, (counts[2] + counts[4]) / 2.0]
+        CLASS_WEIGHTS = torch.tensor([len(train) / (CLASSES * max(pairs[i], 1)) for i in [0, 1, 2, 1, 2]])
         print('class counts %s, weights %s' % (counts, [round(w, 2) for w in CLASS_WEIGHTS.tolist()]))
     dev = device()
     model = build_model(args.task, pretrained=True).to(dev)
