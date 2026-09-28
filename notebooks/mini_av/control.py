@@ -43,8 +43,11 @@ class Controller(object):
 
     def feedforward(self, curve_probs, curve_dir):
         """Base turn from the curve model: a curve needs a sustained turn that P alone only gives with a
-        large error. Size from how sharp the curve is, direction from which way it bends (both curve model)."""
+        large error. Size from how sharp the curve is, direction from which way it bends (both curve model).
+        None when the robot is already inside the curve: then P steers it back to the center."""
         if abs(curve_dir) < config.FEEDFORWARD_MIN_DIR:
+            return 0.0
+        if self.lane_x * curve_dir < 0 and abs(self.lane_x) > config.FEEDFORWARD_MAX_INSIDE:
             return 0.0
         size = curve_probs[1] * config.FEEDFORWARD_GENTLE + curve_probs[2] * config.FEEDFORWARD_SHARP
         return size if curve_dir > 0 else -size
