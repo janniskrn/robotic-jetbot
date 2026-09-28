@@ -8,6 +8,7 @@ Run inside the Jupyter container, from this folder:
     python3 auto_record.py --name weave_a --seconds 60 --weave 45     # off-center views
     python3 auto_record.py --name spin_a --seconds 60 --spin-every 5  # views without the lane
     add --turn-around to drive the lane in the other direction
+    python3 auto_record.py --name cups_a --seconds 90 --cup-stop       # approaches to red-band cups (Task 2)
 """
 
 import math
@@ -20,6 +21,7 @@ import time
 import cv2
 from jetbot import Camera, Robot
 
+from cup_mask import find_cup
 from lane_mask import LaneTracker, blue_mask, is_left_line, line_centers
 from recorder import Recorder
 from safety import BatteryGuard, BatteryLow, CameraFrozen, wait_for_new_frame
@@ -40,6 +42,7 @@ TURN_AROUND_PULSES = 6  # pulses before looking for the lane again: roughly half
 MAX_PULSES = 40       # give up after this many pulses without finding the lane
 ALIGN_TOLERANCE = 30  # pixels the lane center may be off the image center to count as aligned
 SAME_VIEW_DIFF = 20   # mean gray difference (0-255, 32x32 thumbnails) below which two views count as the same heading
+CUP_STOP_ROW = 109    # --cup-stop: stop and turn around when the cup's red band reaches this row (about 20 cm, cup_mask.py)
 
 def steering_error(center, image_width):
     """Lane center offset from the image center, -1 (left edge) .. 1 (right edge)"""
@@ -90,11 +93,13 @@ def spin(robot, camera, recorder, labels, min_pulses, new_heading=False):
     return False
 
 
-def drive(robot, camera, recorder, seconds, labels, trace, battery, weave=0.0, spin_every=0.0):
+def drive(robot, camera, recorder, seconds, labels, trace, battery, weave=0.0, spin_every=0.0, cup_stop=False):
     """Follows the lane until the time is up or the lane is lost; returns the stop reason.
 
     weave: pixels the steering target swings left and right of the image center (0 = drive centered).
     spin_every: seconds between turns in place (0 = never).
+    cup_stop: stop in front of a cup and turn around, so the robot shuttles between cups on the lane and
+    records many approaches for the obstacle model.
     For every saved frame, writes what the color mask saw: these are the automatic pre-labels (D10).
     """
     tracker = LaneTracker(camera.width)
@@ -111,6 +116,16 @@ def drive(robot, camera, recorder, seconds, labels, trace, battery, weave=0.0, s
             last_error = None
             last_spin = last_seen = last_time = time.time()
         frame = wait_for_new_frame(camera, frame)
+        cup = find_cup(frame) if cup_stop else None
+        if cup is not None and cup[1] >= CUP_STOP_ROW:
+            robot.stop()
+            save(recorder, labels, frame, line_centers(blue_mask(frame)), None)
+            if not spin(robot, camera, recorder, labels, TURN_AROUND_PULSES, new_heading=True):
+                return 'lane not found after turning at a cup'
+            tracker = LaneTracker(camera.width)
+            last_error = None
+            last_seen = last_time = time.time()
+            continue
         mask = blue_mask(frame)
         lines = line_centers(mask)
         center = tracker.update(mask)
@@ -142,6 +157,7 @@ def main():
     parser.add_argument('--weave', type=float, default=0.0, help='pixels the target swings left and right')
     parser.add_argument('--spin-every', type=float, default=0.0, help='seconds between turns in place')
     parser.add_argument('--turn-around', action='store_true', help='turn to the other lane direction first')
+    parser.add_argument('--cup-stop', action='store_true', help='stop and turn around in front of each cup')
     args = parser.parse_args()
 
     battery = BatteryGuard()
@@ -157,7 +173,7 @@ def main():
         'mode': 'auto_color_mask',
         'tape_color': 'blue',
         'section': 'mixed',
-        'obstacle': 'none',
+        'obstacle': 'red-band cups' if args.cup_stop else 'none',
         'notes': args.notes,
         'frame_width': camera.width,
         'frame_height': camera.height,
@@ -167,6 +183,7 @@ def main():
         'weave': args.weave,
         'spin_every': args.spin_every,
         'turn_around': args.turn_around,
+        'cup_stop': args.cup_stop,
         'battery_start_v': round(battery.volts, 2),
     })
     try:
@@ -182,7 +199,8 @@ def main():
                 if args.turn_around and not spin(robot, camera, recorder, labels, TURN_AROUND_PULSES, new_heading=True):
                     reason = 'lane not found after turning around'
                 else:
-                    reason = drive(robot, camera, recorder, args.seconds, labels, trace, battery, args.weave, args.spin_every)
+                    reason = drive(robot, camera, recorder, args.seconds, labels, trace, battery, args.weave, args.spin_every,
+                                   args.cup_stop)
             except CameraFrozen:
                 reason = 'camera frozen'
             except BatteryLow as low:

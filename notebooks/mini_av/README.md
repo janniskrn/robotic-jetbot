@@ -14,6 +14,7 @@ folders would mean moving or copying files every week.
 | `recorder.py` | Saves camera frames into dataset sessions | Robot |
 | `01_record_dataset.ipynb` | Drive with the gamepad and record a session | Robot |
 | `lane_mask.py` | Classical blue-tape lane detection (color mask); data tool and pre-labels only | Robot, workstation |
+| `cup_mask.py` | Classical detection of the red-band obstacle cups (color mask); data tool and labels only | Robot, workstation |
 | `02_auto_label.py` | Labels recorded sessions with the color mask (`labels.csv`) and draws review sheets | Robot or workstation |
 | `vision.py` | Network and preprocessing shared by training and driving | Robot, workstation |
 | `03_train.py` | Trains one model (`--task lane` or `curve`) with whole sessions held out | Robot (never while driving) or Mac |
@@ -30,7 +31,7 @@ folders would mean moving or copying files every week.
 | `replay.py` | Runs the trained models over recorded sessions offline and compares them with the color mask per section and direction (DATA2); judge a model before driving | Robot (container) |
 | `analyze_runs.py` | Task 1 table (`results/week1/`) and graphs (`usb/images/results/week1/`) from run logs | Robot host |
 | `battery.py` | Battery voltage and charge estimate; run it before any motor session | Robot host, container, or `ssh` from a PC |
-| `auto_record.py` | Robot drives the lane itself with `lane_mask` and records a session plus `auto_labels.csv` | Robot (`python3 auto_record.py --name lap --seconds 60` in the container) |
+| `auto_record.py` | Robot drives the lane itself with `lane_mask` and records a session plus `auto_labels.csv` | Robot (`python3 auto_record.py --name lap --seconds 60` in the container; `--cup-stop` shuttles between cups for obstacle data) |
 
 Planned next, same numbering: `02_label_dataset` (workstation), `03_train_*` (workstation or
 robot), `04_drive` plus the driving modules `config.py`, `perception.py`, `decision.py`,

@@ -77,12 +77,13 @@ def curve_class(value):
 
 
 def centered_driving(session_dir):
-    """True if the session was driven on the lane center (no weaving, no turns in place while driving)"""
+    """True if the session was driven on the lane center (no weaving, no turns in place while driving,
+    no turning around at cups)"""
     with open(os.path.join(session_dir, 'session.json')) as f:
         session = json.load(f)
     if 'curves_trusted' in session:  # driving runs: False by default, set True by hand after checking the log
         return bool(session['curves_trusted'])
-    return not session.get('weave') and not session.get('spin_every')
+    return not session.get('weave') and not session.get('spin_every') and not session.get('cup_stop')
 
 
 def turn_around_frames(session_dir):
