@@ -90,6 +90,11 @@ Status: **decided**, **open** (options proposed, waiting for the team), **revisi
 
 ## Open
 
+- **Data strategy (next session's first job):** does the sharp counterclockwise curve need much more data,
+  including negative and false-positive material (no lane, lane sideways, glare, blur, other lighting)?
+  Measure first with an offline replay check on the failed runs, then decide, plan, execute, measure again.
+  Also open: whether to hand-label a few hundred sharp-curve frames despite GOLD ("no human gold set").
+
 - **MOTOR_TRIM** is still 0.0 although the robot drifts right open-loop: measure it before the timed AVOID maneuver.
 - **RECOVER "centered"** needs a number (for example abs(lane_x) < 0.15 for 5 frames).
 - **AVOID timing vs. battery:** calibrate the timed segments over the battery range actually used (for example 11.5-12.4 V), or scale them by the measured voltage; keep the blind segment short.
