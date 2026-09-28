@@ -27,6 +27,8 @@ from safety import BatteryGuard, BatteryLow, CameraFrozen, MotorWatchdog, wait_f
 
 RECORD_HZ = 4.0  # camera frames saved per second as a dataset session, to see what went wrong and to retrain
 WARMUP_FRAMES = 5  # model calls with the motors off before driving (the first call took up to 1.1 s)
+STARTUP_TIMEOUT = 3.0  # seconds to wait (motors off) for the first sight of the lane: the camera's
+                       # exposure needs a moment after start, and the first frames can be too dark
 
 
 def start_frame_saver(recorder):
@@ -46,6 +48,10 @@ def start_frame_saver(recorder):
     thread = threading.Thread(target=save, daemon=True)
     thread.start()
     return frames, thread
+
+
+class NoLaneAtStart(Exception):
+    """The lane was not visible when the run started: put the robot on the lane"""
 
 
 def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
@@ -74,6 +80,12 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
         for _ in range(WARMUP_FRAMES):
             frame = wait_for_new_frame(camera, frame)
             perception.observe(frame)
+        # wait for the lane with the motors off instead of judging one unsettled frame
+        waited = time.time()
+        while perception.observe(frame)['lane_visible'] < config.LANE_VISIBLE_THRESHOLD:
+            if time.time() - waited > STARTUP_TIMEOUT:
+                raise NoLaneAtStart()
+            frame = wait_for_new_frame(camera, frame)
         watchdog.start()
         left = right = 0.0
         start = last = last_saved = time.time()
@@ -110,6 +122,8 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
                      left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'])
             if mode != FOLLOW:
                 break
+    except NoLaneAtStart:
+        reason = 'no lane at start: put the robot on the lane'
     except CameraFrozen:
         reason = 'camera frozen'
     except BatteryLow as low:
