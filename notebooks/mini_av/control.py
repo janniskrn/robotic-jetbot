@@ -21,6 +21,7 @@ class Controller(object):
         self.use_curve = use_curve
         self.lane_x = 0.0      # smoothed lane position
         self.integral = 0.0    # leaky sum of lane_x over time
+        self.curve_side = 0.0  # smoothed lane_x: which way the curve bends
         self.last_error = None
         self.steering = 0.0
         self.speed = config.SPEED_SHARP  # start at the slowest speed that moves the robot, then ramp up
@@ -44,10 +45,10 @@ class Controller(object):
     def feedforward(self, curve_probs):
         """Base turn from the curve model: a curve needs a sustained turn that P alone only gives with a
         large error. The direction comes from the lane position (the lane center moves to the inside)."""
-        if abs(self.lane_x) < config.FEEDFORWARD_MIN_X:
+        if abs(self.curve_side) < config.FEEDFORWARD_MIN_X:
             return 0.0
         size = curve_probs[1] * config.FEEDFORWARD_GENTLE + curve_probs[2] * config.FEEDFORWARD_SHARP
-        return size if self.lane_x > 0 else -size
+        return size if self.curve_side > 0 else -size
 
     def update(self, lane_x, curve_probs, dt):
         """Returns (left, right) wheel speeds"""
@@ -57,6 +58,7 @@ class Controller(object):
             self.speed = config.BASELINE_SPEED
         else:
             self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
+            self.curve_side += config.FEEDFORWARD_SIDE_SMOOTHING * (self.lane_x - self.curve_side)
             change = 0.0 if self.last_error is None else (self.lane_x - self.last_error) / dt
             self.last_error = self.lane_x
             # leaky integral: grows while the robot stays off-center in a curve, fades on the straight

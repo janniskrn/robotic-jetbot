@@ -21,6 +21,9 @@ STEERING_KD = 0.06      # wheel speed difference per unit of lane_x change per s
 FEEDFORWARD_GENTLE = 0.015  # base turn added in a gentle curve (times the curve model's probability)
 FEEDFORWARD_SHARP = 0.07    # base turn added in a sharp curve (0.04 was too weak: the robot ran wide counterclockwise)
 FEEDFORWARD_MIN_X = 0.05    # |lane_x| below which the curve direction is unclear and no feedforward is added
+FEEDFORWARD_SIDE_SMOOTHING = 0.05  # weight of a new frame in the smoothed curve direction (about 1 s at 20 Hz):
+                                   # a curve cannot change direction that fast, but the lane model can flip
+                                   # sign for single frames when only the outer line is visible
 STEERING_REF_SPEED = 0.32  # speed the gains were tuned at; at other speeds they are scaled by REF/speed
                            # (at 0.40 the unscaled gains made the robot swing on the straight)
 STEERING_RATE = 2.0     # maximum change of the steering command per second
