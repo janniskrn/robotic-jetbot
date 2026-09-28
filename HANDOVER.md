@@ -1,125 +1,72 @@
-# Handover (2026-09-27, end of session 1)
+# Handover (2026-09-27, end of session 2)
 
-For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md`, `WEEK1_PLAN.md`.
+For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest entries: DATA2, CURVE3,
+LANE2, FF2, OBST1), `WEEK1_PLAN.md`.
 
-**Your first job: decide, plan and execute a data strategy** (details in "The open question" below).
-Before starting, run a critical review (Sonnet subagent, high effort) of this plan and the code in
-`notebooks/mini_av/`, as the last session did (DECISIONS.md: REVIEW2, PASS2).
+**Your first job: obstacle data for Task 2** (step 4b of the plan below). The team stopped the session before
+recording; two small changes were proposed and not yet approved (see "Next steps").
 
 ## Where we are
 
-- **Task 1 works in principle**: with the models and our control layer the robot drove 60 s laps in both
-  directions (results: `results/week1/task1_results.md`, graphs on the USB stick in `images/results/week1/`).
-  The stock-style baseline loses the lane after about 20 s.
-- **The sharp curve at the couch, counterclockwise, is still the weak point.** Latest runs (2026-09-27, with
-  the new curve model): 16.8 s and 28.6 s, both ended there.
-- **Models:** lane (lane visible 99.6 %, lane_x error 0.022 on held-out sessions) and curve (85.9 %, sharp
-  recall 34/37 after class weighting, `DECISIONS.md` CURVE2). Both converted to TensorRT.
-- **Task 2 (obstacle avoidance) has not started.** Decisions ready: modes FOLLOW / AVOID / RECOVER / STOP
-  (D9b), passing on the inside of the oval with left as fallback (PASS, PASS2).
+- **Task 1 works in both directions.** Counterclockwise: 5 sharp curves in a row (run `v3_ccw_4`, 58 s, ended by
+  a test cup the team put on the road). Clockwise: 60 s without a lane loss (`v3_cw_1`). Logs in `usb/logs/`.
+- **What fixed the sharp ccw curve** (DATA2, CURVE3, FF2):
+  1. The curve model has 5 classes (straight, gentle/sharp left/right); `perception.py` gives `curve_dir`
+     (-1 left .. 1 right), and the feedforward takes its direction from it instead of from lane_x.
+  2. `FEEDFORWARD_SHARP` 0.07 -> 0.04 (with the steady direction 0.07 turned in early and cut over the inner line).
+  3. No feedforward once lane_x shows the robot more than 0.10 inside the curve (`FEEDFORWARD_MAX_INSIDE`).
+  4. During the 0.5 s lane-lost grace time `Controller.hold` keeps turning into the curve (unless already inside).
+- **Lane model unchanged** (2026-09-20). A retrain on all data had a constant offset (+0.025..+0.037) and is not
+  used (LANE2, kept in `models/old/`). Old models are backed up in `notebooks/mini_av/models/old/`.
+- **`replay.py`** measures models offline per section and direction (hard-case set: the unlabeled runs
+  `drive_v2_adaptive_a/_b` plus `lap_ccw4`, `lap_cw3`). Use it before every driving test.
 
-## The open question: more data, and which data
+## Lessons from this session
 
-The evidence says the remaining failure is **perception, not control**:
+- The single-row lane_x carries no heading: at the sharp curve's exit it reads slightly right both when the robot
+  is inside and when it runs wide, and the mask labels say the same. More lane_x data cannot fix that.
+- **Frames alone did not tell inside from wide; the person watching did.** Ask the team what they saw before
+  tuning. Claude misread two runs from the images.
+- Change one thing per driving test; each lane loss costs a human trip.
 
-- In the sharp counterclockwise curve only the outer line is visible and the robot is at an angle. There the
-  lane model reports too small a lane position, and in the last run it even **flipped sign for a few frames**
-  (log `2026-09-28_03-45-05_v2_adaptive_b`, 27.9 s: +0.11 instead of negative), so the robot briefly steered
-  out of the curve. The control now smooths the curve direction over about a second (committed), but that
-  treats the symptom.
-- The lane model has never seen such frames with correct labels: the color mask that produces the labels is
-  itself unreliable exactly there (one line, sideways tape), so those frames were labeled "lane not visible"
-  and dropped from the lane_x loss.
+## Task 2: obstacle recognition (OBST1)
 
-**Plan this properly, then execute it:**
+- Obstacles: white paper cups (about 8 cm) with a red tape band all around; all cups, also for the demo.
+- `cup_mask.py` finds the band (hue 165-180 and 0-4; 0 false cups in 6298 recorded frames). Band lower edge:
+  20 cm row 109, 30 cm row 98, 50 cm row 84 (snapshots in `usb/images/obstacle_survey/`).
+- `auto_record.py --cup-stop` follows the lane with the blue mask, stops at a cup, turns around and drives to the
+  next one. First session `2026-09-28_06-13-18_cups_a` (60 s): 4 approaches, all stopped, but at about 12 cm
+  instead of 20 (camera lag), and only about 3 "blocked" frames per approach.
 
-1. **Measure first, offline.** Build a replay check: run the current models over the frames of the failed runs
-   (`usb/images/datasets/*drive_v2_adaptive_*`) and compare with the mask labels, split by section
-   (straight / gentle / sharp) and by direction. That gives a hard number for "how bad is the model in the
-   sharp curve" and lets every later change be judged without driving. This is the cheapest and most useful
-   next step.
-2. **Decide what data is missing**, at least:
-   - **Hard cases:** the sharp curve counterclockwise, from many starting positions and angles, including
-     views with only one line, entering too wide, and the curve exit.
-   - **Negative and false-positive material:** frames with no lane at all, the lane far away sideways, other
-     blue objects (the couch), strong glare, other lighting (day, evening, lamp), motion blur. These teach
-     "lane not visible" and stop false confidence.
-   - **Balance:** currently about 3300 labeled frames, mostly straights. Count per section and direction, and
-     record a target ("at least N frames per section and direction, at least M with the lane not visible").
-   - **Label quality where it matters most:** the mask is weakest in the sharp curve, which is where the model
-     needs the best labels. Options: hand-label a few hundred frames there with `02_manual_label.py`
-     (it exists and is tested), or improve the mask for one-line situations, or both. The decision GOLD said
-     "no human gold set"; propose revisiting it for the sharp curve only, and ask the user.
-3. **Then retrain and measure again with the replay check**, not by driving first.
+## Next steps (each needs the team's go)
 
-## Other levers for quality (evaluate, don't apply blindly)
-
-- **Model output:** instead of one lane position, predict the two line positions separately (left and right
-  line, each with "visible"), and compute the lane center in code. In the sharp curve a single line is then a
-  first-class case instead of a missing label.
-- **Auxiliary output "curve direction"** (left / right / none) trained on the signed curve value; would fix the
-  sign flip in perception rather than in control.
-- **More input:** the models see 224x224. Recording at a higher resolution and downscaling later keeps detail
-  for small or distant tape (also needed for traffic signs in week 2).
-- **Time context:** the model sees single frames. Feeding two frames (now and 0.15 s ago) or smoothing the
-  model output would stabilize exactly the flickering frames.
-- **Augmentation:** currently mirror, brightness, contrast. Motion blur and small rotations match the real
-  failure cases; hue must stay untouched (the blue tape color is the signal).
-- **Training:** longer training with early stopping, and a learning-rate schedule; the curve model was still
-  improving when it stopped.
-- **Evaluation:** keep a fixed hard-case test set (sharp curve, both directions, mixed lighting) and report
-  the numbers for every model version in `DECISIONS.md`, the way CURVE1 and CURVE2 are recorded.
-
-## After that
-
-1. Repeat the Task 1 comparison with the final configuration (baseline, nocurve, adaptive, both directions)
-   and regenerate the table with `analyze_runs.py`.
-2. Task 2 per `WEEK1_PLAN.md` Phases 4-5, with the open items in `DECISIONS.md` (motor trim, numeric
-   "centered" for RECOVER, avoidance timing across the battery range, mode table).
+1. **Proposed, not approved yet:** `CUP_STOP_ROW` 109 -> 104 (stop at about 20 cm) and record at 8 Hz in cup mode.
+2. **Record** 6 x 90 s: cups centered on both straights (2 sessions), shifted left/right in the lane (2), one in the
+   gentle curve (1), new positions (1). Target 300+ "blocked" frames. Team moves the cups between sessions.
+3. **Labels (4c):** blocked from band row 98 (30 cm) with the cup in the lane, free above about row 90 or no cup,
+   frames between left out; review sheets. Add an `obstacle` label to `02_auto_label.py`.
+4. **Train the obstacle model (4d)**, check false alarms per lap with laps without cups, then Phase 5 (AVOID /
+   RECOVER, `WEEK1_PLAN.md`, open items in `DECISIONS.md`).
+5. **Known risk for RECOVER:** off the track the lane model reported "lane visible 0.99" on the distant tape and
+   the robot drove on for about 4 s (run `v3_ccw_3`). Recovery must require the lane near the center, and the lane
+   model needs negative frames (lane far away or sideways).
+6. Later: repeat the Task 1 comparison (baseline, nocurve, adaptive, both directions) with `analyze_runs.py`.
 
 ## How to run things (on the robot, from `~/jetbot`)
 
 | What | Command |
 | :--- | :--- |
-| Battery | `python3 notebooks/mini_av/battery.py` (valid with the charger unplugged) |
+| Battery | `python3 notebooks/mini_av/battery.py` (valid with the charger unplugged; 11.90 V at the end of this session) |
 | Emergency stop | `scripts/stop_robot.sh` |
-| Camera broken ("(Argus) Error") | `scripts/restart_camera.sh` (happened twice; always works) |
-| Drive (in the container) | `echo 'jetbot' \| sudo -S -p '' docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 drive.py --name NAME --seconds 60` (add `--baseline` or `--no-curve`) |
-| Record laps by color mask | same prefix, `python3 auto_record.py --name lap_ccw10 --seconds 60` (`--turn-around`, `--weave 25`, `--spin-every 6`) |
+| Camera broken ("(Argus) Error") | `scripts/restart_camera.sh` |
+| Drive (in the container) | `echo 'jetbot' \| sudo -S -p '' docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 drive.py --name NAME --seconds 60` |
+| Record cup approaches | same prefix, `python3 auto_record.py --name cups_b --seconds 90 --cup-stop` |
+| Replay models offline | same prefix, `python3 replay.py v2_adaptive lap_ccw4 lap_cw3` (`--per-frame` for details) |
 | Label | host: `cd notebooks/mini_av && python3 02_auto_label.py /home/jetbot/usb/images/datasets/<session>/` |
-| Train | container: `python3 03_train.py --task curve --val lap_ccw4 --val lap_cw3 --epochs 6` (15-25 min) |
+| Train | container, detached: `docker exec -d ... bash -c "python3 -u 03_train.py --task curve --val lap_ccw4 --val lap_cw3 --epochs 8 > /workspace/usb/logs/<name>.log 2>&1; echo FINISHED >> ..."` (`-u`, or the log stays empty until the end) |
 | TensorRT (after every training) | container: `python3 03_convert_trt.py --task curve` |
-| Results | host: `python3 analyze_runs.py /home/jetbot/usb/logs/<run> ...` |
-| Long job without a session | `docker exec -d ... bash -c "python3 ... > /workspace/usb/logs/<name>.log 2>&1; echo FINISHED >> ..."` |
 
-- **Heredoc + sudo:** `echo pw | sudo -S docker exec -i ... <<EOF` fails (the heredoc replaces the password
-  input). Use `echo 'jetbot' | sudo -S -p '' -v && sudo -n docker exec -i ... <<'EOF'`.
-- **Stopping a driving script:** only with Ctrl-C (`pkill -INT -f '^python3 drive[.]py'`), never a plain kill.
-- **Robot off the lane:** `auto_record.py --turn-around --seconds 0.3` sometimes finds the lane again; usually
-  the human has to put the robot back. Every lane loss costs a human trip, so plan runs in batches.
-
-## Rules learned the hard way (all in CLAUDE.md / DECISIONS.md)
-
-- Never train while the robot drives: low memory froze the camera and the robot hit a chair.
-- Check the battery before motor sessions; below 11.4 V charge.
-- Every driving program: battery guard, camera watchdog, motor watchdog, Ctrl-C stop, motors off in `finally`,
-  and waiting for the lane before the first movement (a forgotten lens cap cost one run).
-- Steering: delay in the loop causes oversteering (D4b-D4f); higher speed needs more damping and gain
-  scheduling; the robot must not speed up while still turning (D5b).
-- Session names can be wrong about direction: take it from the data (sign of curve_value or mean lane_x).
-- Curve labels only from runs that did not swing: driving runs are `"curves_trusted": false` until checked.
-
-## State of code and data
-
-- Code: `notebooks/mini_av/` (see its README). Steering: KP 0.15, KD 0.06, gain scheduling to 0.32,
-  feedforward 0.015 gentle / 0.07 sharp with a smoothed direction, speeds 0.40 / 0.35 / 0.31, speed limited
-  while turning, startup waits for the lane.
-- Models in `notebooks/mini_av/models/` (weights not in git), metrics in `lane.json` / `curve.json`.
-- Data on the USB stick in `images/datasets/`: about 3300 labeled training frames plus the `drive_*` runs;
-  validation sessions `lap_ccw4` and `lap_cw3`; sessions with `test` in the name are never used.
-- Logs of every drive: USB stick `logs/`.
-
-## Human-only steps
-
-Charging and unplugging, putting the robot on the lane (also after every lane loss), providing and placing
-the obstacle box, checking the free floor beside the lane, watching Task 2 trials, the week 1 demo.
+- The models folder is owned by root: use sudo to copy or move model files.
+- Scripts for the container cannot be read from the host's scratchpad: pipe them in with
+  `echo 'jetbot' | sudo -S -p '' -v && sudo -n docker exec -i jetbot_jupyter python3 - < script.py`.
+- Never train while the robot drives; check the battery before motor sessions (below 11.4 V charge).
