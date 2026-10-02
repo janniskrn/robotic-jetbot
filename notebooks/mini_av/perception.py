@@ -43,6 +43,7 @@ class Perception(object):
         self.obstacle_model = load('obstacle')  # None until trained: then no cup is ever seen
         self.frame_count = 0
         self.curve_model_probs = [1.0, 0.0, 0.0, 0.0, 0.0]  # straight until the curve model says otherwise
+        self.cup = [-10.0, 0.0, 0.0]  # obstacle model output (visible logit, row, x): no cup until it says otherwise
 
     @torch.no_grad()
     def observe(self, frame):
@@ -56,9 +57,11 @@ class Perception(object):
             new = torch.softmax(self.curve_model(image)[0].float(), 0).tolist()
             self.curve_model_probs = [old + config.CURVE_SMOOTHING * (n - old)
                                       for old, n in zip(self.curve_model_probs, new)]
+        if self.obstacle_model is not None and self.frame_count % config.OBSTACLE_EVERY == 1:  # between curve frames
+            self.cup = self.obstacle_model(image)[0].float().tolist()
         self.frame_count += 1
         curve_probs, curve_dir = split_curve_probs(self.curve_model_probs)
-        cup = [-10.0, 0.0, 0.0] if self.obstacle_model is None else self.obstacle_model(image)[0].float().tolist()
+        cup = self.cup
         return {
             'lane_visible': torch.sigmoid(lane[0]).item(),
             'lane_x': max(-1.0, min(1.0, lane[1].item())),

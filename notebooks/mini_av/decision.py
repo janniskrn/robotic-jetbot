@@ -17,20 +17,24 @@ def cup_close(percept):
             and percept['cup_row'] >= config.OBSTACLE_ROW)
 
 
+def cup_gone(percept):
+    """True if no cup is seen, or only one clearly further away than the trigger distance"""
+    return (percept['cup_visible'] < config.OBSTACLE_VISIBLE_THRESHOLD
+            or percept['cup_row'] < config.OBSTACLE_CLEAR_ROW)
+
+
 class Decision(object):
     def __init__(self):
         self.lost_since = None
         self.lane_seen = False
         self.blocked = False
-        self.close_frames = 0  # frames in a row with a close cup
-        self.clear_frames = 0  # frames in a row without one
+        self.close_frames = 0  # control steps in a row with a close cup
+        self.clear_frames = 0  # control steps in a row with the cup gone
 
     def update(self, percept, now):
         """Returns the mode for this frame"""
-        if cup_close(percept):
-            self.close_frames, self.clear_frames = self.close_frames + 1, 0
-        else:
-            self.close_frames, self.clear_frames = 0, self.clear_frames + 1
+        self.close_frames = self.close_frames + 1 if cup_close(percept) else 0
+        self.clear_frames = self.clear_frames + 1 if cup_gone(percept) else 0
         if self.blocked and self.clear_frames >= config.OBSTACLE_CLEAR_FRAMES:
             self.blocked = False
         elif not self.blocked and self.close_frames >= config.OBSTACLE_FRAMES:
