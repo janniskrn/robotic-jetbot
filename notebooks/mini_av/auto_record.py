@@ -42,7 +42,12 @@ TURN_AROUND_PULSES = 6  # pulses before looking for the lane again: roughly half
 MAX_PULSES = 40       # give up after this many pulses without finding the lane
 ALIGN_TOLERANCE = 30  # pixels the lane center may be off the image center to count as aligned
 SAME_VIEW_DIFF = 20   # mean gray difference (0-255, 32x32 thumbnails) below which two views count as the same heading
-CUP_STOP_ROW = 109    # --cup-stop: stop and turn around when the cup's red band reaches this row (about 20 cm, cup_mask.py)
+CUP_STOP_ROW = 104    # --cup-stop: stop and turn around when the cup's red band reaches this row (about 25 cm, cup_mask.py);
+                      # with the camera lag the robot stops at about 20 cm (row 109 stopped at about 12 cm, session cups_a)
+START_FRAMES = 5      # camera frames in a row that must show the lane before the robot moves
+START_TIMEOUT = 3.0   # seconds to wait for that, motors off (a lens cap gives pure noise, 2026-10-01)
+LANE_WIDTH_RANGE = (100, 215)  # pixels two lines at the lookahead row may be apart to be the lane (same as 02_auto_label)
+CUP_RECORD_HZ = 8.0   # --cup-stop: frames saved per second; an approach lasts only about 2 s, and every frame shows a new distance
 
 def steering_error(center, image_width):
     """Lane center offset from the image center, -1 (left edge) .. 1 (right edge)"""
@@ -64,6 +69,23 @@ def lane_aligned(mask, width):
         return False
     centered = abs((lines[0] + lines[1]) / 2.0 - width / 2.0) < ALIGN_TOLERANCE
     return centered and is_left_line(mask, lines[0]) is True and is_left_line(mask, lines[1]) is False
+
+
+def wait_for_lane(camera):
+    """True once START_FRAMES frames in a row show two lines about one lane width apart, False after START_TIMEOUT.
+
+    With a covered lens the camera gives noise, in which the masks find random "lines" and "cups"; single noise
+    frames passed a two-line test, none passed it with the lane width.
+    """
+    start, in_a_row, frame = time.time(), 0, camera.value
+    while time.time() - start < START_TIMEOUT:
+        frame = wait_for_new_frame(camera, frame)
+        lines = line_centers(blue_mask(frame))
+        lane = len(lines) == 2 and LANE_WIDTH_RANGE[0] <= lines[1] - lines[0] <= LANE_WIDTH_RANGE[1]
+        in_a_row = in_a_row + 1 if lane else 0
+        if in_a_row >= START_FRAMES:
+            return True
+    return False
 
 
 def thumbnail(frame):
@@ -167,7 +189,7 @@ def main():
 
     robot = Robot()
     camera = Camera.instance()
-    recorder = Recorder(period=1.0 / RECORD_HZ)
+    recorder = Recorder(period=1.0 / (CUP_RECORD_HZ if args.cup_stop else RECORD_HZ))
     time.sleep(2.0)  # let the camera settle its exposure
     recorder.start(args.name, {
         'mode': 'auto_color_mask',
@@ -196,7 +218,9 @@ def main():
             trace.writerow(['time', 'lane_center_x', 'turn', 'battery_v'])
             try:
                 wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
-                if args.turn_around and not spin(robot, camera, recorder, labels, TURN_AROUND_PULSES, new_heading=True):
+                if not wait_for_lane(camera):
+                    reason = 'no lane in view at start: check the lens cap and put the robot on the lane'
+                elif args.turn_around and not spin(robot, camera, recorder, labels, TURN_AROUND_PULSES, new_heading=True):
                     reason = 'lane not found after turning around'
                 else:
                     reason = drive(robot, camera, recorder, args.seconds, labels, trace, battery, args.weave, args.spin_every,
