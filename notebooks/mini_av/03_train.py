@@ -131,7 +131,7 @@ def loss_and_stats(task, out, y):
         return loss, {'correct': (predicted == visible).sum().item(), 'x_count': int(mask.sum().item()),
                       'false_visible': int(((predicted == 1) & (visible == 0)).sum().item()),
                       'missed_visible': int(((predicted == 0) & (visible == 1)).sum().item()),
-                      'error_sums': errors.sum(0).cpu().numpy() if mask.any() else 0.0}
+                      'error_sums': errors.detach().sum(0).cpu().numpy() if mask.any() else 0.0}
     labels = y[:, 0].long()
     weight = None if CLASS_WEIGHTS is None else CLASS_WEIGHTS.to(out.device)
     loss = F.cross_entropy(out, labels, weight=weight)
