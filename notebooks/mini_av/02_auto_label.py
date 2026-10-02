@@ -11,6 +11,9 @@ For every frame of a session it writes labels.csv:
     curve_class    straight / gentle / sharp from curve_value; empty if curve_value is empty
                    Curve labels only come from sessions driven on the lane center: in weave and spin
                    sessions the robot is at an angle, and lens distortion then fakes a bend.
+    cup_visible    1 if a red-band obstacle cup is seen (cup_mask.py), 0 otherwise
+    cup_row        lower edge of the cup's red band, 0 (top) .. 1 (bottom of the image); empty without a cup
+    cup_x          center of the band, -1 (left edge) .. 1 (right edge); empty without a cup
     label_source   color_mask
     reviewed       0 until a person has checked the frame
 
@@ -29,6 +32,7 @@ import sys
 import cv2
 import numpy as np
 
+from cup_mask import find_cup
 from lane_mask import LOOKAHEAD_ROW, LaneTracker, blue_mask, is_left_line, line_centers
 
 MIN_TAPE_PIXELS = 150   # tape pixels on the floor (224x224 image) that count as "tape visible"
@@ -133,6 +137,7 @@ def compute_labels(session_dir, curves_trusted):
         if not visible:
             center = None
         last_center = center
+        cup = find_cup(image)
         rows.append({
             'frame': os.path.basename(path),
             'tape_visible': int(np.count_nonzero(mask) >= MIN_TAPE_PIXELS),
@@ -141,6 +146,9 @@ def compute_labels(session_dir, curves_trusted):
             'lane_x': '' if center is None else round(2.0 * center / width - 1.0, 4),
             'curve_value': '' if bend is None else round(bend, 4),
             'curve_class': curve_class(bend),
+            'cup_visible': int(cup is not None),
+            'cup_row': '' if cup is None else round(cup[1] / float(image.shape[0]), 4),
+            'cup_x': '' if cup is None else round(2.0 * cup[0] / width - 1.0, 4),
             'label_source': 'color_mask',
             'reviewed': 0,
         })
@@ -167,7 +175,11 @@ def draw(image, row):
     if row['lane_x'] != '':
         x = int((row['lane_x'] + 1.0) / 2.0 * w)
         cv2.circle(out, (x, y), 6, (0, 255, 255), 2)
-    text = '%s L%d %s' % (row['frame'][6:11], row['lane_visible'], row['curve_class'] or '-')
+    if row['cup_visible']:
+        cup_x, cup_y = int((row['cup_x'] + 1.0) / 2.0 * w), int(row['cup_row'] * h)
+        cv2.rectangle(out, (cup_x - 8, cup_y - 8), (cup_x + 8, cup_y), (0, 255, 0), 2)
+    text = '%s L%d %s%s' % (row['frame'][6:11], row['lane_visible'], row['curve_class'] or '-',
+                            ' C%d' % int(row['cup_row'] * h) if row['cup_visible'] else '')
     cv2.putText(out, text, (4, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 3)
     cv2.putText(out, text, (4, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
     return out

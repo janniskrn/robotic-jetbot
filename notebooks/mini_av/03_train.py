@@ -2,10 +2,13 @@
 
     python3 03_train.py --task lane  --val <session name part> [--val ...]
     python3 03_train.py --task curve --val <session name part>
+    python3 03_train.py --task obstacle --val <session name part>
 
 lane:  outputs lane_visible (yes/no) and lane_x; lane_x only counts on frames where the lane is visible.
 curve: straight / gentle / sharp, and left or right for a curve (vision.CURVE_MODEL_CLASSES); only frames
        that have a curve class. A mirrored image swaps left and right.
+obstacle: outputs cup_visible (yes/no), cup_row and cup_x; row and x only count on frames with a cup (OBST2).
+       Frames of the cup sessions plus every OBSTACLE_OTHER_EVERY-th frame of the other sessions (no cups there).
 
 Whole sessions are held out for validation (--val), never single frames: neighboring frames look
 almost the same, so a random split would make the result look better than it is.
@@ -38,6 +41,7 @@ CLASS_WEIGHTS = None   # curve task: set in main() to the inverse class frequenc
 CLASSES = len(CURVE_MODEL_CLASSES)
 MIRRORED = {'straight': 'straight', 'gentle_left': 'gentle_right', 'sharp_left': 'sharp_right',
             'gentle_right': 'gentle_left', 'sharp_right': 'sharp_left'}  # a mirrored curve bends the other way
+OBSTACLE_OTHER_EVERY = 4  # obstacle task: share of frames from sessions without cups (about 6000, all "no cup")
 BRIGHTNESS = 0.25      # random brightness change of up to +-25 %, for changing daylight
 CONTRAST = 0.25        # random contrast change of up to +-25 %
 
@@ -59,15 +63,22 @@ def load_rows(root, task):
         if 'test' in session:
             continue
         with open(labels_path) as f:
-            for row in csv.DictReader(f):
+            for i, row in enumerate(csv.DictReader(f)):
                 if task == 'curve' and not row['curve_class']:
+                    continue
+                if task == 'obstacle' and '_cups_' not in session and i % OBSTACLE_OTHER_EVERY:
                     continue
                 rows.append((os.path.join(session_dir, row['frame']), session, row))
     return rows
 
 
 def target(task, row, flipped):
-    """Label as a float vector: lane = [visible, x], curve = [class index]"""
+    """Label as a float vector: lane = [visible, x], obstacle = [visible, row, x], curve = [class index]"""
+    if task == 'obstacle':
+        visible = float(row['cup_visible'])
+        cup_row = float(row['cup_row']) if visible else 0.0
+        x = float(row['cup_x']) if visible else 0.0
+        return [visible, cup_row, -x if flipped else x]  # mirroring moves the cup to the other side, not up or down
     if task == 'lane':
         visible = float(row['lane_visible'])
         x = float(row['lane_x']) if row['lane_x'] != '' else 0.0
@@ -108,15 +119,19 @@ def batches(rows, task, train):
 
 def loss_and_stats(task, out, y):
     """Loss plus counts for the metrics"""
-    if task == 'lane':
+    if task in ('lane', 'obstacle'):
+        # first output: visible (yes/no); the others are positions that only count where something is visible
         visible = y[:, 0]
         loss = F.binary_cross_entropy_with_logits(out[:, 0], visible)
         mask = visible > 0.5
-        x_error = (out[:, 1] - y[:, 1]).abs()[mask]
+        errors = (out[:, 1:] - y[:, 1:]).abs()[mask]
         if mask.any():
-            loss = loss + F.mse_loss(out[:, 1][mask], y[:, 1][mask])
-        correct = ((out[:, 0] > 0).float() == visible).sum().item()
-        return loss, {'correct': correct, 'x_error_sum': x_error.sum().item(), 'x_count': int(mask.sum().item())}
+            loss = loss + F.mse_loss(out[:, 1:][mask], y[:, 1:][mask])
+        predicted = (out[:, 0] > 0).float()
+        return loss, {'correct': (predicted == visible).sum().item(), 'x_count': int(mask.sum().item()),
+                      'false_visible': int(((predicted == 1) & (visible == 0)).sum().item()),
+                      'missed_visible': int(((predicted == 0) & (visible == 1)).sum().item()),
+                      'error_sums': errors.sum(0).cpu().numpy() if mask.any() else 0.0}
     labels = y[:, 0].long()
     weight = None if CLASS_WEIGHTS is None else CLASS_WEIGHTS.to(out.device)
     loss = F.cross_entropy(out, labels, weight=weight)
@@ -130,7 +145,8 @@ def loss_and_stats(task, out, y):
 def run_epoch(model, rows, task, dev, optimizer=None):
     """One pass over rows; trains if an optimizer is given. Returns the metrics."""
     model.train(optimizer is not None)
-    total = {'loss': 0.0, 'correct': 0, 'x_error_sum': 0.0, 'x_count': 0, 'confusion': np.zeros((CLASSES, CLASSES), dtype=int)}
+    total = {'loss': 0.0, 'correct': 0, 'x_count': 0, 'false_visible': 0, 'missed_visible': 0, 'error_sums': 0.0,
+             'confusion': np.zeros((CLASSES, CLASSES), dtype=int)}
     with torch.set_grad_enabled(optimizer is not None):
         for images, y in batches(rows, task, train=optimizer is not None):
             images, y = images.to(dev), y.to(dev)
@@ -144,8 +160,14 @@ def run_epoch(model, rows, task, dev, optimizer=None):
                 total[key] = total[key] + value
     n = max(len(rows), 1)
     metrics = {'loss': total['loss'] / n, 'accuracy': total['correct'] / n}
-    if task == 'lane':
-        metrics['lane_x_mean_error'] = total['x_error_sum'] / max(total['x_count'], 1)
+    if task in ('lane', 'obstacle'):
+        means = np.atleast_1d(total['error_sums']) / max(total['x_count'], 1)
+        names = ['lane_x'] if task == 'lane' else ['cup_row', 'cup_x']
+        for name, value in zip(names, means):
+            metrics[name + '_mean_error'] = float(value)
+        metrics['false_visible'] = total['false_visible']
+        metrics['missed_visible'] = total['missed_visible']
+        metrics['visible_frames'] = total['x_count']
     else:
         metrics['confusion'] = total['confusion'].tolist()  # rows: true class, columns: predicted
     return metrics
@@ -153,7 +175,7 @@ def run_epoch(model, rows, task, dev, optimizer=None):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', choices=['lane', 'curve'], required=True)
+    parser.add_argument('--task', choices=['lane', 'curve', 'obstacle'], required=True)
     parser.add_argument('--val', action='append', required=True, help='part of a session name held out for validation')
     parser.add_argument('--epochs', type=int, default=EPOCHS)
     parser.add_argument('--root', default=DATASET_ROOT)
@@ -185,7 +207,7 @@ def main():
         history.append({'epoch': epoch, 'train': train_metrics, 'val': val_metrics})
         print('epoch %2d  train loss %.4f  val loss %.4f  val accuracy %.3f%s  (%.0f s)' % (
             epoch, train_metrics['loss'], val_metrics['loss'], val_metrics['accuracy'],
-            '  val lane_x error %.3f' % val_metrics['lane_x_mean_error'] if args.task == 'lane' else '',
+            ''.join('  val %s %.3f' % (k, v) for k, v in val_metrics.items() if k.endswith('_mean_error')),
             time.time() - start))
         if best is None or val_metrics['loss'] < best['val']['loss']:
             best = history[-1]

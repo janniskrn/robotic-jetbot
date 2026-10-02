@@ -10,8 +10,9 @@ import torchvision
 MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)  # ImageNet statistics, the backbone was pretrained on them
 STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
-# Outputs per task: lane = (lane_visible logit, lane_x); curve = CURVE_MODEL_CLASSES; obstacle = free/blocked
-TASK_OUTPUTS = {'lane': 2, 'curve': 5, 'obstacle': 2}
+# Outputs per task: lane = (lane_visible logit, lane_x); curve = CURVE_MODEL_CLASSES;
+# obstacle = (cup_visible logit, cup_row, cup_x), see OBST2
+TASK_OUTPUTS = {'lane': 2, 'curve': 5, 'obstacle': 3}
 CURVE_CLASSES = ['straight', 'gentle', 'sharp']  # how sharp: what speed and feedforward size use
 # The curve model also says which way the curve bends (DATA2): the sign of lane_x was near 0 and flipped
 # in the sharp curve. Left = negative curve_value, the same sign convention as lane_x.
