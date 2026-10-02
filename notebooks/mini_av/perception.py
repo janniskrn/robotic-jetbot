@@ -3,6 +3,7 @@
 No decisions and no motor commands here.
 """
 
+import math
 import os
 import time
 
@@ -39,13 +40,15 @@ class Perception(object):
         if self.lane_model is None:
             raise RuntimeError('no lane model: train it first with 03_train.py --task lane')
         self.curve_model = load('curve') if use_curve else None
+        self.obstacle_model = load('obstacle')  # None until trained: then no cup is ever seen
         self.frame_count = 0
         self.curve_model_probs = [1.0, 0.0, 0.0, 0.0, 0.0]  # straight until the curve model says otherwise
 
     @torch.no_grad()
     def observe(self, frame):
         """Returns a dict: lane_visible (probability), lane_x (-1..1), curve_probs (straight, gentle, sharp),
-        curve_dir (-1 left .. 1 right), curve_class, inference_ms"""
+        curve_dir (-1 left .. 1 right), curve_class, cup_visible (probability), cup_row (lower edge of the cup's
+        band, 0 top .. 1 bottom), cup_x (-1..1), inference_ms"""
         start = time.time()
         image = preprocess(frame).unsqueeze(0).cuda().half()
         lane = self.lane_model(image)[0].float()
@@ -55,11 +58,15 @@ class Perception(object):
                                       for old, n in zip(self.curve_model_probs, new)]
         self.frame_count += 1
         curve_probs, curve_dir = split_curve_probs(self.curve_model_probs)
+        cup = [-10.0, 0.0, 0.0] if self.obstacle_model is None else self.obstacle_model(image)[0].float().tolist()
         return {
             'lane_visible': torch.sigmoid(lane[0]).item(),
             'lane_x': max(-1.0, min(1.0, lane[1].item())),
             'curve_probs': curve_probs,
             'curve_dir': curve_dir,
             'curve_class': CURVE_CLASSES[max(range(3), key=lambda i: curve_probs[i])],
+            'cup_visible': 1.0 / (1.0 + math.exp(-cup[0])),
+            'cup_row': cup[1],
+            'cup_x': cup[2],
             'inference_ms': (time.time() - start) * 1000.0,
         }

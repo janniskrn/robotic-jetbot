@@ -8,7 +8,8 @@ import time
 import config
 
 COLUMNS = ['time', 'dt', 'mode', 'lane_visible', 'lane_x', 'p_straight', 'p_gentle', 'p_sharp',
-           'curve_dir', 'curve_class', 'steering', 'speed', 'left', 'right', 'battery_v', 'inference_ms']
+           'curve_dir', 'curve_class', 'steering', 'speed', 'left', 'right', 'battery_v', 'inference_ms',
+           'cup_visible', 'cup_row', 'cup_x']
 
 
 class RunLogger(object):

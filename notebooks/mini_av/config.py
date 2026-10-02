@@ -46,3 +46,8 @@ BASELINE_SPEED = 0.32
 
 # Decision
 LANE_LOST_TIMEOUT = 0.5  # seconds without a visible lane before the robot stops
+OBSTACLE_VISIBLE_THRESHOLD = 0.5  # obstacle model probability above which a cup counts as seen
+OBSTACLE_ROW = 98 / 224.0  # cup_row (lower edge of the red band) from which the cup is close: about 30 cm (OBST1);
+                           # the model reads 3-13 rows too close there, so the robot reacts at about 35-40 cm (OBST3)
+OBSTACLE_FRAMES = 3        # frames in a row with a close cup before the robot counts as blocked (debounce)
+OBSTACLE_CLEAR_FRAMES = 5  # frames in a row without a close cup before it drives on (hysteresis)

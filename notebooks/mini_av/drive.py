@@ -18,7 +18,7 @@ from jetbot import Camera, Robot
 
 import config
 from control import Controller
-from decision import FOLLOW, Decision
+from decision import BLOCKED, FOLLOW, Decision
 from logger import RunLogger
 from perception import Perception
 from recorder import Recorder
@@ -112,6 +112,12 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
                 with watchdog.lock:
                     robot.set_motors(left, right)
                 watchdog.feed()
+            elif mode == BLOCKED:  # wait in front of the cup; drive on (from slow) once it is gone
+                with watchdog.lock:
+                    robot.stop()
+                watchdog.feed()
+                controller.reset()
+                left = right = 0.0
             else:
                 robot.stop()
                 reason = 'lane lost'
@@ -121,8 +127,9 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
                      lane_x=percept['lane_x'], p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2],
                      curve_dir=percept['curve_dir'],
                      curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
-                     left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'])
-            if mode != FOLLOW:
+                     left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
+                     cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'])
+            if mode not in (FOLLOW, BLOCKED):
                 break
     except NoLaneAtStart:
         reason = 'no lane at start: put the robot on the lane'
