@@ -20,6 +20,7 @@ class Controller(object):
         self.baseline = baseline
         self.use_curve = use_curve
         self.lane_x = 0.0      # smoothed lane position
+        self.d_lane_x = 0.0    # more strongly smoothed lane position, only for the D term
         self.integral = 0.0    # leaky sum of lane_x over time
         self.last_error = None
         self.steering = 0.0
@@ -60,8 +61,11 @@ class Controller(object):
             self.speed = config.BASELINE_SPEED
         else:
             self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
-            change = 0.0 if self.last_error is None else (self.lane_x - self.last_error) / dt
-            self.last_error = self.lane_x
+            if self.last_error is None:
+                self.d_lane_x = self.lane_x
+            self.d_lane_x += config.D_SMOOTHING * (self.lane_x - self.d_lane_x)
+            change = 0.0 if self.last_error is None else (self.d_lane_x - self.last_error) / dt
+            self.last_error = self.d_lane_x
             # leaky integral: grows while the robot stays off-center in a curve, fades on the straight
             self.integral += self.lane_x * dt - self.integral * dt / config.STEERING_I_LEAK
             integral_part = max(-config.STEERING_I_MAX, min(config.STEERING_I_MAX, config.STEERING_KI * self.integral))

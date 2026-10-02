@@ -20,6 +20,8 @@ STEERING_KI = 0.0       # integral (off: 0.25 added delay and a growing swing on
 STEERING_I_LEAK = 1.5   # seconds: the integral fades after a curve instead of carrying over into the straight
 STEERING_I_MAX = 0.12   # largest steering the integral may add (no wind-up)
 STEERING_KD = 0.06      # wheel speed difference per unit of lane_x change per second (damping; 0.03 let the swing grow at 0.39)
+D_SMOOTHING = 0.5       # weight of the new lane_x in the smoothed value the D term differentiates (P stays on the raw
+                        # value): D on the raw value turned every frame-to-frame jump into a steering jerk (2026-10-01)
 FEEDFORWARD_GENTLE = 0.015  # base turn added in a gentle curve (times the curve model's probability)
 FEEDFORWARD_SHARP = 0.04    # base turn added in a sharp curve. With the direction from lane_x (on only part of the
                             # time) 0.04 ran wide; with the steady curve-model direction 0.07 turned in early and cut
@@ -32,7 +34,9 @@ FEEDFORWARD_MAX_INSIDE = 0.10  # lane_x toward the outside of the curve (the rob
 STEERING_REF_SPEED = 0.32  # speed the gains were tuned at; at other speeds they are scaled by REF/speed
                            # (at 0.40 the unscaled gains made the robot swing on the straight)
 STEERING_RATE = 2.0     # maximum change of the steering command per second
-MOTOR_TRIM = 0.0        # added to the left wheel, subtracted from the right; positive corrects a drift to the left
+MOTOR_TRIM = -0.01      # added to the left wheel, subtracted from the right; positive corrects a drift to the left.
+                        # The robot drifts right: on straights the steering averaged -0.005..-0.013 and the robot sat
+                        # right of center (mean lane_x -0.04..-0.11) in every run up to 2026-10-01
 
 # Speed (D5): speed per curve class, blended by the curve model's probabilities
 SPEED_STRAIGHT = 0.40
