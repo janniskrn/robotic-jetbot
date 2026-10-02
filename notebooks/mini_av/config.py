@@ -50,8 +50,9 @@ BASELINE_SPEED = 0.32
 LANE_LOST_TIMEOUT = 0.5  # seconds without a visible lane before the robot stops
 OBSTACLE_VISIBLE_THRESHOLD = 0.5  # obstacle model probability above which a cup counts as seen
 OBSTACLE_ROW = 88 / 224.0  # cup_row (lower edge of the red band) from which the cup is close: about 45 cm as the model
-                           # sees it. The camera image lags about 0.35 s: triggered at row 98-112 the robot stood at
-                           # row 134-138 (10-12 cm, run stop_cups_1); this should stop it at about 25 cm
+                           # sees it. Triggered at row 98-112 the robot stood at row 134-138 (10-12 cm, run
+                           # stop_cups_1): debounce, about 0.14 s camera lag and rolling on after the stop;
+                           # this should stop it at about 25 cm
 OBSTACLE_CLEAR_ROW = 80 / 224.0  # the cup only counts as gone when unseen or above this row (hysteresis: at the same row
                                  # as the trigger, a reading jittering around it released the robot in front of the cup)
 OBSTACLE_FRAMES = 4        # control steps in a row with a close cup before the robot counts as blocked (debounce;
