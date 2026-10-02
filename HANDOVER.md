@@ -1,12 +1,41 @@
-# Handover (2026-09-27, end of session 2)
+# Handover (2026-10-01, end of session 3)
 
-For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest entries: DATA2, CURVE3,
-LANE2, FF2, OBST1), `WEEK1_PLAN.md`.
+For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest entries: OBST1-3, AB1, STEER2),
+`WEEK1_PLAN.md`.
 
-**Your first job: obstacle data for Task 2** (step 4b of the plan below). The team stopped the session before
-recording; two small changes were proposed and not yet approved (see "Next steps").
+**First: the camera.** It failed at the end of session 3: the IMX219 stopped answering on I2C
+(`dmesg`: `no acknowledge from address 0x10`, `imx219 7-0010: Error turning off streaming`), and
+`scripts/restart_camera.sh` did not help twice. The team was asked to power off and check the ribbon cable at both
+ends. Check the camera before anything else (one frame through `jetbot.Camera`, mean and std of the image).
 
-## Where we are
+## Session 3 (2026-10-01) in short
+
+- **Obstacle model done (OBST2, OBST3):** outputs `cup_visible`, `cup_row`, `cup_x`; 7 cup sessions (396 frames
+  with a cup); 0 false alarms on laps without cups; near the trigger it reads 3-13 rows too close.
+- **Step 5.2 (stop at a cup) built:** mode BLOCKED in `decision.py` (trigger band row 88, clear below row 80,
+  debounce 4 steps, obstacle model alternating with the curve model). Only one stop run so far (`stop_cups_1`,
+  with the older trigger row 98: stopped at 10-12 cm, released once too early; both fixed, not yet re-tested).
+- **Steering swung more than in session 2, with the same code** (A/B test with the old code, AB1). Not the third
+  model, not loop timing, not camera lag (measured 115-160 ms, constant). Speed 0.37 and KP 0.12 did not help and
+  were reverted. Committed under test (STEER2): motor trim -0.01 and a smoothed D term: calmer steering and less
+  offset, but the swing after the sharp curve still grows during a run. Verify in both directions first.
+- `auto_record.py` now waits for the lane before moving (a forgotten lens cap gave pure noise, and the cup mask saw
+  cups in it). Noise session renamed to `test_lenscap`.
+- Diagnostic scripts on the USB stick: `usb/logs/lag_test.py` (camera lag under model load),
+  `usb/logs/compare_runs.py <run names>` (direction, offset, jerkiness, swing after the sharp curve).
+
+## Next steps (each needs the team's go)
+
+1. Camera check (above). Then 60 s cw and 60 s ccw without cups with STEER2; compare with
+   `python3 /home/jetbot/usb/logs/compare_runs.py v3_cw_1 v5_trim_dsmooth_1 <new runs>`.
+   Keep STEER2 if the steering is calmer and no lane is lost; the team's eyes decide.
+2. Stop test 5.2: cups in the middle of both straights, 10 approaches, the team lifts each cup away; then 3 laps
+   without cups (no false stop). Measure the stop distance (settled cup row).
+3. 5.3 AVOID / RECOVER: mode table first (open items in `DECISIONS.md`); the cup must be in the lane
+   (compare `cup_x` with the lane), RECOVER must not accept a distant lane (false "lane visible", session 2).
+4. Later: obstacle model retrained with a right-shifted cup session in training; Task 1 comparison table.
+
+## State from session 2 (still valid unless noted above)
 
 - **Task 1 works in both directions.** Counterclockwise: 5 sharp curves in a row (run `v3_ccw_4`, 58 s, ended by
   a test cup the team put on the road). Clockwise: 60 s without a lane loss (`v3_cw_1`). Logs in `usb/logs/`.
