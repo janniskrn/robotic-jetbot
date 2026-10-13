@@ -1,12 +1,26 @@
-# Handover (2026-10-01, end of session 3)
+# Handover (2026-10-12, end of session 5)
 
-For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest entries: OBST1-3, AB1, STEER2),
-`WEEK1_PLAN.md`.
+For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest: DEMO1, MOVE1, AVOID1, SM1, OBST4,
+OBST5), `notebooks/mini_av/STATE_MACHINE.md`.
 
-**First: the camera.** It failed at the end of session 3: the IMX219 stopped answering on I2C
-(`dmesg`: `no acknowledge from address 0x10`, `imx219 7-0010: Error turning off streaming`), and
-`scripts/restart_camera.sh` did not help twice. The team was asked to power off and check the ribbon cable at both
-ends. Check the camera before anything else (one frame through `jetbot.Camera`, mean and std of the image).
+**Schedule pressure (2026-10-12, about week 4 of 6): the team wants fast progress without side tracks.**
+
+## Where we are
+
+- Task 1 works. Task 2: stop at a cup shown live to the professor (DEMO1). **AVOID / ROAD_RECOVERY are coded and
+  tested offline only (AVOID1): first job is the track test.** Swerve timings come from MOVE1.
+- State machine with the guide's names in `decision.py` + `STATE_MACHINE.md` (SM1). TURN_LEFT/RIGHT, PARKING and the
+  STOP sign are only in the table: no signs, intersection, parking space or second JetBot exist yet (team to build).
+- Obstacle model v3 in use (OBST5). `03_train.py` now keeps the epoch with the best position error (not the loss).
+- Camera fault of session 3 was a loose ribbon cable (fixed). The robot lost power during a training: keep it on the
+  charger for trainings.
+
+## Next steps
+
+1. AVOID track test: cup in the middle of a straight, robot about 1.5 m before it (passes a curve first, so the pass
+   side is known), 60 s runs, about 10 swerves; tune `AVOID_STEPS` from the logs and what the team sees.
+2. As soon as signs exist: record sign laps (Task 3), labels, a sign model like the obstacle model, STOP state.
+3. Intersection (Task 4), parking (Task 5), ACC (Task 7) when the track parts / second JetBot exist.
 
 ## Session 3 (2026-10-01) in short
 
