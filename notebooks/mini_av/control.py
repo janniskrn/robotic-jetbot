@@ -92,6 +92,28 @@ class Controller(object):
             self.steering = limit_change(turn, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
         return self.wheels()
 
+    def avoid(self, elapsed, side):
+        """Returns (left, right) for the timed swerve at `elapsed` seconds after it started (config.AVOID_STEPS).
+
+        side: 'left' or 'right', the side the robot passes the cup on.
+        """
+        toward = -1.0 if side == 'left' else 1.0  # sign of a turn toward the pass side (positive turns right)
+        for _, seconds, turn in config.AVOID_STEPS:
+            if elapsed < seconds:
+                if turn == 0:
+                    return config.AVOID_SPEED, config.AVOID_SPEED
+                spin = toward * turn * config.AVOID_SPEED
+                return spin, -spin
+            elapsed -= seconds
+        return 0.0, 0.0  # done; the decision layer switches to RECOVER
+
+    def recover(self, side):
+        """Returns (left, right) while the lane is not seen after the swerve: slowly forward, turning back
+        toward the lane, which lies on the side away from the pass side"""
+        self.steering = (config.RECOVER_TURN if side == 'left' else -config.RECOVER_TURN)
+        self.speed = config.RECOVER_SPEED
+        return self.wheels()
+
     def wheels(self):
         """(left, right) wheel speeds from the current speed and steering"""
         left = self.speed + self.steering + config.MOTOR_TRIM

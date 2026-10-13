@@ -3,6 +3,7 @@
     python3 drive.py --name adaptive --seconds 60            # our controller (Task 1)
     python3 drive.py --name baseline --seconds 60 --baseline # stock-style comparison run
     python3 drive.py --name nocurve --seconds 60 --no-curve  # our steering, baseline speed
+    add --stop-only to wait in front of a cup instead of avoiding it, --pass-side left/right to fix the side
 
 Or from 04_drive.ipynb with start and stop buttons. Stop from a terminal: scripts/stop_robot.sh.
 """
@@ -18,7 +19,7 @@ from jetbot import Camera, Robot
 
 import config
 from control import Controller
-from decision import BLOCKED, FOLLOW, Decision
+from decision import AVOID, BLOCKED, FOLLOW, RECOVER, Decision
 from logger import RunLogger
 from perception import Perception
 from recorder import Recorder
@@ -54,8 +55,10 @@ class NoLaneAtStart(Exception):
     """The lane was not visible when the run started: put the robot on the lane"""
 
 
-def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
+def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_only=False, pass_side=None):
     """Drives until the time is up, the lane is lost, a safety check fails or stop_event is set.
+
+    stop_only: wait in front of a cup instead of avoiding it; pass_side: 'left'/'right' or None (measured).
 
     Returns the stop reason and the log folder. The camera frames go to a dataset session drive_<name>.
     """
@@ -64,10 +67,11 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
         return 'battery %.2f V is too low: charge first' % battery.volts, None
     perception = Perception(use_curve=use_curve and not baseline)
     controller = Controller(baseline=baseline, use_curve=use_curve)
-    decision = Decision()
+    decision = Decision(stop_only=stop_only, pass_side=pass_side)
     robot = Robot()
     camera = Camera.instance()
     log = RunLogger(name, {'baseline': baseline, 'use_curve': use_curve, 'seconds': seconds,
+                           'stop_only': stop_only, 'pass_side': pass_side,
                            'battery_start_v': round(battery.volts, 2)})
     recorder = Recorder(period=1.0 / RECORD_HZ)
     recorder.start('drive_' + name, {'mode': 'drive', 'curves_trusted': False, 'log': log.dir, 'baseline': baseline, 'use_curve': use_curve,
@@ -103,8 +107,10 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
                     frames.put_nowait(frame)
                 except queue.Full:
                     pass
-            mode = decision.update(percept, now)
-            if mode == FOLLOW:
+            previous_mode, mode = decision.mode, decision.update(percept, now)
+            if mode != previous_mode and mode in (AVOID, BLOCKED):
+                controller.reset()  # restart slowly afterwards, without old steering or damping memory
+            if mode == FOLLOW or (mode == RECOVER and percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD):
                 if percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD:
                     left, right = controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'], dt)
                 else:  # short gap: steer without lane_x, which is not trained on frames without a lane
@@ -112,15 +118,22 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
                 with watchdog.lock:
                     robot.set_motors(left, right)
                 watchdog.feed()
+            elif mode in (AVOID, RECOVER):
+                if mode == AVOID:
+                    left, right = controller.avoid(now - decision.mode_since, decision.pass_side())
+                else:
+                    left, right = controller.recover(decision.pass_side())
+                with watchdog.lock:
+                    robot.set_motors(left, right)
+                watchdog.feed()
             elif mode == BLOCKED:  # wait in front of the cup; drive on (from slow) once it is gone
                 with watchdog.lock:
                     robot.stop()
                 watchdog.feed()
-                controller.reset()
                 left = right = 0.0
             else:
                 robot.stop()
-                reason = 'lane lost'
+                reason = 'lane not found after avoiding' if previous_mode == RECOVER else 'lane lost'
                 left = right = 0.0
             probs = percept['curve_probs']
             log.step(time=now - start, dt=dt, mode=mode, lane_visible=percept['lane_visible'],
@@ -129,7 +142,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None):
                      curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
                      left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
                      cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'])
-            if mode not in (FOLLOW, BLOCKED):
+            if mode not in (FOLLOW, BLOCKED, AVOID, RECOVER):
                 break
     except NoLaneAtStart:
         reason = 'no lane at start: put the robot on the lane'
@@ -156,8 +169,11 @@ def main():
     parser.add_argument('--seconds', type=float, default=30.0)
     parser.add_argument('--baseline', action='store_true', help='constant speed, plain P steering')
     parser.add_argument('--no-curve', action='store_true', help='our steering at the baseline speed')
+    parser.add_argument('--stop-only', action='store_true', help='wait in front of a cup instead of avoiding it')
+    parser.add_argument('--pass-side', choices=['left', 'right'], help='side to pass cups on (default: inside of the oval)')
     args = parser.parse_args()
-    reason, log_dir = run(args.name, args.seconds, args.baseline, not args.no_curve)
+    reason, log_dir = run(args.name, args.seconds, args.baseline, not args.no_curve,
+                          stop_only=args.stop_only, pass_side=args.pass_side)
     print('%s, log in %s' % (reason, log_dir))
 
 

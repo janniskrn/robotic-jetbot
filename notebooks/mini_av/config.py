@@ -61,4 +61,21 @@ OBSTACLE_CLEAR_ROW = 80 / 224.0  # the cup only counts as gone when unseen or ab
                                  # as the trigger, a reading jittering around it released the robot in front of the cup)
 OBSTACLE_FRAMES = 4        # control steps in a row with a close cup before the robot counts as blocked (debounce;
                            # 2 fresh readings, the obstacle model runs every OBSTACLE_EVERY-th step)
-OBSTACLE_CLEAR_FRAMES = 5  # control steps in a row with the cup gone before it drives on
+OBSTACLE_CLEAR_FRAMES = 5  # control steps in a row with the cup gone before it drives on (stop-only mode)
+CUP_IN_LANE = 0.4          # |cup_x - lane_x| below which a close cup is in the lane and gets avoided
+
+# Avoidance (D7, AVOID1): timed swerve to the inside of the oval, from the measured motion (MOVE1: at wheel speed
+# 0.35 about 25 cm/s straight and about 125 deg/s turning in place); the camera is not used until it is done
+AVOID_SPEED = 0.35
+AVOID_STEPS = [            # (name, seconds, turn): turn +1 toward the pass side in place, -1 away from it, 0 straight
+    ('turn_out', 0.36, 1),        # about 45 degrees toward the pass side
+    ('out', 0.8, 0),              # about 20 cm diagonally: about 14 cm sideways, out of the lane
+    ('turn_parallel', 0.36, -1),  # back parallel to the lane
+    ('pass', 1.4, 0),             # about 35 cm past the cup (stop distance about 25 cm, cup about 8 cm)
+    ('turn_in', 0.36, -1),        # about 45 degrees toward the lane
+]
+RECOVER_SPEED = 0.31       # forward speed while looking for the lane (the slowest that moves the robot)
+RECOVER_TURN = 0.04        # gentle turn toward the lane while it is not seen yet
+RECOVER_CENTERED = 0.15    # |lane_x| below which the lane counts as found
+RECOVER_FRAMES = 5         # control steps in a row with the lane found before normal following resumes
+RECOVER_TIMEOUT = 4.0      # seconds without finding the lane before the robot stops
