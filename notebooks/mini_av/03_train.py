@@ -13,7 +13,7 @@ obstacle: outputs cup_visible (yes/no), cup_row and cup_x; row and x only count 
 Whole sessions are held out for validation (--val), never single frames: neighboring frames look
 almost the same, so a random split would make the result look better than it is.
 Sessions with "test" in the name are never used. Runs on the robot (CUDA), a Mac (MPS) or a CPU.
-Saves the best model to models/<task>.pth and its metrics to models/<task>.json.
+Saves the best model (see score()) to models/<task>.pth and its metrics to models/<task>.json.
 """
 
 import argparse
@@ -173,6 +173,17 @@ def run_epoch(model, rows, task, dev, optimizer=None):
     return metrics
 
 
+def score(task, metrics):
+    """Lower is better: decides which epoch is kept. Lane and obstacle: the position error (what steering and the
+    obstacle trigger use) plus the share of wrong "visible" answers; the total loss let a less accurate epoch win
+    twice (LANE2, OBST4). Curve: the loss."""
+    if task == 'lane':
+        return metrics['lane_x_mean_error'] + (1.0 - metrics['accuracy'])
+    if task == 'obstacle':
+        return metrics['cup_row_mean_error'] + (1.0 - metrics['accuracy'])
+    return metrics['loss']
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', choices=['lane', 'curve', 'obstacle'], required=True)
@@ -209,7 +220,7 @@ def main():
             epoch, train_metrics['loss'], val_metrics['loss'], val_metrics['accuracy'],
             ''.join('  val %s %.3f' % (k, v) for k, v in val_metrics.items() if k.endswith('_mean_error')),
             time.time() - start))
-        if best is None or val_metrics['loss'] < best['val']['loss']:
+        if best is None or score(args.task, val_metrics) < score(args.task, best['val']):
             best = history[-1]
             # legacy format so older PyTorch versions can load it as well
             torch.save(model.state_dict(), os.path.join(MODEL_DIR, args.task + '.pth'),
