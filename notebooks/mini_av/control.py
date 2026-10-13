@@ -53,8 +53,8 @@ class Controller(object):
         size = curve_probs[1] * config.FEEDFORWARD_GENTLE + curve_probs[2] * config.FEEDFORWARD_SHARP
         return size if curve_dir > 0 else -size
 
-    def update(self, lane_x, curve_probs, curve_dir, dt):
-        """Returns (left, right) wheel speeds"""
+    def update(self, lane_x, curve_probs, curve_dir, dt, speed_limit=None):
+        """Returns (left, right) wheel speeds; speed_limit caps the target speed (state SLOW_DOWN)"""
         if self.baseline:
             # stock JetBot style: raw model output, plain P steering, constant speed
             self.steering = config.STEERING_KP * lane_x
@@ -76,8 +76,10 @@ class Controller(object):
                       + self.feedforward(curve_probs, curve_dir))
             self.steering = limit_change(wanted, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
             if self.use_curve:
-                self.speed = limit_change(self.target_speed(curve_probs, self.lane_x), self.speed,
-                                          config.SPEED_UP_RATE, config.SPEED_DOWN_RATE, dt)
+                target = self.target_speed(curve_probs, self.lane_x)
+                if speed_limit is not None:
+                    target = min(target, speed_limit)
+                self.speed = limit_change(target, self.speed, config.SPEED_UP_RATE, config.SPEED_DOWN_RATE, dt)
             else:
                 self.speed = config.BASELINE_SPEED  # same speed as the baseline: the runs differ only in steering
         return self.wheels()

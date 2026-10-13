@@ -19,7 +19,7 @@ from jetbot import Camera, Robot
 
 import config
 from control import Controller
-from decision import AVOID, BLOCKED, FOLLOW, RECOVER, Decision
+from decision import FOLLOWING, HALT, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision
 from logger import RunLogger
 from perception import Perception
 from recorder import Recorder
@@ -107,42 +107,45 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                     frames.put_nowait(frame)
                 except queue.Full:
                     pass
-            previous_mode, mode = decision.mode, decision.update(percept, now)
-            if mode != previous_mode and mode in (AVOID, BLOCKED):
+            previous_state, state = decision.state, decision.update(percept, now)
+            if state != previous_state and state in (OBSTACLE_AVOIDANCE, STOP):
                 controller.reset()  # restart slowly afterwards, without old steering or damping memory
-            if mode == FOLLOW or (mode == RECOVER and percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD):
-                if percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD:
-                    left, right = controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'], dt)
+            lane_seen = percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD
+            if state in FOLLOWING or (state == ROAD_RECOVERY and lane_seen):
+                if lane_seen:
+                    limit = config.SPEED_SHARP if state == SLOW_DOWN else None
+                    left, right = controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'],
+                                                    dt, speed_limit=limit)
                 else:  # short gap: steer without lane_x, which is not trained on frames without a lane
                     left, right = controller.hold(percept['curve_probs'], percept['curve_dir'], dt)
                 with watchdog.lock:
                     robot.set_motors(left, right)
                 watchdog.feed()
-            elif mode in (AVOID, RECOVER):
-                if mode == AVOID:
-                    left, right = controller.avoid(now - decision.mode_since, decision.pass_side())
+            elif state in (OBSTACLE_AVOIDANCE, ROAD_RECOVERY):
+                if state == OBSTACLE_AVOIDANCE:
+                    left, right = controller.avoid(now - decision.state_since, decision.pass_side())
                 else:
                     left, right = controller.recover(decision.pass_side())
                 with watchdog.lock:
                     robot.set_motors(left, right)
                 watchdog.feed()
-            elif mode == BLOCKED:  # wait in front of the cup; drive on (from slow) once it is gone
+            elif state == STOP:  # wait in front of the cup; drive on (from slow) once it is gone
                 with watchdog.lock:
                     robot.stop()
                 watchdog.feed()
                 left = right = 0.0
             else:
                 robot.stop()
-                reason = 'lane not found after avoiding' if previous_mode == RECOVER else 'lane lost'
+                reason = 'lane not found after avoiding' if previous_state == ROAD_RECOVERY else 'lane lost'
                 left = right = 0.0
             probs = percept['curve_probs']
-            log.step(time=now - start, dt=dt, mode=mode, lane_visible=percept['lane_visible'],
+            log.step(time=now - start, dt=dt, mode=state, lane_visible=percept['lane_visible'],
                      lane_x=percept['lane_x'], p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2],
                      curve_dir=percept['curve_dir'],
                      curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
                      left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
                      cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'])
-            if mode not in (FOLLOW, BLOCKED, AVOID, RECOVER):
+            if state == HALT:
                 break
     except NoLaneAtStart:
         reason = 'no lane at start: put the robot on the lane'

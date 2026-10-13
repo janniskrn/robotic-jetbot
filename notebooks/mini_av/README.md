@@ -23,7 +23,8 @@ folders would mean moving or copying files every week.
 | `config.py` | All tuning values of the driving program | Robot |
 | `safety.py` | Camera watchdog and battery guard, shared by every program that drives | Robot |
 | `perception.py` | Camera frame -> lane visible, lane position, curve probabilities and curve direction (models) | Robot |
-| `decision.py` | FOLLOW or STOP (Task 1); AVOID and RECOVER come with Task 2 | Robot |
+| `decision.py` | State machine (Task 6): ROAD_FOLLOWING, SLOW_DOWN, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, STOP, HALT; table and diagram in `STATE_MACHINE.md` | Robot |
+| `calibrate_motion.py` | Drives one open-loop move to measure distances and angles for the timed avoidance | Robot (container) |
 | `control.py` | Smoothed PD steering, curve-based speed, rate limits, motor trim | Robot |
 | `logger.py` | One CSV row per control step plus run.json, in `usb/logs/` | Robot |
 | `drive.py` | Main loop: perception -> decision -> control -> motors (`--baseline`, `--no-curve`) | Robot (container) |

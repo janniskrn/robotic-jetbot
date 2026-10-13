@@ -52,6 +52,8 @@ BASELINE_SPEED = 0.32
 
 # Decision
 LANE_LOST_TIMEOUT = 0.5  # seconds without a visible lane before the robot stops
+SLOW_DOWN_ENTER = 0.5    # p_sharp above which the state machine enters SLOW_DOWN (speed capped at SPEED_SHARP)
+SLOW_DOWN_EXIT = 0.3     # p_sharp below which it returns to ROAD_FOLLOWING (hysteresis)
 OBSTACLE_VISIBLE_THRESHOLD = 0.5  # obstacle model probability above which a cup counts as seen
 OBSTACLE_ROW = 88 / 224.0  # cup_row (lower edge of the red band) from which the cup is close: about 45 cm as the model
                            # sees it. Triggered at row 98-112 the robot stood at row 134-138 (10-12 cm, run
