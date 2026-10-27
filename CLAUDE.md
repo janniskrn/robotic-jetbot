@@ -145,6 +145,12 @@ Every week ends with a demonstration of that week's tasks.
 - Every program that drives the motors needs: battery guard, camera watchdog (stop after 0.5 s without a new frame), stop on Ctrl-C, motors stopped in `finally`.
 - Emergency stop: `~/jetbot/scripts/stop_robot.sh`. Stop driving scripts with Ctrl-C (`pkill -INT`), never with a plain kill.
 
+## 9c. Skills
+
+- Project skills are in `.claude/skills/`, listed with their use in `.claude/SKILLS.md`: `slop-prose` or
+  `slop-humanizer` for docs and slide text, `slop-diagrams` and `diagrams-archify` (via `scripts/archify.sh`)
+  for diagrams, `systematic-debugging` and `verification-before-completion` for driving problems and approvals.
+
 ## 10. Never Use Emoji
 
 - Never use emoji anywhere: chat responses, documentation, code, comments, notebooks, commit messages.
