@@ -4,19 +4,7 @@ Working plan toward `GOAL.md`. Update it as work progresses: tick steps, add res
 Decisions that come out of it go into `DECISIONS.md`. Every step follows CLAUDE.md 6.1 (propose, go, implement,
 test, approval, commit).
 
-Version: 2026-10-26, draft 2 (draft 1 reviewed critically, section 10).
-
-## 0. Blocker: the deadline
-
-The handover of 2026-10-12 said "about week 4 of 6", so today may already be week 6. **Q1: deadline and the
-remaining demo dates.** Once known, put a date on every step of section 6 and plan backwards from the final run.
-
-Cut list if time runs out (cut first at the top):
-1. ACC (M7): needs a second JetBot and its own program.
-2. Archify diagrams V2 / V3: Mermaid in `STATE_MACHINE.md` already shows the state machine.
-3. Sign model robustness extras (S10 beyond the required demonstration).
-4. Parking retry (keep approach, align, stop).
-Never cut: safety rules, one integrated program with the state machine, parking at the end, the slides.
+Version: 2026-10-26, draft 3 (no dates in the repo; order of section 6 approved, decision ORDER).
 
 ## 1. Where we are against the goal
 
@@ -182,8 +170,7 @@ step test from now on (slides).
 
 - [ ] **S17 Robustness:** new sessions in changed light and positions through `replay.py`; fix the weakest case.
 - [ ] **S18 Slides** (one per member, `slop-prose` for text, V2-V4 figures), training/test data summary (why each
-  dataset was added, what it fixed), graphs and tables, video, ZIP `StudentID_Name_mmddyyyy_DataMining.zip`
-  (late: -10 % per day).
+  dataset was added, what it fixed), graphs and tables, video, ZIP `StudentID_Name_mmddyyyy_DataMining.zip`.
 
 ## 7. Risks
 
@@ -202,8 +189,6 @@ step test from now on (slides).
 
 | ID | Question | Who |
 | :--- | :--- | :--- |
-| Q1 | **Deadline and demo dates (blocker, section 0)** | team |
-| Q2 | Order: S4 restructure (M6 work) before M3-M5. CLAUDE.md 6.2 says do not skip ahead; reasons: signs are not here, parking and intersection can start now and should plug into the new structure | team |
 | P2 | Intersection detection: road model output with mask labels (crossing line, lane widening), the sign as trigger at a fixed distance, or both | team, after S9a |
 | Q3 | When do the signs and a second JetBot arrive; sign sizes and colors | team |
 | Q4 | May the lead JetBot carry a marker (like the cup band)? | team / professor |
@@ -215,15 +200,17 @@ step test from now on (slides).
 | :--- | :--- |
 | 2026-10-26 | Draft 1 |
 | 2026-10-26 | Draft 2 after critical review (section 10) |
+| 2026-10-26 | Draft 3: deadlines removed (user: not for the repo); order approved: S4 restructure before M3-M5 (`ORDER`) |
 
 ## 10. Review of draft 1 (2026-10-26, independent reviewer agent)
 
-Taken: deadline as blocker plus cut list; intersection and parking are tape, build now (S0); if/elif
+Taken: intersection and parking are tape, build now (S0); if/elif
 `update_state` instead of a transition table; no diagram generator (keeps `SM1`); A1 with the sign model; A5
 deferred to M4 as a pivot search; "interruptible by" column, separate SLOW_DOWN exits, sign memory timeout,
 straight-through and T-stem cases; compute check before the sign model; debounce in fresh readings; S10 with
 numbers and the capture size decided before recording; ACC hysteresis and a lead program; videos from now on,
 slide owners early; numeric pass criteria; `compare_runs.py` into the repository; `PASS2` gap; P1 settled by `D2`
 and `LANE2`. Verified in the code: four motor writes in `drive.py`, one outside the watchdog lock.
+Not taken: deadline as blocker plus cut list (user: no deadlines in the repo).
 Partly taken: Task 3 framing. The slide asks to "use the data to solve a demonstrated recognition problem such
 as distance", so data aimed at a measured weakness counts; S11 allows data, crop or jitter as the one change.

@@ -116,7 +116,7 @@ Every week ends with a demonstration of that week's tasks.
 - Experiment record per change: problem -> hypothesis/design -> code change -> test -> result.
 - Training and test data summary: why data was added and what problem it solved.
 - Graphs and tables for the results.
-- One ZIP: source code, report, video, optional data. Name `StudentID_Name_mmddyyyy_DataMining.zip`. Late: -10 % per day.
+- One ZIP: source code, report, video, optional data. Name `StudentID_Name_mmddyyyy_DataMining.zip`.
 
 ## 7. Coding policy
 

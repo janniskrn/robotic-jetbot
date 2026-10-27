@@ -99,9 +99,10 @@ Code style:
 - Keep perception, decision, and control clearly separated (required for the final program).
 - For every change, be ready to explain: problem → design → code change → test → result.
 
-### 6.2 The Plan (Follow Strictly, in This Order)
+### 6.2 The Plan (Milestones)
 
-Full details are in `PROJECT_GUIDE_1.md`. Do not skip ahead or mix tasks from later weeks.
+Full details are in `PROJECT_GUIDE_1.md`. The order of work is `PLAN.md` section 6 (decision `ORDER`): do not
+start a step that is not next there without the user's go.
 
 | Week | Task | Done when |
 | :--- | :--- | :--- |

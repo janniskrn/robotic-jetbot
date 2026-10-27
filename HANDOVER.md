@@ -3,7 +3,7 @@
 For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest: DEMO1, MOVE1, AVOID1, SM1, OBST4,
 OBST5), `notebooks/mini_av/STATE_MACHINE.md`.
 
-**Schedule pressure (2026-10-12, about week 4 of 6): the team wants fast progress without side tracks.**
+**The team wants fast progress without side tracks.** Current plan: `PLAN.md`.
 
 ## Where we are
 
