@@ -74,6 +74,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 **Never implement anything without explicit permission.**
 
 - The assignment is described in `PROJECT_GUIDE_1.md` (JetBot Project Guide #1, a 6-week project).
+- `GOAL.md` analyzes all slides (Guide #1, Guide #2 state machine and pseudo code, state machine example) and
+  says what they mean for our code. `PLAN.md` is the working plan toward that goal: update it as work progresses.
 - Analysis, explanations, plans, and suggestions are fine. Writing or changing code or notebooks for a task needs the user's approval first.
 - Propose the approach, wait for a clear "go", then implement only what was approved.
 - Coding policy from the guide: reuse existing notebooks as building blocks only. Steering, speed control, avoidance, recovery, intersection, state machine, cruise control, and parking logic must be team-written.
