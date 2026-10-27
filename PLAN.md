@@ -38,7 +38,13 @@ the floor: the team can build them now (S0).**
 A2-A4 change no behavior. They come before the first new state (TURN, PARKING or STOP, whichever is first), so
 each new state is one `<state>_step`, one branch in `update_state` and one table row.
 
-## 3. Models: ML measures, scripts decide
+## 3. Models: ML recognizes, scripts measure and decide
+
+**Principle `HYBRID` (user, 2026-10-26):** combine models and Python scripts for better results. A model
+recognizes (is there a lane, a cup, a sign; roughly where). Plain scripts measure exact geometry with the classical
+color masks we already have (`lane_mask.py`, `cup_mask.py`) and run the maneuvers and the checks that end them. A
+check that decides a state change uses a script measurement whenever one exists. First use: run `avoid_ccw_1`
+(S1).
 
 The same pipeline for every model, as for lane and cup: record sessions -> labels from a color mask or the session
 settings -> spot check on review sheets -> train (`03_train.py`, epoch picked by the error that matters) ->
@@ -118,7 +124,18 @@ step test from now on (slides).
 
 - [ ] **S0 Team (no code):** tape a T-intersection and a parking box on the track; ask the professor what the
   unknown course looks like (tape color, lane width, sign placement). Assign one slide topic per member.
-- [ ] **S1 M2 track test.** Cup on a straight, 60 s runs, about 10 swerves, tune `AVOID_STEPS`. Pass: 8 of 10
+- [ ] **S1 M2 track test.** First run `avoid_ccw_1` (2026-10-26, battery 11.0-11.2 V under load): the cup was
+  detected, but (1) the turn-in after the pass pointed at the cup: the cup leaves the wide-angle image while still
+  beside the front of the robot; (2) recovery turned the robot further toward the lane until it stood crosswise,
+  and the lane model's lane_x near 0 on the crosswise tape ended recovery; then it drove off. Fixes (`AVOID2`,
+  `HYBRID`): S1a below. Remaining S1 plan unchanged:
+  - [x] **S1a** (implemented, offline tested, reviewed; not yet driven) pass phase ends only after the cup mask has not seen the cup on its side for `AVOID_PASS_CLEAR`
+    (timeout -> HALT); swerve made symmetric (drive back in, turn parallel again); recovery steers on lane_x as
+    before and ends only when the lane mask sees two lines one lane width apart. Pass offline: the crosswise frames of
+    `avoid_ccw_1` are rejected, centered lap frames accepted (measured: 0 of the crosswise frames, 378 of 379
+    centered lap frames); decision test with synthetic percepts; subagent review.
+  - [ ] **S1b** track test as described here, with a charged battery.
+  Original S1: Cup on a straight, 60 s runs, about 10 swerves, tune `AVOID_STEPS`. Pass: 8 of 10
   swerves end in `ROAD_FOLLOWING` without touching the robot. Same runs decide `STEER2` (keep if no lane loss).
   Then the M2 demo.
 - [ ] **S2 PASS2** in `decision.py` (no cup trigger while the curve model says sharp). Pass: replay of cup sessions
@@ -200,6 +217,7 @@ step test from now on (slides).
 | :--- | :--- |
 | 2026-10-26 | Draft 1 |
 | 2026-10-26 | Draft 2 after critical review (section 10) |
+| 2026-10-26 | S1 first run failed; principle HYBRID; S1a fixes |
 | 2026-10-26 | Draft 3: deadlines removed (user: not for the repo); order approved: S4 restructure before M3-M5 (`ORDER`) |
 
 ## 10. Review of draft 1 (2026-10-26, independent reviewer agent)

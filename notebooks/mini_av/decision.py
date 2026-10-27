@@ -2,9 +2,11 @@
 
 States (names from PROJECT_GUIDE_1.md), highest priority first; the full table with entry condition, action,
 exit condition and priority, plus the diagram, is in STATE_MACHINE.md and must stay in step with this file.
-    HALT                lane lost, recovery timeout (battery and camera stops are in drive.py): the run ends
-    OBSTACLE_AVOIDANCE  a cup is close ahead in the lane: timed swerve to the inside of the oval (control.avoid)
-    ROAD_RECOVERY       after the swerve: back to the lane until it is seen near the center for a few steps
+    HALT                lane lost, recovery timeout, cup still beside after the pass time (battery and camera stops
+                        are in drive.py): the run ends
+    OBSTACLE_AVOIDANCE  a cup is close ahead in the lane: swerve to the inside of the oval in phases
+                        (config.AVOID_STEPS, control.avoid); the pass lasts until the cup mask sees the cup behind
+    ROAD_RECOVERY       after the swerve: back to the lane until it is seen near the center and aligned for a few steps
     STOP                required stop: with stop_only, wait in front of a cup until it is gone
     SLOW_DOWN           sharp curve ahead: lane following with the speed capped
     ROAD_FOLLOWING      normal lane following
@@ -41,9 +43,20 @@ def cup_in_lane(percept):
             and abs(percept['cup_x'] - percept['lane_x']) < config.CUP_IN_LANE)
 
 
-def avoid_duration():
-    """Seconds the timed swerve takes (sum of its steps)"""
-    return sum(seconds for _, seconds, _ in config.AVOID_STEPS)
+def cup_beside(percept, pass_side):
+    """True if the cup mask sees a large red band on the cup's side of the image while passing it (HYBRID): passing
+    on the left, the cup is on the right; a small band is a cup further along the track. The mask also finds the
+    band at the image edge, where the model misses cups"""
+    x = percept['mask_cup_x']
+    return (percept['mask_cup_pixels'] >= config.AVOID_BESIDE_PIXELS
+            and (x > 0 if pass_side == 'left' else x < 0))
+
+
+def lane_found(percept):
+    """True if the lane is seen near the center and the robot points along it. lane_x alone was near 0 when the
+    robot stood crosswise to the lane (run avoid_ccw_1); the lane mask's two-line check rejects that"""
+    return (percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD and percept['lane_aligned']
+            and abs(percept['lane_x']) < config.RECOVER_CENTERED)
 
 
 class Decision(object):
@@ -58,7 +71,10 @@ class Decision(object):
         self.lane_seen = False
         self.close_frames = 0     # control steps in a row with a close cup (in the lane, unless stop_only)
         self.clear_frames = 0     # control steps in a row with the cup gone (STOP)
-        self.centered_frames = 0  # control steps in a row with the lane near the center (ROAD_RECOVERY)
+        self.centered_frames = 0  # control steps in a row with the lane found (ROAD_RECOVERY)
+        self.avoid_phase = 0      # index of the current swerve phase in config.AVOID_STEPS
+        self.phase_since = 0.0
+        self.cup_seen_at = 0.0    # last time the cup mask saw the cup beside the robot (pass phase)
         self.curve_sum = 0.0      # sum of curve_dir in curves: negative = curves turn left = counterclockwise
 
     def pass_side(self):
@@ -69,21 +85,47 @@ class Decision(object):
 
     def enter(self, state, now):
         self.state, self.state_since = state, now
+        if state == OBSTACLE_AVOIDANCE:
+            self.avoid_phase, self.phase_since = 0, now
+
+    def avoid_turn(self):
+        """Turn of the current swerve phase: +1 toward the pass side, -1 away from it, 0 straight"""
+        return config.AVOID_STEPS[self.avoid_phase][2]
+
+    def update_avoidance(self, percept, now):
+        """Moves through the swerve phases. All are timed except the pass, which lasts at least its time and then
+        until the cup has not been seen beside the robot for AVOID_PASS_CLEAR seconds"""
+        name, seconds, _ = config.AVOID_STEPS[self.avoid_phase]
+        elapsed = now - self.phase_since
+        done = elapsed >= seconds
+        if name == 'pass':
+            beside = cup_beside(percept, self.pass_side())
+            if beside:
+                self.cup_seen_at = now
+                if elapsed > config.AVOID_PASS_MAX:
+                    self.enter(HALT, now)  # the cup is still beside the robot: turning in would hit it
+                    return
+            done = done and now - self.cup_seen_at >= config.AVOID_PASS_CLEAR
+        if not done:
+            return
+        self.avoid_phase += 1
+        # timed phases keep their exact length (a frame late here does not lengthen the next pivot); the pass ends now
+        self.phase_since = now if name == 'pass' else self.phase_since + seconds
+        self.cup_seen_at = now
+        if self.avoid_phase == len(config.AVOID_STEPS):
+            self.centered_frames = 0
+            self.enter(ROAD_RECOVERY, now)
 
     def update(self, percept, now):
         """Returns the state for this frame"""
         if self.state == HALT:
             return HALT
-        if self.state == OBSTACLE_AVOIDANCE:  # blind, timed: the camera is not asked until the swerve is done
-            if now - self.state_since >= avoid_duration():
-                self.centered_frames = 0
-                self.enter(ROAD_RECOVERY, now)
+        if self.state == OBSTACLE_AVOIDANCE:  # the lane is not asked until the swerve is done
+            self.update_avoidance(percept, now)
             return self.state
         if self.state == ROAD_RECOVERY:
-            centered = (percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD
-                        and abs(percept['lane_x']) < config.RECOVER_CENTERED)
-            self.centered_frames = self.centered_frames + 1 if centered else 0
-            if self.centered_frames >= config.RECOVER_FRAMES:  # a distant lane is not centered: no false end
+            self.centered_frames = self.centered_frames + 1 if lane_found(percept) else 0
+            if self.centered_frames >= config.RECOVER_FRAMES:  # a distant or crosswise lane does not count
                 self.lost_since = None
                 self.close_frames = 0
                 self.enter(ROAD_FOLLOWING, now)

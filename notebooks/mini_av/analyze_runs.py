@@ -26,7 +26,8 @@ def load(log_dir):
     with open(os.path.join(log_dir, 'run.json')) as f:
         info = json.load(f)
     with open(os.path.join(log_dir, 'steps.csv')) as f:
-        steps = [{k: (v if k in ('mode', 'curve_class') else float(v)) for k, v in row.items()} for row in csv.DictReader(f)]
+        steps = [{k: (v if k in ('mode', 'curve_class', 'avoid_phase') or v == '' else float(v)) for k, v in row.items()}
+                 for row in csv.DictReader(f)]
     kind = 'baseline' if info['baseline'] else ('adaptive' if info['use_curve'] else 'nocurve')
     return info, steps, kind
 

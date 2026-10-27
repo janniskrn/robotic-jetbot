@@ -9,7 +9,8 @@ import config
 
 COLUMNS = ['time', 'dt', 'mode', 'lane_visible', 'lane_x', 'p_straight', 'p_gentle', 'p_sharp',
            'curve_dir', 'curve_class', 'steering', 'speed', 'left', 'right', 'battery_v', 'inference_ms',
-           'cup_visible', 'cup_row', 'cup_x']
+           'cup_visible', 'cup_row', 'cup_x', 'lane_aligned', 'mask_cup_x', 'mask_cup_pixels',
+           'avoid_phase']
 
 
 class RunLogger(object):

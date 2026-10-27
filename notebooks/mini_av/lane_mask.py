@@ -1,7 +1,8 @@
 """Classical detection of the blue-tape lane with a color mask.
 
-Only a helper for data collection and automatic pre-labels (D10). The driving
-program itself uses the learned models, not this.
+A helper for data collection and automatic pre-labels (D10). The driving program follows the lane with the
+learned lane model; it uses this only for geometry the model does not give (HYBRID): whether the robot is
+aligned with the lane (lane_aligned).
 """
 
 import cv2
@@ -20,6 +21,7 @@ MIN_GAP = 12          # pixels between two tape pieces that make them separate l
 LANE_WIDTH = 162      # lane width in pixels at the lookahead row, measured on a straight (224x224 image)
 MAX_LINE_WIDTH = 50   # wider tape pieces are a line crossing the row sideways (sharp curve), not a lane edge
 NEAR_OFFSET = 0.15    # second, closer row used to see which way a single line leans
+ALIGNED_GAP = (0.6, 1.4)  # gap between the outer lines, as a fraction of LANE_WIDTH, for an aligned robot
 
 
 def blue_mask(bgr):
@@ -39,6 +41,19 @@ def line_centers(mask, row_frac=LOOKAHEAD_ROW):
     # split the tape columns into separate lines wherever there is a gap
     pieces = np.split(columns, np.nonzero(np.diff(columns) > MIN_GAP)[0] + 1)
     return [float(piece.mean()) for piece in pieces if piece[-1] - piece[0] <= MAX_LINE_WIDTH]
+
+
+def lane_aligned(bgr):
+    """True if two tape lines about one lane width apart cross the lookahead row: the robot points along the lane.
+
+    A robot standing crosswise sees the tape run across the image: no narrow line pieces, so False, although
+    the lane model then reports lane_x near 0 (run avoid_ccw_1). On clean laps 378 of 379 centered frames pass.
+    """
+    lines = line_centers(blue_mask(bgr))
+    if len(lines) < 2:
+        return False
+    gap = lines[-1] - lines[0]
+    return ALIGNED_GAP[0] * LANE_WIDTH <= gap <= ALIGNED_GAP[1] * LANE_WIDTH
 
 
 def is_left_line(mask, x, row_frac=LOOKAHEAD_ROW):

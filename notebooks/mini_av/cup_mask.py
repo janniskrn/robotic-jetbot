@@ -1,8 +1,9 @@
 """Classical detection of the obstacle cups with a color mask: white paper cups (about 8 cm high)
 marked with a red tape band all around.
 
-Only a helper for data collection and automatic labels, like lane_mask.py. The driving program
-will use the learned obstacle model, not this.
+A helper for data collection and automatic labels, like lane_mask.py. The driving program detects cups with the
+learned obstacle model; it uses this only to follow a cup it is passing (HYBRID): the mask also finds the band at
+the image edge, where the model misses cups (OBST3).
 """
 
 import cv2

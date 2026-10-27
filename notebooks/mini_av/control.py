@@ -94,24 +94,21 @@ class Controller(object):
             self.steering = limit_change(turn, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
         return self.wheels()
 
-    def avoid(self, elapsed, side):
-        """Returns (left, right) for the timed swerve at `elapsed` seconds after it started (config.AVOID_STEPS).
+    def avoid(self, turn, side):
+        """Returns (left, right) for one swerve phase (config.AVOID_STEPS; the decision layer picks the phase).
 
-        side: 'left' or 'right', the side the robot passes the cup on.
+        turn: +1 pivot toward the pass side, -1 away from it, 0 straight; side: 'left' or 'right', the pass side.
         """
+        if turn == 0:
+            return config.AVOID_SPEED, config.AVOID_SPEED
         toward = -1.0 if side == 'left' else 1.0  # sign of a turn toward the pass side (positive turns right)
-        for _, seconds, turn in config.AVOID_STEPS:
-            if elapsed < seconds:
-                if turn == 0:
-                    return config.AVOID_SPEED, config.AVOID_SPEED
-                spin = toward * turn * config.AVOID_SPEED
-                return spin, -spin
-            elapsed -= seconds
-        return 0.0, 0.0  # done; the decision layer switches to RECOVER
+        spin = toward * turn * config.AVOID_SPEED
+        return spin, -spin
 
     def recover(self, side):
-        """Returns (left, right) while the lane is not seen after the swerve: slowly forward, turning back
-        toward the lane, which lies on the side away from the pass side"""
+        """Returns (left, right) while the lane is not seen after the swerve: slowly forward, turning gently away
+        from the pass side. The swerve is symmetric and should end on the lane; if the lane is not seen, the robot
+        most likely did not come all the way back (slower pivots on a low battery)"""
         self.steering = (config.RECOVER_TURN if side == 'left' else -config.RECOVER_TURN)
         self.speed = config.RECOVER_SPEED
         return self.wheels()

@@ -1,4 +1,5 @@
-"""Perception: camera frame -> what the models see (lane visible, lane position, curve class).
+"""Perception: camera frame -> what the models see (lane visible, lane position, curve class, cup) plus two
+script measurements from the color masks (HYBRID): lane aligned, and where the cup band is.
 
 No decisions and no motor commands here.
 """
@@ -10,6 +11,8 @@ import time
 import torch
 
 import config
+import cup_mask
+import lane_mask
 from vision import CURVE_CLASSES, build_model, preprocess, split_curve_probs
 
 
@@ -49,7 +52,9 @@ class Perception(object):
     def observe(self, frame):
         """Returns a dict: lane_visible (probability), lane_x (-1..1), curve_probs (straight, gentle, sharp),
         curve_dir (-1 left .. 1 right), curve_class, cup_visible (probability), cup_row (lower edge of the cup's
-        band, 0 top .. 1 bottom), cup_x (-1..1), inference_ms"""
+        band, 0 top .. 1 bottom), cup_x (-1..1), inference_ms;
+        from the color masks: lane_aligned (True/False), mask_cup_x (-1..1, None without a red band),
+        mask_cup_pixels (size of the band, 0 without one)"""
         start = time.time()
         image = preprocess(frame).unsqueeze(0).cuda().half()
         lane = self.lane_model(image)[0].float()
@@ -62,6 +67,7 @@ class Perception(object):
         self.frame_count += 1
         curve_probs, curve_dir = split_curve_probs(self.curve_model_probs)
         cup = self.cup
+        band = cup_mask.find_cup(frame)
         return {
             'lane_visible': torch.sigmoid(lane[0]).item(),
             'lane_x': max(-1.0, min(1.0, lane[1].item())),
@@ -71,5 +77,8 @@ class Perception(object):
             'cup_visible': 1.0 / (1.0 + math.exp(-cup[0])),
             'cup_row': cup[1],
             'cup_x': cup[2],
+            'lane_aligned': lane_mask.lane_aligned(frame),
+            'mask_cup_x': None if band is None else band[0] / (frame.shape[1] / 2.0) - 1.0,
+            'mask_cup_pixels': 0 if band is None else band[2],
             'inference_ms': (time.time() - start) * 1000.0,
         }

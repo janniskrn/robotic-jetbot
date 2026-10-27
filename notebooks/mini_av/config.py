@@ -66,18 +66,27 @@ OBSTACLE_FRAMES = 4        # control steps in a row with a close cup before the 
 OBSTACLE_CLEAR_FRAMES = 5  # control steps in a row with the cup gone before it drives on (stop-only mode)
 CUP_IN_LANE = 0.4          # |cup_x - lane_x| below which a close cup is in the lane and gets avoided
 
-# Avoidance (D7, AVOID1): timed swerve to the inside of the oval, from the measured motion (MOVE1: at wheel speed
-# 0.35 about 25 cm/s straight and about 125 deg/s turning in place); the camera is not used until it is done
+# Avoidance (D7, AVOID1, AVOID2): swerve to the inside of the oval, from the measured motion (MOVE1: at wheel speed
+# 0.35 about 25 cm/s straight and about 125 deg/s turning in place). Symmetric: the way back mirrors the way out,
+# so a slower pivot (low battery) changes both turns alike. Only the pass uses the camera (cup mask, HYBRID)
 AVOID_SPEED = 0.35
 AVOID_STEPS = [            # (name, seconds, turn): turn +1 toward the pass side in place, -1 away from it, 0 straight
     ('turn_out', 0.36, 1),        # about 45 degrees toward the pass side
     ('out', 0.8, 0),              # about 20 cm diagonally: about 14 cm sideways, out of the lane
     ('turn_parallel', 0.36, -1),  # back parallel to the lane
-    ('pass', 1.4, 0),             # about 35 cm past the cup (stop distance about 25 cm, cup about 8 cm)
+    ('pass', 1.4, 0),             # at least this long (about 35 cm), then until the cup is behind (AVOID_PASS_CLEAR)
     ('turn_in', 0.36, -1),        # about 45 degrees toward the lane
+    ('in', 0.8, 0),               # the same 14 cm sideways back to the lane center
+    ('turn_straight', 0.36, 1),   # parallel to the lane again: without it recovery turned the robot crosswise
 ]
+AVOID_PASS_CLEAR = 1.0     # seconds the pass goes on after the cup mask last saw the cup on its side: the cup leaves
+                           # the wide-angle image while still beside the robot's front (run avoid_ccw_1)
+AVOID_PASS_MAX = 4.0       # seconds after which a cup still beside the robot stops the run (HALT)
+AVOID_BESIDE_PIXELS = 80   # smallest red band (pixels) that counts as the cup being passed: in avoid_ccw_1 it had
+                           # 93-168, the next cup further along the track 34-68 (it must not stretch the pass)
 RECOVER_SPEED = 0.31       # forward speed while looking for the lane (the slowest that moves the robot)
 RECOVER_TURN = 0.04        # gentle turn toward the lane while it is not seen yet
-RECOVER_CENTERED = 0.15    # |lane_x| below which the lane counts as found
+RECOVER_CENTERED = 0.15    # |lane_x| below which the lane counts as found (and the lane mask must see the robot
+                           # aligned: crosswise tape gave lane_x near 0, run avoid_ccw_1)
 RECOVER_FRAMES = 5         # control steps in a row with the lane found before normal following resumes
 RECOVER_TIMEOUT = 4.0      # seconds without finding the lane before the robot stops
