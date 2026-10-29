@@ -2,8 +2,10 @@
 
 A helper for data collection and automatic pre-labels (D10). The driving program follows the lane with the
 learned lane model; it uses this only for geometry the model does not give (HYBRID): whether the robot is
-aligned with the lane (lane_aligned).
+aligned with the lane (lane_aligned) and when a turn away from the lane reaches 90 degrees (tape_angle).
 """
+
+import math
 
 import cv2
 import numpy as np
@@ -22,6 +24,8 @@ LANE_WIDTH = 162      # lane width in pixels at the lookahead row, measured on a
 MAX_LINE_WIDTH = 50   # wider tape pieces are a line crossing the row sideways (sharp curve), not a lane edge
 NEAR_OFFSET = 0.15    # second, closer row used to see which way a single line leans
 ALIGNED_GAP = (0.6, 1.4)  # gap between the outer lines, as a fraction of LANE_WIDTH, for an aligned robot
+TAPE_MIN_PIXELS = 400     # smallest tape piece tape_angle measures (the near lane edge had 600-3500 while turning)
+TAPE_MIN_WIDTH = 100      # and its smallest width in pixels (a short far piece gives no reliable angle)
 
 
 def blue_mask(bgr):
@@ -54,6 +58,24 @@ def lane_aligned(bgr):
         return False
     gap = lines[-1] - lines[0]
     return ALIGNED_GAP[0] * LANE_WIDTH <= gap <= ALIGNED_GAP[1] * LANE_WIDTH
+
+
+def tape_angle(bgr):
+    """Angle in degrees of the largest tape piece, 0 = horizontal, or None if no large piece is seen.
+
+    Turning in place away from the lane, the near lane edge sweeps through horizontal when the robot stands
+    at 90 degrees to the lane (spin test, AVOID3). Only the largest piece: two lane lines together give a
+    meaningless average angle.
+    """
+    count, labels, stats, _ = cv2.connectedComponentsWithStats((blue_mask(bgr) > 0).astype(np.uint8))
+    if count < 2:
+        return None
+    piece = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    if stats[piece, cv2.CC_STAT_AREA] < TAPE_MIN_PIXELS or stats[piece, cv2.CC_STAT_WIDTH] < TAPE_MIN_WIDTH:
+        return None
+    ys, xs = np.nonzero(labels == piece)
+    dx, dy = np.linalg.eigh(np.cov(np.vstack([xs, ys])))[1][:, 1]  # main direction of the piece
+    return (math.degrees(math.atan2(dy, dx)) + 90) % 180 - 90
 
 
 def is_left_line(mask, x, row_frac=LOOKAHEAD_ROW):

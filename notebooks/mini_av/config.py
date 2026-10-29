@@ -84,7 +84,14 @@ AVOID_PASS_CLEAR = 1.0     # seconds the pass goes on after the cup mask last sa
 AVOID_PASS_MAX = 4.0       # seconds after which a cup still beside the robot stops the run (HALT)
 AVOID_BESIDE_PIXELS = 80   # smallest red band (pixels) that counts as the cup being passed: in avoid_ccw_1 it had
                            # 93-168, the next cup further along the track 34-68 (it must not stretch the pass)
-RECOVER_SPEED = 0.31       # forward speed while looking for the lane (the slowest that moves the robot)
+# Turns in place ended by the camera (AVOID3, under test with turn_test.py): spin test 2026-10-29 at 12 V, wheel
+# speed 0.35 turned about 305 deg/s, 0.30 about 200, 0.27 about 100, 0.26 did not start
+TURN_SPEED = 0.27          # slowest wheel speed that turns reliably: little overshoot from the camera delay
+TURN_KICK = (0.35, 0.1)    # wheel speed and seconds at the start of a turn (0.26 and below did not start on their own)
+TURN_EARLY = 13.0          # tape angle (degrees) before horizontal at which a 90-degree turn stops: the robot turned
+                           # on by 11-14 degrees of tape angle after a stop at horizontal (camera delay, braking)
+TURN_MAX = 3.0             # seconds a turn may take before the robot stops (a stall or the tape not found)
+RECOVER_SPEED = 0.31      # forward speed while looking for the lane (the slowest that moves the robot)
 RECOVER_TURN = 0.04        # gentle turn toward the lane while it is not seen yet
 RECOVER_CENTERED = 0.15    # |lane_x| below which the lane counts as found (and the lane mask must see the robot
                            # aligned: crosswise tape gave lane_x near 0, run avoid_ccw_1)

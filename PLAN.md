@@ -134,7 +134,16 @@ step test from now on (slides).
     before and ends only when the lane mask sees two lines one lane width apart. Pass offline: the crosswise frames of
     `avoid_ccw_1` are rejected, centered lap frames accepted (measured: 0 of the crosswise frames, 378 of 379
     centered lap frames); decision test with synthetic percepts; subagent review.
-  - [ ] **S1b** track test as described here, with a charged battery.
+  - [x] **S1b** run `avoid_ccw_2` (2026-10-29, 12.09 V): 3 of 3 swerves ended in following, recovery under 1 s,
+    but each timed turn was about 130 degrees (`MOVE2`), so the turn-in pointed back at the passed cup; the run
+    ended by driving into a second JetBot standing on the lane (no JetBot detection before M7: keep other robots
+    off the track). Swerve replaced (`AVOID3`, user): S1c.
+  - [ ] **S1c** swerve as turn 90 degrees, curve around the cup, turn 90 degrees back (`AVOID3`).
+    - [x] S1c1 camera-ended turns: spin test (`MOVE2`), `lane_mask.tape_angle`, `turn_test.py`: 5 of 5 turns
+      at 90 degrees (user), 5 of 5 turns back found the lane.
+    - [ ] S1c2 the curve: wheel ratio and time for a radius of about the trigger distance; offline geometry first.
+    - [ ] S1c3 swerve phases in `decision.py` / `control.py`, `STATE_MACHINE.md`, offline tests, subagent review.
+    - [ ] S1c4 track runs (one cup, no other robot, filmed); pass as in S1 below.
   Original S1: Cup on a straight, 60 s runs, about 10 swerves, tune `AVOID_STEPS`. Pass: 8 of 10
   swerves end in `ROAD_FOLLOWING` without touching the robot. Same runs decide `STEER2` (keep if no lane loss).
   Then the M2 demo.
@@ -219,6 +228,7 @@ step test from now on (slides).
 | 2026-10-26 | Draft 2 after critical review (section 10) |
 | 2026-10-26 | S1 first run failed; principle HYBRID; S1a fixes |
 | 2026-10-26 | Draft 3: deadlines removed (user: not for the repo); order approved: S4 restructure before M3-M5 (`ORDER`) |
+| 2026-10-29 | S1b run; turn rates measured (`MOVE2`); new swerve with camera-ended turns (`AVOID3`), S1c1 done |
 
 ## 10. Review of draft 1 (2026-10-26, independent reviewer agent)
 
