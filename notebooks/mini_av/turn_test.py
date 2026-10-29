@@ -32,6 +32,13 @@ def turn_speed(elapsed):
     return config.TURN_KICK[0] if elapsed < config.TURN_KICK[1] else config.TURN_SPEED
 
 
+def reached_horizontal(angle, direction, early):
+    """True if a turn (direction -1 left, +1 right) has brought the near lane edge to within `early` degrees before
+    horizontal: turning left its angle rises toward 0, turning right it falls. A window, not a limit: a lane line
+    leaning the other way (+39 degrees at one start) must not end a left turn"""
+    return angle is not None and 0 <= direction * angle <= early
+
+
 def main():
     repeats = int(sys.argv[1]) if len(sys.argv) > 1 else 5
     battery = BatteryGuard()
@@ -67,8 +74,7 @@ def main():
                     elif elapsed >= config.TURN_MAX:
                         raise RuntimeError('%s turn took longer than %.1f s' % (name, config.TURN_MAX))
                     elif name == 'out':
-                        # turning left the near edge's angle rises toward 0 (horizontal), turning right it falls
-                        done = angle is not None and direction * angle <= config.TURN_EARLY
+                        done = reached_horizontal(angle, direction, config.TURN_EARLY)
                     else:
                         done = found
                     left = 0.0 if done or direction == 0 else direction * turn_speed(elapsed)

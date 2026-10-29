@@ -141,7 +141,11 @@ step test from now on (slides).
   - [ ] **S1c** swerve as turn 90 degrees, curve around the cup, turn 90 degrees back (`AVOID3`).
     - [x] S1c1 camera-ended turns: spin test (`MOVE2`), `lane_mask.tape_angle`, `turn_test.py`: 5 of 5 turns
       at 90 degrees (user), 5 of 5 turns back found the lane.
-    - [ ] S1c2 the curve: wheel ratio and time for a radius of about the trigger distance; offline geometry first.
+    - [x] S1c2 the curve (`swerve_test.py`, no cup, robot on the center of the straight): turn out, curve right
+      (`ARC_WHEELS` 0.37 / 0.30, ends when the lane edge ahead is horizontal again), turn back until `lane_found`.
+      0.40 / 0.27 went only just past the inner edge; 0.37 / 0.30 is the width the user wants (curve 2.85 s).
+      Open: the robot ended on the right side of the lane, almost on the outer tape (user); `lane_found` also
+      fires mid-curve when the robot crosses back into the lane.
     - [ ] S1c3 swerve phases in `decision.py` / `control.py`, `STATE_MACHINE.md`, offline tests, subagent review.
     - [ ] S1c4 track runs (one cup, no other robot, filmed); pass as in S1 below.
   Original S1: Cup on a straight, 60 s runs, about 10 swerves, tune `AVOID_STEPS`. Pass: 8 of 10

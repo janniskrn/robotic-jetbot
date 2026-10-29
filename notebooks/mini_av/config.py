@@ -91,6 +91,13 @@ TURN_KICK = (0.35, 0.1)    # wheel speed and seconds at the start of a turn (0.2
 TURN_EARLY = 13.0          # tape angle (degrees) before horizontal at which a 90-degree turn stops: the robot turned
                            # on by 11-14 degrees of tape angle after a stop at horizontal (camera delay, braking)
 TURN_MAX = 3.0             # seconds a turn may take before the robot stops (a stall or the tape not found)
+ARC_WHEELS = (0.37, 0.30)  # outer and inner wheel in the curve around the cup. A wheel moves only above about 0.24
+                           # and then about in proportion to (speed - 0.24) (spin test): 0.40 / 0.27 went only about
+                           # 20 cm to the side, the user asked for 1.8 times the distance (swerve_test 2026-10-29)
+ARC_MIN = 1.0              # seconds the curve lasts at least (it starts with the lane edge horizontal ahead)
+ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends: it turns slower than a
+                           # spin in place, so it overshoots less (first guess, swerve_test.py)
+ARC_MAX = 6.0              # seconds the curve may take before the robot stops
 RECOVER_SPEED = 0.31      # forward speed while looking for the lane (the slowest that moves the robot)
 RECOVER_TURN = 0.04        # gentle turn toward the lane while it is not seen yet
 RECOVER_CENTERED = 0.15    # |lane_x| below which the lane counts as found (and the lane mask must see the robot
