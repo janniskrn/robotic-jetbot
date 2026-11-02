@@ -8,14 +8,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
-/* Tape, locked in design/THEME.md. Light by default; dark is the podium toggle (t).
-   Contrast amended 2026-11-02: muted 7.6:1, faint 4.7:1, accent-ink for accent text. */
+/* Tape, locked in design/THEME.md, with the 2026-11-02 contrast amendment. */
 :root{
   color-scheme:light;
   --ground:#DEDCD5; --raise:#EFEEE9; --ink:#1B1E23; --muted:#3C4047; --faint:#5A5F67;
   --rule:#C6C4BC; --rule-soft:#D5D3CC;
   --accent:#1E5FA8; --accent-ink:#184B84; --accent-soft:rgba(30,95,168,.12);
-  --alarm:#7A2418; --amber:#8A5A16; --cat1:#9C5120; --cat2:#4C7A8C; --ok:#2F6F5E;
+  --alarm:#7A2418; --alarm-soft:rgba(122,36,24,.12); --amber:#8A5A16; --amber-soft:rgba(138,90,22,.14);
+  --cat1:#9C5120; --cat2:#4C7A8C; --ok:#2F6F5E; --ok-soft:rgba(47,111,94,.14);
   --display:"Archivo Narrow","Arial Narrow",Helvetica,Arial,sans-serif;
   --body:"Archivo Narrow","Arial Narrow",Helvetica,Arial,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
@@ -25,48 +25,41 @@
   --ground:#171A1E; --raise:#1F2329; --ink:#EDEBE4; --muted:#A6ACB4; --faint:#8E959E;
   --rule:#343A42; --rule-soft:#2A3037;
   --accent:#7BB2E4; --accent-ink:#9CC6EC; --accent-soft:rgba(123,178,228,.16);
-  --alarm:#EE9D86; --amber:#D7A75A; --cat1:#D79355; --cat2:#86AFC4; --ok:#6FC3A8;
+  --alarm:#EE9D86; --alarm-soft:rgba(238,157,134,.16); --amber:#D7A75A; --amber-soft:rgba(215,167,90,.16);
+  --cat1:#D79355; --cat2:#86AFC4; --ok:#6FC3A8; --ok-soft:rgba(111,195,168,.16);
 }
 *{box-sizing:border-box}
 html,body{margin:0; padding:0; height:100%}
 body{background:var(--ground); color:var(--ink); font-family:var(--body); -webkit-font-smoothing:antialiased}
 @media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }
 
-/* ── chrome ── */
 .chrome{position:fixed; z-index:50; right:12px; top:10px; display:flex; gap:7px}
-.btn{
-  font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
-  color:var(--muted); background:var(--raise); border:1px solid var(--rule); border-radius:999px;
-  padding:6px 12px; cursor:pointer;
-}
+.btn{font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--muted); background:var(--raise); border:1px solid var(--rule); border-radius:999px; padding:6px 12px; cursor:pointer}
 .btn:hover{color:var(--ink); border-color:var(--accent)}
 .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .rail{position:fixed; z-index:50; left:0; right:0; bottom:0; height:3px; background:transparent}
 .rail i{display:block; height:100%; width:0; background:var(--accent); transition:width .25s ease}
 body.map .rail{display:none}
 
-/* ════════ ROADMAP SCREEN ════════ */
-.roadmap{min-height:100%; display:flex; flex-direction:column; justify-content:center; gap:clamp(18px,2.6vh,30px);
-  padding:clamp(22px,4vh,52px) clamp(18px,4vw,64px)}
-body.slides .roadmap, body.doc .roadmap{display:none}
-body.doc .roadmap{display:flex; min-height:0; padding:0 0 2rem}
-.rm-head{display:flex; flex-direction:column; gap:8px}
+/* ════════ ROADMAP ════════ */
+.roadmap{min-height:100%; display:flex; flex-direction:column; justify-content:center; gap:clamp(16px,2.4vh,26px);
+  padding:clamp(20px,4vh,46px) clamp(18px,4vw,60px)}
+body.slides .roadmap{display:none}
+body.doc .roadmap{display:flex; min-height:0; padding:0 0 1.6rem}
+.rm-head{display:flex; flex-direction:column; gap:7px}
 .rm-eyebrow{font-family:var(--mono); font-size:clamp(10px,.85vw,12px); font-weight:600; letter-spacing:.2em;
   text-transform:uppercase; color:var(--accent-ink)}
-.rm-head h1{font-family:var(--display); font-weight:700; font-size:clamp(28px,4.4vw,54px); line-height:1.04;
-  margin:0; max-width:24ch; text-wrap:balance}
-.rm-head p{margin:0; color:var(--muted); font-size:clamp(14px,1.4vw,19px); max-width:62ch; line-height:1.5}
-.cards{display:grid; gap:clamp(10px,1.1vw,16px); grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
-.card{
-  background:var(--raise); border:1px solid var(--rule); border-radius:12px; padding:clamp(13px,1.3vw,18px);
-  display:flex; flex-direction:column; gap:7px; min-width:0; text-align:left; font:inherit; color:inherit;
-  position:relative;
-}
-.card .cw{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
-.card h2{font-family:var(--display); font-weight:700; font-size:clamp(16px,1.5vw,20px); line-height:1.12; margin:0}
-.card p{margin:0; color:var(--muted); font-size:clamp(12.5px,1.05vw,14.5px); line-height:1.4}
-.card .state{font-family:var(--mono); font-size:10px; letter-spacing:.07em; text-transform:uppercase;
-  display:inline-flex; align-items:center; gap:6px; margin-top:auto; padding-top:6px}
+.rm-head h1{font-family:var(--display); font-weight:700; font-size:clamp(26px,4vw,48px); line-height:1.04; margin:0; text-wrap:balance}
+.rm-head p{margin:0; color:var(--muted); font-size:clamp(13px,1.3vw,17px); max-width:58ch; line-height:1.45}
+.cards{display:grid; gap:clamp(9px,1vw,14px); grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.card{background:var(--raise); border:1px solid var(--rule); border-radius:11px; padding:clamp(11px,1.1vw,15px);
+  display:flex; flex-direction:column; gap:6px; min-width:0; text-align:left; font:inherit; color:inherit; position:relative}
+.card .cw{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--faint)}
+.card h2{font-family:var(--display); font-weight:700; font-size:clamp(15px,1.4vw,19px); line-height:1.12; margin:0}
+.card p{margin:0; color:var(--muted); font-size:clamp(12px,1vw,13.5px); line-height:1.38}
+.card .state{font-family:var(--mono); font-size:9.5px; letter-spacing:.07em; text-transform:uppercase;
+  display:inline-flex; align-items:center; gap:6px; margin-top:auto; padding-top:5px}
 .card .state i{width:8px; height:8px; border-radius:50%; display:block}
 .card.open{cursor:pointer; border-color:var(--accent)}
 .card.open:hover{background:var(--accent-soft)}
@@ -74,9 +67,9 @@ body.doc .roadmap{display:flex; min-height:0; padding:0 0 2rem}
 .card.open .state{color:var(--ok)} .card.open .state i{background:var(--ok)}
 .card.locked{border-style:dashed; background:transparent}
 .card.locked h2{color:var(--faint)}
-.card.locked .state{color:var(--faint)} .card.locked .state i{background:var(--rule)}
-.card .enter{font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-ink)}
-.legendrow{display:flex; flex-wrap:wrap; gap:16px; font-family:var(--mono); font-size:11px; color:var(--faint)}
+.card.locked .state{color:var(--faint)}
+.card .enter{font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-ink)}
+.legendrow{display:flex; flex-wrap:wrap; gap:15px; font-family:var(--mono); font-size:10.5px; color:var(--faint)}
 .legendrow span{display:flex; align-items:center; gap:6px}
 .legendrow i{width:8px; height:8px; border-radius:50%; display:block}
 .i-built{background:var(--ok)} .i-written{background:var(--amber)} .i-open{background:var(--rule)}
@@ -86,183 +79,201 @@ body.doc .roadmap{display:flex; min-height:0; padding:0 0 2rem}
 body.slides #deck{display:block; height:100dvh; overflow-y:scroll; scroll-snap-type:y mandatory; scrollbar-width:none}
 body.slides #deck::-webkit-scrollbar{display:none}
 body.slides section{height:100dvh; scroll-snap-align:start; scroll-snap-stop:always; display:flex; align-items:center; justify-content:center}
-.slide{
-  width:min(100vw,177.78vh); aspect-ratio:16/9; container-type:inline-size; position:relative; overflow:hidden;
-  background:var(--ground); color:var(--ink);
-}
-.slide::after{
-  content:""; position:absolute; inset:auto 0 0; height:.9cqw; pointer-events:none;
-  background:linear-gradient(90deg,var(--accent) 0 38%,transparent 38% 62%,var(--accent) 62% 100%);
-}
-.inner{position:absolute; inset:0; padding:4.4cqw 5cqw 5.4cqw; display:flex; flex-direction:column; gap:1.6cqw}
+.slide{width:min(100vw,177.78vh); aspect-ratio:16/9; container-type:inline-size; position:relative; overflow:hidden;
+  background:var(--ground); color:var(--ink)}
+.slide::after{content:""; position:absolute; inset:auto 0 0; height:.9cqw; pointer-events:none;
+  background:linear-gradient(90deg,var(--accent) 0 38%,transparent 38% 62%,var(--accent) 62% 100%)}
+.inner{position:absolute; inset:0; padding:4.2cqw 5cqw 5.2cqw; display:flex; flex-direction:column; gap:1.5cqw}
 .spacer{flex:1}
 
 body.doc #deck{display:block; max-width:50rem; margin:0 auto; padding:0 max(1rem,env(safe-area-inset-left,0px)) 4rem}
 body.doc section{display:block}
 body.doc .slide{width:auto; aspect-ratio:auto; height:auto; container-type:normal; overflow:visible;
-  border-top:1px solid var(--rule-soft); padding-top:1.8rem}
+  border-top:1px solid var(--rule-soft); padding-top:1.6rem}
 body.doc .slide::after{display:none}
-body.doc .inner{position:static; padding:0 0 1.4rem; gap:.9rem}
+body.doc .inner{position:static; padding:0 0 1.2rem; gap:.85rem}
 body.doc .spacer{display:none}
 
-/* type: cqw on slides, rem twins in the document */
-.eyebrow{font-family:var(--mono); font-size:1.1cqw; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--accent-ink)}
-h2.sh{font-family:var(--display); font-weight:700; font-size:3.7cqw; line-height:1.06; margin:0; max-width:25ch; text-wrap:balance}
-h1.sh{font-family:var(--display); font-weight:700; font-size:5.2cqw; line-height:1.02; margin:0; max-width:22ch; text-wrap:balance}
-.lead{font-size:1.6cqw; color:var(--muted); margin:0; max-width:54ch; line-height:1.42}
-.slide p{margin:0; color:var(--muted); font-size:1.35cqw; max-width:60ch; line-height:1.42}
-.src{font-family:var(--mono); font-size:.98cqw; color:var(--faint); margin:0; max-width:none}
+.eyebrow{font-family:var(--mono); font-size:1.05cqw; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--accent-ink)}
+h2.sh{font-family:var(--display); font-weight:700; font-size:3.5cqw; line-height:1.06; margin:0; max-width:26ch; text-wrap:balance}
+h1.sh{font-family:var(--display); font-weight:700; font-size:4.6cqw; line-height:1.03; margin:0; max-width:24ch; text-wrap:balance}
+.slide p{margin:0; color:var(--muted); font-size:1.3cqw; max-width:62ch; line-height:1.4}
+.src{font-family:var(--mono); font-size:.95cqw; color:var(--faint); margin:0; max-width:none}
 .slide b{color:var(--ink); font-weight:600}
 body.doc .eyebrow{font-size:.7rem}
-body.doc h1.sh{font-size:1.9rem; max-width:none}
-body.doc h2.sh{font-size:1.45rem; max-width:none}
-body.doc .lead{font-size:1.02rem; max-width:none}
-body.doc .slide p{font-size:.97rem; max-width:none}
-body.doc .src{font-size:.76rem}
+body.doc h1.sh, body.doc h2.sh{max-width:none}
+body.doc h1.sh{font-size:1.8rem}
+body.doc h2.sh{font-size:1.4rem}
+body.doc .slide p{font-size:.95rem; max-width:none}
+body.doc .src{font-size:.74rem}
 
 /* facts */
-.facts{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1.5cqw}
-.fact{display:flex; flex-direction:column; gap:.35cqw; min-width:0}
-.fact .n{font-family:var(--display); font-weight:700; font-size:3cqw; line-height:1; font-variant-numeric:tabular-nums}
-.fact .l{font-family:var(--mono); font-size:.95cqw; color:var(--faint); letter-spacing:.05em; text-transform:uppercase; line-height:1.35}
-body.doc .facts{gap:.9rem; grid-template-columns:repeat(2,minmax(0,1fr))}
-body.doc .fact{gap:.1rem}
-body.doc .fact .n{font-size:1.6rem}
-body.doc .fact .l{font-size:.68rem}
+.facts{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1.4cqw}
+.fact{display:flex; flex-direction:column; gap:.3cqw; min-width:0}
+.fact .n{font-family:var(--display); font-weight:700; font-size:2.9cqw; line-height:1; font-variant-numeric:tabular-nums}
+.fact .l{font-family:var(--mono); font-size:.92cqw; color:var(--faint); letter-spacing:.05em; text-transform:uppercase; line-height:1.3}
+body.doc .facts{gap:.8rem; grid-template-columns:repeat(2,minmax(0,1fr))}
+body.doc .fact .n{font-size:1.5rem}
+body.doc .fact .l{font-size:.66rem}
+
+/* status board: one row per task */
+.board{display:flex; flex-direction:column; gap:.55cqw}
+.brow{display:grid; grid-template-columns:3cqw 1fr 26cqw 13cqw; align-items:center; gap:1.2cqw;
+  padding:.5cqw 0; border-bottom:1px solid var(--rule-soft)}
+.brow .bn{font-family:var(--mono); font-size:1cqw; color:var(--faint)}
+.brow .bt{font-family:var(--display); font-weight:700; font-size:1.5cqw; line-height:1.1}
+.brow .bmeter{height:1cqw; background:var(--rule); border-radius:.5cqw; overflow:hidden; position:relative}
+.brow .bmeter i{position:absolute; inset:0 auto 0 0; border-radius:.5cqw}
+.brow .bs{font-family:var(--mono); font-size:.95cqw; letter-spacing:.05em; text-transform:uppercase; text-align:right}
+.s-built i{background:var(--ok)} .s-built .bs{color:var(--ok)}
+.s-written i{background:var(--amber)} .s-written .bs{color:var(--amber)}
+.s-open i{background:var(--rule)} .s-open .bs{color:var(--faint)}
+body.doc .board{gap:.3rem}
+body.doc .brow{grid-template-columns:1.6rem 1fr 9rem 6rem; gap:.7rem; padding:.3rem 0}
+body.doc .brow .bn{font-size:.72rem}
+body.doc .brow .bt{font-size:.95rem}
+body.doc .brow .bmeter{height:.5rem; border-radius:.25rem}
+body.doc .brow .bmeter i{border-radius:.25rem}
+body.doc .brow .bs{font-size:.66rem}
+
+/* week strip */
+.week{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1.2cqw; position:relative}
+.wday{display:flex; flex-direction:column; gap:.5cqw; min-width:0; border-top:.3cqw solid var(--rule); padding-top:.9cqw}
+.wday.good{border-top-color:var(--ok)} .wday.bad{border-top-color:var(--alarm)} .wday.now{border-top-color:var(--accent)}
+.wday .wd{font-family:var(--mono); font-size:.92cqw; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+.wday .wt{font-family:var(--display); font-weight:700; font-size:1.4cqw; line-height:1.12}
+.wday .wp{font-size:1.05cqw; color:var(--muted); line-height:1.35}
+body.doc .week{grid-template-columns:1fr; gap:.8rem}
+body.doc .wday{border-top-width:2px; padding-top:.5rem; gap:.2rem}
+body.doc .wday .wd{font-size:.66rem}
+body.doc .wday .wt{font-size:.95rem}
+body.doc .wday .wp{font-size:.88rem}
+
+/* failure chains */
+.chains{display:flex; flex-direction:column; gap:.8cqw}
+.chain{display:grid; grid-template-columns:1fr 1fr 1fr; gap:.7cqw; align-items:stretch}
+.cbox{border-radius:.4cqw; padding:.7cqw .9cqw; display:flex; flex-direction:column; gap:.2cqw; min-width:0}
+.cbox .cl{font-family:var(--mono); font-size:.82cqw; letter-spacing:.1em; text-transform:uppercase}
+.cbox .ct{font-size:1.1cqw; line-height:1.3; color:var(--ink)}
+.c-sym{background:var(--alarm-soft)} .c-sym .cl{color:var(--alarm)}
+.c-why{background:var(--raise)} .c-why .cl{color:var(--faint)}
+.c-fix{background:var(--ok-soft)} .c-fix .cl{color:var(--ok)}
+.c-open{background:var(--amber-soft)} .c-open .cl{color:var(--amber)}
+body.doc .chains{gap:.6rem}
+body.doc .chain{grid-template-columns:1fr; gap:.25rem}
+body.doc .cbox{border-radius:6px; padding:.5rem .6rem}
+body.doc .cbox .cl{font-size:.62rem}
+body.doc .cbox .ct{font-size:.88rem}
+
+/* next steps */
+.steps{display:flex; flex-direction:column; gap:.6cqw}
+.step{display:grid; grid-template-columns:1.6cqw 1fr 30cqw; gap:1.1cqw; align-items:baseline;
+  padding-bottom:.55cqw; border-bottom:1px solid var(--rule-soft)}
+.step .sq{width:1.1cqw; height:1.1cqw; border:.18cqw solid var(--faint); border-radius:.2cqw; display:block}
+.step.block .sq{border-color:var(--alarm); background:var(--alarm-soft)}
+.step .st{font-size:1.25cqw; color:var(--ink); line-height:1.3}
+.step .sp{font-family:var(--mono); font-size:.95cqw; color:var(--faint); line-height:1.35}
+body.doc .steps{gap:.4rem}
+body.doc .step{grid-template-columns:1rem 1fr; gap:.5rem; padding-bottom:.4rem}
+body.doc .step .sq{width:.6rem; height:.6rem; border-width:1px; border-radius:2px}
+body.doc .step .st{font-size:.92rem}
+body.doc .step .sp{font-size:.72rem; grid-column:2}
 
 /* bars */
 .bars{display:flex; flex-direction:column; gap:.7cqw}
 .bar{display:grid; grid-template-columns:13cqw 1fr 10cqw; align-items:center; gap:1.2cqw}
-.bl{font-family:var(--mono); font-size:1.05cqw; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
+.bl{font-family:var(--mono); font-size:1cqw; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
 .track{height:1.7cqw; background:var(--rule); border-radius:.3cqw; position:relative; overflow:hidden}
 .fill{position:absolute; inset:0 auto 0 0; border-radius:.3cqw}
-.bv{font-family:var(--mono); font-size:1.05cqw; font-variant-numeric:tabular-nums; text-align:right}
+.bv{font-family:var(--mono); font-size:1cqw; font-variant-numeric:tabular-nums; text-align:right}
 .bar.lost .bv{color:var(--alarm); font-weight:600}
 .f-base{background:var(--cat1)} .f-ours{background:var(--cat2)} .f-adaptive{background:var(--accent)}
-.legend{display:flex; flex-wrap:wrap; gap:1.6cqw; font-family:var(--mono); font-size:.98cqw; color:var(--faint)}
-.legend span{display:flex; align-items:center; gap:.5cqw}
-.legend i{width:1cqw; height:1cqw; border-radius:.2cqw; display:block}
-body.doc .bars{gap:.45rem}
-body.doc .bar{grid-template-columns:7rem 1fr 5rem; gap:.6rem}
-body.doc .bl{font-size:.74rem}
-body.doc .track{height:.85rem; border-radius:3px}
+body.doc .bars{gap:.4rem}
+body.doc .bar{grid-template-columns:7rem 1fr 4rem; gap:.6rem}
+body.doc .bl{font-size:.72rem}
+body.doc .track{height:.8rem; border-radius:3px}
 body.doc .fill{border-radius:3px}
-body.doc .bv{font-size:.76rem}
-body.doc .legend{gap:.8rem; font-size:.72rem}
-body.doc .legend i{width:.6rem; height:.6rem; border-radius:2px}
-body.doc .legend span{gap:.3rem}
+body.doc .bv{font-size:.74rem}
 
 /* pipeline */
 .pipe{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:1cqw}
-.pstep{background:var(--raise); border:1px solid var(--rule); border-radius:.6cqw; padding:1.2cqw; display:flex; flex-direction:column; gap:.45cqw; min-width:0}
-.pstep .pn{font-family:var(--mono); font-size:.9cqw; letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
-.pstep .pt{font-family:var(--display); font-weight:700; font-size:1.45cqw; line-height:1.1}
-.pstep .pd{font-size:.98cqw; color:var(--muted); line-height:1.3}
+.pstep{background:var(--raise); border:1px solid var(--rule); border-radius:.6cqw; padding:1.1cqw; display:flex; flex-direction:column; gap:.4cqw; min-width:0}
+.pstep .pn{font-family:var(--mono); font-size:.88cqw; letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
+.pstep .pt{font-family:var(--display); font-weight:700; font-size:1.4cqw; line-height:1.1}
+.pstep .pd{font-size:.95cqw; color:var(--muted); line-height:1.3}
 .pstep.mid{border-color:var(--accent)}
-.chip{font-family:var(--mono); font-size:.88cqw; background:var(--accent-soft); border-radius:.3cqw; padding:.2cqw .45cqw; margin-top:.25cqw}
-body.doc .pipe{grid-template-columns:repeat(2,minmax(0,1fr)); gap:.7rem}
-body.doc .pstep{border-radius:8px; padding:.75rem; gap:.2rem}
-body.doc .pstep .pn{font-size:.64rem}
-body.doc .pstep .pt{font-size:.98rem}
-body.doc .pstep .pd{font-size:.8rem}
-body.doc .chip{font-size:.66rem; border-radius:3px; padding:.1rem .3rem; margin-top:.2rem}
+.chip{font-family:var(--mono); font-size:.85cqw; background:var(--accent-soft); border-radius:.3cqw; padding:.18cqw .4cqw; margin-top:.2cqw}
+body.doc .pipe{grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem}
+body.doc .pstep{border-radius:8px; padding:.7rem; gap:.15rem}
+body.doc .pstep .pn{font-size:.62rem}
+body.doc .pstep .pt{font-size:.95rem}
+body.doc .pstep .pd{font-size:.78rem}
+body.doc .chip{font-size:.64rem; border-radius:3px; padding:.08rem .28rem}
 
-/* tables */
-.ft{border-collapse:collapse; width:100%; font-size:1.2cqw}
-.ft th{font-family:var(--mono); font-size:.9cqw; letter-spacing:.09em; text-transform:uppercase; color:var(--faint);
-  text-align:left; font-weight:600; padding:0 1.1cqw .55cqw 0; border-bottom:1px solid var(--rule)}
-.ft td{color:var(--muted); padding:.6cqw 1.1cqw .6cqw 0; border-bottom:1px solid var(--rule-soft); vertical-align:top}
-.ft td.m{font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap}
-.scroller{overflow-x:auto}
-body.doc .ft{font-size:.86rem}
-body.doc .ft th{font-size:.64rem; padding:0 .7rem .35rem 0}
-body.doc .ft td{padding:.4rem .7rem .4rem 0}
+/* model cards */
+.models{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1.2cqw}
+.model{background:var(--raise); border:1px solid var(--rule); border-radius:.6cqw; padding:1.1cqw; display:flex; flex-direction:column; gap:.5cqw; min-width:0}
+.model .mt{font-family:var(--display); font-weight:700; font-size:1.5cqw}
+.model .mn{font-family:var(--display); font-weight:700; font-size:2.6cqw; line-height:1; font-variant-numeric:tabular-nums; color:var(--accent-ink)}
+.model .ml{font-family:var(--mono); font-size:.88cqw; color:var(--faint); letter-spacing:.04em; line-height:1.35}
+.model .mw{font-size:1cqw; color:var(--muted); line-height:1.3; border-top:1px solid var(--rule-soft); padding-top:.5cqw; margin-top:auto}
+body.doc .models{grid-template-columns:1fr; gap:.6rem}
+body.doc .model{border-radius:8px; padding:.7rem; gap:.25rem}
+body.doc .model .mt{font-size:.98rem}
+body.doc .model .mn{font-size:1.4rem}
+body.doc .model .ml{font-size:.68rem}
+body.doc .model .mw{font-size:.85rem; padding-top:.35rem}
 
-/* status dots in tables */
-.dot{display:inline-flex; align-items:center; gap:.5cqw; font-family:var(--mono); font-size:1cqw; white-space:nowrap}
-.dot i{width:.8cqw; height:.8cqw; border-radius:50%; display:block}
-body.doc .dot{font-size:.76rem; gap:.3rem}
-body.doc .dot i{width:.5rem; height:.5rem}
+figure{margin:0; min-height:0; display:flex; flex-direction:column; gap:.5cqw; align-items:center}
+figure svg{display:block; width:100%; height:auto; max-height:23cqw; max-width:100%}
+figure.wide svg{max-height:18cqw}
+.fl{font-family:var(--mono); font-size:.92cqw; color:var(--faint); letter-spacing:.09em; text-transform:uppercase; align-self:flex-start}
+body.doc figure{gap:.3rem}
+body.doc figure svg, body.doc figure.wide svg{max-height:none}
+body.doc .fl{font-size:.64rem}
 
-/* two lanes */
-.lanes{display:grid; grid-template-columns:1fr 1fr; gap:2.2cqw}
-.lane{display:flex; flex-direction:column; gap:.7cqw; border-top:.3cqw solid var(--rule); padding-top:.9cqw; min-width:0}
-.lane.answer{border-top-color:var(--accent)}
-.lane h3{font-family:var(--display); font-weight:700; font-size:1.55cqw; margin:0}
-.lane .ltag{font-family:var(--mono); font-size:.9cqw; letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
-body.doc .lanes{grid-template-columns:1fr; gap:1.1rem}
-body.doc .lane{gap:.35rem; border-top-width:2px; padding-top:.55rem}
-body.doc .lane h3{font-size:1rem}
-body.doc .lane .ltag{font-size:.64rem}
+.tag{font-family:var(--mono); font-size:.88cqw; letter-spacing:.06em; text-transform:uppercase; padding:.22cqw .55cqw; border-radius:.3cqw; display:inline-block}
+.t-run{background:var(--ok-soft); color:var(--ok)}
+.t-test{background:var(--amber-soft); color:var(--amber)}
+body.doc .tag{font-size:.62rem; padding:.1rem .3rem; border-radius:3px}
 
-/* figures: capped so the text under them always fits the slide */
-figure{margin:0; min-height:0; display:flex; flex-direction:column; gap:.6cqw; align-items:center}
-figure svg{display:block; width:100%; height:auto; max-height:20cqw; max-width:100%}
-figure.wide svg{max-height:17cqw}
-.fl{font-family:var(--mono); font-size:.95cqw; color:var(--faint); letter-spacing:.09em; text-transform:uppercase; align-self:flex-start}
-body.doc figure{gap:.35rem}
-body.doc figure svg{max-height:none}
-body.doc figure.wide svg{max-height:none}
-body.doc .fl{font-size:.66rem}
-
-.tag{font-family:var(--mono); font-size:.9cqw; letter-spacing:.06em; text-transform:uppercase; padding:.25cqw .6cqw; border-radius:.3cqw; display:inline-block}
-.t-run{background:rgba(47,111,94,.16); color:var(--ok)}
-.t-test{background:rgba(138,90,22,.16); color:var(--amber)}
-body.doc .tag{font-size:.64rem; padding:.12rem .35rem; border-radius:3px}
-
-.srclist{display:grid; grid-template-columns:1fr 1fr; gap:.9cqw 2.2cqw; font-size:1.1cqw}
-.srclist div{display:flex; flex-direction:column; gap:.15cqw; min-width:0}
-.srclist b{font-family:var(--display)}
-.srclist span{font-family:var(--mono); font-size:.95cqw; color:var(--faint); word-break:break-word}
-body.doc .srclist{grid-template-columns:1fr; gap:.55rem; font-size:.88rem}
-body.doc .srclist div{gap:.05rem}
-body.doc .srclist span{font-size:.73rem}
-
-/* ── code panel: only where the code is the content ── */
-.codeblock{margin-top:.4cqw}
-.codebtn{
-  font-family:var(--mono); font-size:.95cqw; letter-spacing:.07em; text-transform:uppercase;
-  color:var(--accent-ink); background:transparent; border:1px solid var(--rule); border-radius:.4cqw;
-  padding:.5cqw 1cqw; cursor:pointer;
-}
+/* code panel: overlay on a slide, inline in the document */
+.codeblock{margin-top:.3cqw}
+.codebtn{font-family:var(--mono); font-size:.92cqw; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--accent-ink); background:transparent; border:1px solid var(--rule); border-radius:.4cqw; padding:.45cqw .9cqw; cursor:pointer}
 .codebtn:hover{background:var(--accent-soft)}
 .codebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-.codewrap{display:none; margin-top:.8cqw; background:var(--raise); border:1px solid var(--rule); border-radius:.5cqw;
-  padding:1.1cqw 1.3cqw; gap:.7cqw; flex-direction:column}
-/* open on a slide, the panel is an overlay with its own scroll: a fixed slide cannot grow */
-.codewrap[data-open="true"]{
-  display:flex; position:absolute; inset:0; margin:0; overflow:auto; z-index:6;
-  padding:2.4cqw 2.6cqw 3.4cqw; border-radius:0; border:0; border-top:.25cqw solid var(--accent);
-}
-.codewrap[data-open="true"]::after{
-  content:"click the panel background or press escape to close";
-  font-family:var(--mono); font-size:.9cqw; color:var(--faint); letter-spacing:.06em;
-}
-.codewrap .why{font-size:1.1cqw; color:var(--muted); line-height:1.4; margin:0; max-width:none}
+.codewrap{display:none; margin-top:.7cqw; background:var(--raise); border:1px solid var(--rule); border-radius:.5cqw;
+  padding:1cqw 1.2cqw; gap:.6cqw; flex-direction:column}
+.codewrap[data-open="true"]{display:flex; position:absolute; inset:0; margin:0; overflow:auto; z-index:6;
+  padding:2.2cqw 2.6cqw 3.2cqw; border-radius:0; border:0; border-top:.25cqw solid var(--accent)}
+.codewrap[data-open="true"]::after{content:"click the panel background or press escape to close";
+  font-family:var(--mono); font-size:.88cqw; color:var(--faint); letter-spacing:.06em}
+.codewrap .why{font-size:1.05cqw; color:var(--muted); line-height:1.4; margin:0; max-width:none}
 .codewrap .why b{color:var(--ink)}
-.codewrap pre{margin:0; font-family:var(--mono); font-size:.95cqw; line-height:1.55; color:var(--ink);
+.codewrap pre{margin:0; font-family:var(--mono); font-size:.92cqw; line-height:1.55; color:var(--ink);
   background:var(--ground); border:1px solid var(--rule-soft); border-radius:.3cqw; padding:.8cqw 1cqw; overflow-x:auto}
 .codewrap pre .c{color:var(--faint)}
-.codewrap .where{font-family:var(--mono); font-size:.9cqw; color:var(--faint)}
+.codewrap .where{font-family:var(--mono); font-size:.88cqw; color:var(--faint)}
 body.doc .codebtn{display:none}
 body.doc .codewrap, body.doc .codewrap[data-open="true"]{display:flex !important; position:static; inset:auto;
-  font-size:1rem; border:1px solid var(--rule); border-radius:8px; padding:.9rem 1rem; gap:.5rem; margin-top:.6rem; overflow:visible}
+  border:1px solid var(--rule); border-radius:8px; padding:.85rem 1rem; gap:.45rem; margin-top:.5rem; overflow:visible}
 body.doc .codewrap[data-open="true"]::after{display:none}
-body.doc .codewrap .why{font-size:.95rem}
-body.doc .codewrap pre{font-size:.78rem; border-radius:4px; padding:.6rem .7rem}
-body.doc .codewrap .where{font-size:.72rem}
+body.doc .codewrap .why{font-size:.92rem}
+body.doc .codewrap pre{font-size:.76rem; border-radius:4px; padding:.55rem .7rem}
+body.doc .codewrap .where{font-size:.7rem}
 
 .deckonly{display:block} .doconly{display:none}
 body.doc .deckonly{display:none} body.doc .doconly{display:block}
 
-/* ── print ── */
 @page{ size:297mm 167mm; margin:0 }
 @media print{
   :root, :root[data-theme="dark"]{ color-scheme:light;
     --ground:#DEDCD5; --raise:#EFEEE9; --ink:#1B1E23; --muted:#3C4047; --faint:#5A5F67;
     --rule:#C6C4BC; --rule-soft:#D5D3CC; --accent:#1E5FA8; --accent-ink:#184B84;
-    --accent-soft:rgba(30,95,168,.12); --alarm:#7A2418; --amber:#8A5A16;
-    --cat1:#9C5120; --cat2:#4C7A8C; --ok:#2F6F5E;
+    --accent-soft:rgba(30,95,168,.12); --alarm:#7A2418; --alarm-soft:rgba(122,36,24,.12);
+    --amber:#8A5A16; --amber-soft:rgba(138,90,22,.14); --cat1:#9C5120; --cat2:#4C7A8C;
+    --ok:#2F6F5E; --ok-soft:rgba(47,111,94,.14);
   }
   html,body{height:auto; overflow:visible}
   .chrome,.rail{display:none !important}
@@ -270,13 +281,11 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
   body.slides #deck, body.map #deck{display:block; height:auto; overflow:visible}
   body.slides section, body.map section{height:167mm; width:297mm; page-break-after:always; break-after:page; display:flex; overflow:hidden}
   body.slides .slide, body.map .slide{width:297mm; height:167mm; aspect-ratio:auto}
-  body.slides .codewrap, body.map .codewrap{display:none !important}   /* the slide PDF keeps the slides clean */
-  body.doc{ }
+  body.slides .codewrap, body.map .codewrap{display:none !important}
   body.doc section{break-inside:avoid-page}
   body.doc .codewrap{display:flex !important}
   *{-webkit-print-color-adjust:exact; print-color-adjust:exact}
 }
-@media print{ body.doc{ } }
 </style>
 </head>
 <body class="map">
@@ -288,134 +297,157 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
 </div>
 <div class="rail"><i id="railfill"></i></div>
 
-<!-- ════════════════ ROADMAP ════════════════ -->
+<!-- ════════ ROADMAP ════════ -->
 <div class="roadmap" id="roadmap">
   <div class="rm-head">
     <div class="rm-eyebrow">Mini autonomous vehicle · team A · status 2 November</div>
-    <h1>Eight tasks. Two of them drive today.</h1>
-    <p>The road following and the obstacle stop run on the track. Everything after them is either written and not yet driven, or waiting for track parts that do not exist yet. Open a task to see what we built, what it measures, and what broke.</p>
+    <h1>Two tasks drive. One is written and waiting for a track test.</h1>
+    <p>Open the first card for the status update: what runs, what we did last week, what broke, and what is next.</p>
   </div>
 
   <div class="cards">
     <button class="card open" id="card-w1" type="button">
       <span class="cw">Tasks 1 and 2</span>
-      <h2>Road following and the obstacle stop</h2>
-      <p>Our own control layer, three trained models, a six state machine, and the three failures that shaped them.</p>
+      <h2>Lane following and the cup stop</h2>
+      <p>Three models, a six state machine, our own steering. Driven on the track.</p>
       <span class="state"><i></i>built and tested</span>
-      <span class="enter">Open the slides</span>
+      <span class="enter">Open the status update</span>
     </button>
-
     <div class="card locked">
       <span class="cw">Task 2, second half</span>
-      <h2>Around the obstacle</h2>
-      <p>Turn 90, one curve around the cup, turn 90 back. The three moves are tested on the track without a cup. Putting them into the state machine is this week's job.</p>
+      <h2>Around the cup</h2>
+      <p>Turn 90, one curve, turn 90 back. Moves tested without a cup.</p>
       <span class="state"><i style="background:var(--amber)"></i>written, not yet driven</span>
     </div>
-
     <div class="card locked">
-      <span class="cw">Tasks 3, 4 and 5</span>
+      <span class="cw">Tasks 3, 4, 5</span>
       <h2>Signs, intersection, parking</h2>
-      <p>Same pipeline as the cup: record, label from a color mask, train one model, decide in our own code. Waiting on signs, a taped intersection and a taped parking box.</p>
-      <span class="state"><i></i>waiting on track parts</span>
+      <p>Same pipeline as the cup. Waiting on signs and tape on the floor.</p>
+      <span class="state"><i style="background:var(--rule)"></i>waiting on track parts</span>
     </div>
-
     <div class="card locked">
       <span class="cw">Task 6</span>
       <h2>One integrated program</h2>
-      <p>Six states already run. Integration adds one transition function, one behavior function per state, and one place that writes the motors.</p>
-      <span class="state"><i></i>after tasks 3 to 5</span>
+      <p>Six states run. One transition function and one motor function to come.</p>
+      <span class="state"><i style="background:var(--rule)"></i>after tasks 3 to 5</span>
     </div>
-
     <div class="card locked">
       <span class="cw">Task 7</span>
-      <h2>Adaptive speed and cruise control</h2>
-      <p>The speed rule already takes the lower of two limits. Cruise control adds a following distance as a third. Needs a second JetBot and a marker.</p>
-      <span class="state"><i></i>waiting on a second robot</span>
+      <h2>Cruise control</h2>
+      <p>The speed rule already takes the lower of two limits.</p>
+      <span class="state"><i style="background:var(--rule)"></i>needs a second robot</span>
     </div>
-
     <div class="card locked">
       <span class="cw">Task 8</span>
       <h2>The unknown course</h2>
-      <p>One autonomous run from the parking space, around a course nobody has seen, and back in. Plus slides, graphs, data summary and video.</p>
-      <span class="state"><i></i>open</span>
+      <p>Parking to parking, filmed, with the archive.</p>
+      <span class="state"><i style="background:var(--rule)"></i>open</span>
     </div>
   </div>
 
   <div class="legendrow">
     <span><i class="i-built"></i>built and tested on the track</span>
     <span><i class="i-written"></i>written, never completed a run</span>
-    <span><i class="i-open"></i>open, or waiting on something physical</span>
-    <span>Keys: enter opens · escape returns · d document · t dark</span>
+    <span><i class="i-open"></i>waiting on something physical</span>
+    <span>enter opens · escape returns · d document · t dark</span>
   </div>
 </div>
 
-<!-- ════════════════ SLIDES ════════════════ -->
+<!-- ════════ SLIDES ════════ -->
 <div id="deck">
 
-<!-- 1 title -->
+<!-- 1 status board -->
 <section>
   <div class="slide"><div class="inner">
-    <div class="eyebrow">Tasks 1 and 2 · status 2 November</div>
-    <div class="spacer" style="flex:.45"></div>
-    <h1 class="sh">A JetBot that drives its lane and stops for a marked cup</h1>
-    <p class="lead">Three trained models report what the camera sees. Our decision and control code does the rest. This is what has driven on the track, what it measures, and the failures that got it there.</p>
-    <div class="spacer"></div>
-    <div class="facts" style="flex:none">
-      <div class="fact"><span class="n">60 s</span><span class="l">driven in both directions, no stop</span></div>
-      <div class="fact"><span class="n">8 stops</span><span class="l">in front of a cup, one 90 s run</span></div>
-      <div class="fact"><span class="n">3 models</span><span class="l">lane, curve, obstacle</span></div>
-      <div class="fact"><span class="n">22 Hz</span><span class="l">control steps per second</span></div>
+    <div class="eyebrow">Status · 2 November</div>
+    <h1 class="sh">Where the project stands</h1>
+    <div class="spacer" style="flex:.3"></div>
+    <div class="board" style="flex:none">
+      <div class="brow s-built"><span class="bn">1</span><span class="bt">Adaptive lane following</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">driven 60 s</span></div>
+      <div class="brow s-built"><span class="bn">2a</span><span class="bt">Stop at a cup</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">8 stops live</span></div>
+      <div class="brow s-written"><span class="bn">2b</span><span class="bt">Drive around the cup</span><span class="bmeter"><i style="width:65%"></i></span><span class="bs">moves tested</span></div>
+      <div class="brow s-written"><span class="bn">6</span><span class="bt">State machine</span><span class="bmeter"><i style="width:60%"></i></span><span class="bs">6 states run</span></div>
+      <div class="brow s-open"><span class="bn">3-5</span><span class="bt">Signs, intersection, parking</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">no track parts</span></div>
+      <div class="brow s-open"><span class="bn">7</span><span class="bt">Cruise control</span><span class="bmeter"><i style="width:8%"></i></span><span class="bs">no 2nd robot</span></div>
+      <div class="brow s-open"><span class="bn">8</span><span class="bt">Final run</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">open</span></div>
     </div>
-    <p class="src">Every figure comes from our own runs on our own track. Sources on the last slide.</p>
+    <div class="spacer"></div>
+    <p class="src">Green: completed runs on the track. Amber: code exists, no complete run. Grey: blocked on something physical.</p>
   </div></div>
 </section>
 
-<!-- 2 where we are -->
+<!-- 2 last week -->
 <section>
   <div class="slide"><div class="inner">
-    <h2 class="sh">Where we are against the eight tasks</h2>
+    <h2 class="sh">What we did since the last demonstration</h2>
     <div class="spacer" style="flex:.3"></div>
-    <div class="scroller" style="flex:none"><table class="ft">
-      <tr><th>Task</th><th>State</th><th>Evidence, or what is missing</th></tr>
-      <tr><td><b>1 · Adaptive road following</b></td><td><span class="dot"><i style="background:var(--ok)"></i>built</span></td><td>60 s in both directions, three controllers compared</td></tr>
-      <tr><td><b>2 · Stop at an obstacle</b></td><td><span class="dot"><i style="background:var(--ok)"></i>built</span></td><td>8 stops in a 90 s run, shown to the professor</td></tr>
-      <tr><td><b>2 · Avoid and recover</b></td><td><span class="dot"><i style="background:var(--amber)"></i>written</span></td><td>the old timed swerve ran 3 of 3; the new one is tested move by move, not in the state machine yet</td></tr>
-      <tr><td><b>6 · State machine</b></td><td><span class="dot"><i style="background:var(--amber)"></i>partly</span></td><td>six states run; one transition function and one motor function are still to come</td></tr>
-      <tr><td><b>3, 4, 5 · Signs, intersection, parking</b></td><td><span class="dot"><i style="background:var(--rule)"></i>open</span></td><td>signs are being bought; the intersection and the parking box are not taped yet</td></tr>
-      <tr><td><b>7 · Adaptive speed, cruise control</b></td><td><span class="dot"><i style="background:var(--rule)"></i>open</span></td><td>needs a second JetBot; the speed rule already takes the lower of two limits</td></tr>
-      <tr><td><b>8 · Final run and slides</b></td><td><span class="dot"><i style="background:var(--rule)"></i>open</span></td><td>the course, the video and the archive</td></tr>
-    </table></div>
+    <div class="week" style="flex:none">
+      <div class="wday bad">
+        <span class="wd">26 Oct · first avoid run</span>
+        <span class="wt">Failed</span>
+        <span class="wp">The robot turned back toward the cup, then stood crosswise and drove off the track.</span>
+      </div>
+      <div class="wday good">
+        <span class="wd">26 Oct · fix</span>
+        <span class="wt">Camera ends the pass</span>
+        <span class="wp">The pass now ends when the cup mask stops seeing the cup. Recovery needs two tape lines.</span>
+      </div>
+      <div class="wday bad">
+        <span class="wd">29 Oct · second run</span>
+        <span class="wt">Three passes, wrong angle</span>
+        <span class="wp">All 3 swerves ended in lane following, but each turn was near 130 degrees, not 45.</span>
+      </div>
+      <div class="wday now">
+        <span class="wd">29 Oct · rebuild</span>
+        <span class="wt">Turn 90, curve, turn 90</span>
+        <span class="wp">Turn rates measured: 305 deg/s, not 120. New moves tested 5 of 5 on the track.</span>
+      </div>
+    </div>
     <div class="spacer"></div>
-    <p class="src">Built means it completed runs on the track. Written means the code exists and has not. Status read from the run logs.</p>
+    <p class="src">Full entries: DECISIONS.md, AVOID2, MOVE2 and AVOID3. Both runs are filmed.</p>
   </div></div>
 </section>
 
 <!-- 3 pipeline -->
 <section>
   <div class="slide"><div class="inner">
-    <h2 class="sh">Models measure. Our code decides and drives.</h2>
+    <h2 class="sh">How the robot decides, every frame</h2>
     <div class="spacer" style="flex:.3"></div>
     <div class="pipe" style="flex:none">
       <div class="pstep"><span class="pn">1 · camera</span><span class="pt">Frame</span><span class="pd">224 by 224 pixels</span></div>
-      <div class="pstep mid"><span class="pn">2 · perception</span><span class="pt">Three models</span><span class="pd">ResNet18 each, run through TensorRT</span>
+      <div class="pstep mid"><span class="pn">2 · perception</span><span class="pt">Three models</span><span class="pd">ResNet18, TensorRT</span>
         <span class="chip">lane: visible, x</span><span class="chip">curve: class, side</span><span class="chip">cup: row, x</span></div>
-      <div class="pstep"><span class="pn">3 · decision</span><span class="pt">State machine</span><span class="pd">Six states, priority order, every threshold a named constant</span></div>
-      <div class="pstep"><span class="pn">4 · control</span><span class="pt">PD and speed</span><span class="pd">Gains scaled by speed, curve feedforward, rate limits</span></div>
-      <div class="pstep"><span class="pn">5 · motors</span><span class="pt">Wheels</span><span class="pd">Battery guard, camera watchdog, motor watchdog</span></div>
+      <div class="pstep"><span class="pn">3 · decision</span><span class="pt">State machine</span><span class="pd">Six states, priority order</span></div>
+      <div class="pstep"><span class="pn">4 · control</span><span class="pt">PD and speed</span><span class="pd">Gains scaled by speed, curve feedforward</span></div>
+      <div class="pstep"><span class="pn">5 · motors</span><span class="pt">Wheels</span><span class="pd">Battery, camera and motor watchdogs</span></div>
     </div>
     <div class="spacer"></div>
-    <p>A model never sends a motor command. It returns numbers, and only our decision and control code reads them. Exact geometry does not come from a model at all: two color masks measure the lane lines and the cup band, and the checks that end a maneuver use those.</p>
-    <p class="src">Loop 21.6 to 22.8 steps per second with 24 ms of model time in the Task 1 runs, which carried two models. With the obstacle model added it is 29.8 ms per step. TensorRT took one lane pass from 41 ms to 10.6 ms.</p>
+    <p>Models report numbers. Only our decision and control code reads them, and the exact geometry comes from two color masks, not from a model.</p>
+    <div class="codeblock deckonly" style="flex:none">
+      <button class="codebtn" type="button" data-code="c-loop">The loop, in five lines</button>
+    </div>
+    <div class="codewrap" id="c-loop" data-open="false">
+      <p class="why"><b>Why it looks like this.</b> The stock example attaches the model to the camera, so the callbacks queue up and the robot steers on an image from a second ago. Ours pulls the newest frame and drops the rest.</p>
+<pre><span class="c"># drive.py</span>
+frame   = wait_for_new_frame(camera, frame)   <span class="c"># newest frame, never a stale one</span>
+percept = perception.observe(frame)           <span class="c"># three models -> numbers</span>
+mode    = decision.update(percept, now)       <span class="c"># one state, fixed priority</span>
+left, right = controller.update(percept['lane_x'], percept['curve_probs'],
+                                percept['curve_dir'], dt)
+robot.set_motors(left, right)</pre>
+      <p class="where">drive.py · 21.6 to 22.8 steps per second with two models, 29.8 ms per step with three</p>
+    </div>
+    <p class="src">Loop measured in the Task 1 runs. TensorRT took one lane pass from 41 ms to 10.6 ms.</p>
   </div></div>
 </section>
 
 <!-- 4 state machine -->
 <section>
   <div class="slide"><div class="inner">
-    <h2 class="sh">Six states, and priority settles every conflict</h2>
+    <h2 class="sh">Six states, priority settles conflicts</h2>
     <div class="spacer" style="flex:.2"></div>
     <figure class="wide" style="flex:none">
-      <div class="fl">Driving states across the top, stop mode and the ending below</div>
+      <div class="fl">Driving across the top, stop mode and the ending below</div>
       <svg viewBox="0 0 560 150" role="img" aria-label="Following, avoidance and recovery across the top, stop mode and halt below">
         <defs>
           <marker id="arG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--faint)" stroke-width="1.7"/></marker>
@@ -425,24 +457,18 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
           <rect x="6" y="30" width="118" height="36" rx="5" fill="var(--accent-soft)" stroke="var(--accent)"/>
           <text x="65" y="46" text-anchor="middle" fill="var(--ink)">FOLLOWING</text>
           <text x="65" y="59" text-anchor="middle" fill="var(--muted)" font-size="8">and SLOW_DOWN</text>
-
           <rect x="178" y="30" width="118" height="36" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
           <text x="237" y="46" text-anchor="middle" fill="var(--ink)">AVOIDANCE</text>
           <text x="237" y="59" text-anchor="middle" fill="var(--muted)" font-size="8">lane ignored</text>
-
           <rect x="350" y="30" width="118" height="36" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
           <text x="409" y="46" text-anchor="middle" fill="var(--ink)">RECOVERY</text>
           <text x="409" y="59" text-anchor="middle" fill="var(--muted)" font-size="8">lane ignored</text>
-
           <g stroke="var(--faint)" stroke-width="1.7" fill="none" marker-end="url(#arG)">
-            <path d="M126,48 L174,48"/>
-            <path d="M298,48 L346,48"/>
-            <path d="M409,26 L409,12 L65,12 L65,26"/>
+            <path d="M126,48 L174,48"/><path d="M298,48 L346,48"/><path d="M409,26 L409,12 L65,12 L65,26"/>
           </g>
           <text x="150" y="40" text-anchor="middle" fill="var(--faint)" font-size="8">cup in lane</text>
           <text x="322" y="40" text-anchor="middle" fill="var(--faint)" font-size="8">done</text>
           <text x="237" y="8" text-anchor="middle" fill="var(--faint)" font-size="8">lane found again</text>
-
           <rect x="6" y="96" width="118" height="34" rx="5" fill="var(--raise)" stroke="var(--rule)" stroke-dasharray="4 3"/>
           <text x="65" y="112" text-anchor="middle" fill="var(--ink)">STOP</text>
           <text x="65" y="124" text-anchor="middle" fill="var(--muted)" font-size="8">separate run mode</text>
@@ -450,12 +476,10 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
             <path d="M42,70 L42,92"/><path d="M88,92 L88,70"/>
           </g>
           <text x="130" y="86" fill="var(--faint)" font-size="8">stop mode only: wait, then drive on</text>
-
           <rect x="350" y="96" width="118" height="34" rx="5" fill="var(--raise)" stroke="var(--alarm)"/>
           <text x="409" y="117" text-anchor="middle" fill="var(--alarm)">HALT</text>
           <g stroke="var(--alarm)" stroke-width="1.7" fill="none">
-            <path d="M409,70 L409,92" marker-end="url(#arR)"/>
-            <path d="M296,113 L346,113" marker-end="url(#arR)"/>
+            <path d="M409,70 L409,92" marker-end="url(#arR)"/><path d="M296,113 L346,113" marker-end="url(#arR)"/>
           </g>
           <text x="237" y="110" text-anchor="middle" fill="var(--alarm)" font-size="8">recovery timeout,</text>
           <text x="237" y="121" text-anchor="middle" fill="var(--alarm)" font-size="8">cup still beside, lane lost 0.5 s</text>
@@ -463,55 +487,62 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
       </svg>
     </figure>
     <div class="spacer"></div>
-    <p>Priority, highest first: <b>halt</b>, <b>avoidance</b> and <b>recovery</b>, <b>stop</b>, <b>slow down</b>, <b>following</b>. During the swerve and the recovery the lane rule is switched off on purpose, because the robot is deliberately off its lane.</p>
+    <p>Order: <b>halt</b>, <b>avoidance</b> and <b>recovery</b>, <b>stop</b>, <b>slow down</b>, <b>following</b>. During the swerve the lane rule is off on purpose.</p>
     <div class="codeblock deckonly" style="flex:none">
-      <button class="codebtn" type="button" data-code="c-state">The twelve lines that are the state machine</button>
+      <button class="codebtn" type="button" data-code="c-state">The branches that are the priority</button>
     </div>
     <div class="codewrap" id="c-state" data-open="false">
-      <p class="why"><b>What we decided.</b> Priority is not a comment. It is the order the conditions are asked in, and the first match wins, so a cup can never be overruled by a curve and a lost lane can never be overruled by a cup.</p>
-<pre><span class="c"># decision.py, update(): asked in this order, first match wins</span>
-if self.state == HALT:                       <span class="c"># 1, the run is over</span>
-    return HALT
-if self.state == OBSTACLE_AVOIDANCE:         <span class="c"># 2, lane not asked at all</span>
+      <p class="why"><b>Why it looks like this.</b> Priority is not a comment. It is the order the conditions are asked in, and the first match wins, so a cup cannot be overruled by a curve.</p>
+<pre><span class="c"># decision.py, update()</span>
+if self.state == HALT: return HALT                     <span class="c"># 1, the run is over</span>
+if self.state == OBSTACLE_AVOIDANCE:                   <span class="c"># 2, lane not asked</span>
     self.update_avoidance(percept, now); return self.state
-if self.state == ROAD_RECOVERY:              <span class="c"># 2, until the lane is found</span>
-    ...
+if self.state == ROAD_RECOVERY: ...                    <span class="c"># 2, until the lane is found</span>
 close = cup_close(percept) and (self.stop_only or cup_in_lane(percept))
-if self.close_frames &gt;= config.OBSTACLE_FRAMES:   <span class="c"># 3, four steps in a row</span>
+if self.close_frames &gt;= OBSTACLE_FRAMES:               <span class="c"># 3, four steps in a row</span>
     self.enter(OBSTACLE_AVOIDANCE, now)
-if p_sharp &gt; config.SLOW_DOWN_ENTER:         <span class="c"># 4, cap the speed</span>
-    self.enter(SLOW_DOWN, now)
-if now - self.lost_since &gt;= config.LANE_LOST_TIMEOUT:   <span class="c"># 5, half a second</span>
-    self.enter(HALT, now)</pre>
-      <p class="where">decision.py · the same order is the table in STATE_MACHINE.md · one transition function is step S4</p>
+if p_sharp &gt; SLOW_DOWN_ENTER: self.enter(SLOW_DOWN, now)        <span class="c"># 4</span>
+if now - self.lost_since &gt;= LANE_LOST_TIMEOUT: self.enter(HALT, now)  <span class="c"># 5</span></pre>
+      <p class="where">decision.py · the same order is the table in STATE_MACHINE.md · clickable diagram in diagrams/state-machine.html</p>
     </div>
-    <p class="src">decision.py and STATE_MACHINE.md change together. A motor watchdog stall stops the wheels but does not end the run.</p>
   </div></div>
 </section>
 
 <!-- 5 models -->
 <section>
   <div class="slide"><div class="inner">
-    <h2 class="sh">Three models, measured on laps they never trained on</h2>
+    <h2 class="sh">What the three models get right, and where they are weak</h2>
     <div class="spacer" style="flex:.3"></div>
-    <div class="scroller" style="flex:none"><table class="ft">
-      <tr><th>Model</th><th>Trained on</th><th>Held out</th><th>What it gets right</th><th>Where it is weak</th></tr>
-      <tr><td><b>lane</b></td><td class="m">2458 frames</td><td class="m">454</td><td>lane found in 99.6 % of frames; center off by 0.022 of half the image</td><td>one row carries no heading, so it cannot tell inside a curve from running wide</td></tr>
-      <tr><td><b>curve</b></td><td class="m">3276 frames</td><td class="m">448</td><td>88.6 % of five classes; the side of all 37 sharp frames correct</td><td>6 of those 37 were called gentle, so it under-reacts before it over-reacts</td></tr>
-      <tr><td><b>obstacle</b></td><td class="m">3147 frames</td><td class="m">724</td><td>no false alarm on 454 lap frames without cups; distance off by 8 image rows</td><td>11 of 133 cup frames missed, mostly at the image edge</td></tr>
-    </table></div>
+    <div class="models" style="flex:none">
+      <div class="model">
+        <span class="mt">lane</span>
+        <span class="mn">99.6 %</span>
+        <span class="ml">frames where it finds the lane · center off by 0.022 · 2458 training frames</span>
+        <span class="mw">One image row carries no heading, so it cannot tell inside a curve from running wide.</span>
+      </div>
+      <div class="model">
+        <span class="mt">curve</span>
+        <span class="mn">88.6 %</span>
+        <span class="ml">five classes correct · side of all 37 sharp frames right · 3276 frames</span>
+        <span class="mw">6 of those 37 were called gentle, so it under-reacts before it over-reacts.</span>
+      </div>
+      <div class="model">
+        <span class="mt">cup</span>
+        <span class="mn">98.1 %</span>
+        <span class="ml">cup seen or not · distance off by 8 rows · 3147 frames</span>
+        <span class="mw">11 of 133 cup frames missed, mostly at the edge of the image. No false alarm on 454 clean frames.</span>
+      </div>
+    </div>
     <div class="spacer"></div>
-    <p>Whole sessions are held back, never single frames: at four frames a second the neighbors look identical and a random split would flatter every number. The labels come from a color mask, so these percentages are agreement with that mask, not with a human.</p>
-    <p class="src">models/lane.json, curve.json, obstacle.json. Held out: lap_ccw4 and lap_cw3, plus two cup sessions for the obstacle model.</p>
+    <p class="src">Measured on whole laps held out of training. Labels come from a color mask, so these are agreement with that mask. models/*.json</p>
   </div></div>
 </section>
 
 <!-- 6 task 1 result -->
 <section>
   <div class="slide"><div class="inner">
-    <div class="eyebrow">Task 1 · measured 20 and 21 September</div>
-    <h2 class="sh">Our control layer drove 60 s in both directions</h2>
-    <div class="spacer" style="flex:.2"></div>
+    <h2 class="sh">Task 1: our control layer drove 60 s both ways</h2>
+    <div class="spacer" style="flex:.25"></div>
     <div class="bars" style="flex:none">
       <div class="bar lost"><span class="bl">stock, cw</span><span class="track"><i class="fill f-base" style="width:34.2%"></i></span><span class="bv">20.5 s</span></div>
       <div class="bar lost"><span class="bl">stock, cw</span><span class="track"><i class="fill f-base" style="width:34.0%"></i></span><span class="bv">20.4 s</span></div>
@@ -521,42 +552,61 @@ if now - self.lost_since &gt;= config.LANE_LOST_TIMEOUT:   <span class="c"># 5, 
       <div class="bar"><span class="bl">adaptive, cw</span><span class="track"><i class="fill f-adaptive" style="width:100%"></i></span><span class="bv">60.0 s</span></div>
     </div>
     <div class="spacer"></div>
-    <p>Same track, same lane model. Both stock runs lost the lane at about 20 s, and the plain PD run was the steadiest of all, so the curve model bought the sharp curve rather than smoothness.</p>
+    <p>Seconds driven against a 60 s cap. Red ended in a lane loss. The curve model bought the sharp curve, not smoothness.</p>
     <div class="codeblock deckonly" style="flex:none">
-      <button class="codebtn" type="button" data-code="c-steer">Why the steering has three terms, not one</button>
+      <button class="codebtn" type="button" data-code="c-steer">Why the steering has three terms</button>
     </div>
     <div class="codewrap" id="c-steer" data-open="false">
-      <p class="why"><b>What we decided, and why each number exists.</b> P alone wobbled. The D term damps it. Gain scheduling exists because at 0.40 the same correction moves the robot further before the next frame, and the robot swung on the straight. The feedforward exists because a curve needs a steady turn that P only gives once the error is already large, and its direction comes from the curve model after the lane position flipped sign in exactly the curve that kept failing.</p>
+      <p class="why"><b>Each term came from a failure.</b> P alone wobbled, so D damps it. Gain scheduling exists because at 0.40 the same correction moves the robot further before the next frame. The feedforward exists because a curve needs a steady turn, and its direction comes from the curve model after the lane position flipped sign in the curve that kept failing.</p>
 <pre><span class="c"># control.py, update()</span>
-schedule = REF_SPEED / max(self.speed, REF_SPEED)   <span class="c"># 0.32 tuned, slower gains when faster</span>
+schedule = REF_SPEED / max(self.speed, REF_SPEED)   <span class="c"># gains shrink as speed rises</span>
 wanted   = schedule * (KP * lane_x + KD * change) + self.feedforward(curve_probs, curve_dir)
 self.steering = limit_change(wanted, self.steering, RATE, RATE, dt)   <span class="c"># max 2.0 per second</span>
 self.speed    = min(curve_speed, steering_speed)    <span class="c"># whichever is slower wins</span></pre>
-      <p class="where">control.py · KP 0.15, KD 0.06, feedforward 0.04 in a sharp curve, all in config.py with the run that set them</p>
+      <p class="where">control.py · KP 0.15, KD 0.06, sharp feedforward 0.04, each in config.py beside the run that set it</p>
     </div>
-    <p class="src">Wobble as the lane position standard deviation: stock 0.150 and 0.126, our PD 0.087, adaptive 0.099. Six runs in results/week1/task1_results.md; refreshing them with today's code is an open step.</p>
+    <p class="src">Six runs, 20 and 21 September. Wobble: stock 0.150 and 0.126, our PD 0.087, adaptive 0.099. Refreshing the table with today's code is an open step.</p>
   </div></div>
 </section>
 
 <!-- 7 cup stop -->
 <section>
   <div class="slide"><div class="inner">
-    <h2 class="sh">Eight stops in front of a cup <span class="tag t-run">shown live</span></h2>
-    <div class="spacer" style="flex:.3"></div>
-    <div class="scroller" style="flex:none"><table class="ft">
-      <tr><th>The question</th><th>How it is answered</th></tr>
-      <tr><td><b>Is a cup there</b></td><td>the obstacle model, above 0.5</td></tr>
-      <tr><td><b>How close is it</b></td><td>the lower edge of its red band, at row 88 of 224</td></tr>
-      <tr><td><b>Am I sure</b></td><td class="m">four control steps in a row</td></tr>
-      <tr><td><b>When may I drive on</b></td><td>the cup unseen, or its band above row 80, for five steps</td></tr>
-    </table></div>
+    <h2 class="sh">Stopping at a cup <span class="tag t-run">8 stops, shown live</span></h2>
+    <div class="spacer" style="flex:.2"></div>
+    <figure style="flex:none">
+      <div class="fl">What the robot sees · rows of the 224 pixel image</div>
+      <svg viewBox="0 0 560 170" role="img" aria-label="Camera image with the trigger row and the release row">
+        <rect x="120" y="8" width="320" height="150" fill="var(--raise)" stroke="var(--rule)"/>
+        <g stroke="var(--cat2)" stroke-width="4" stroke-linecap="round">
+          <path d="M160,158 L232,70"/><path d="M400,158 L328,70"/>
+        </g>
+        <rect x="258" y="86" width="44" height="30" rx="3" fill="var(--raise)" stroke="var(--muted)"/>
+        <rect x="258" y="96" width="44" height="11" fill="var(--alarm)"/>
+        <g stroke="var(--alarm)" stroke-dasharray="6 4" stroke-width="1.6">
+          <path d="M120,107 L440,107"/>
+        </g>
+        <g stroke="var(--ok)" stroke-dasharray="6 4" stroke-width="1.6">
+          <path d="M120,86 L440,86"/>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="9">
+          <text x="448" y="110" fill="var(--alarm)">row 88 · stop</text>
+          <text x="448" y="89" fill="var(--ok)">row 80 · drive on</text>
+          <text x="280" y="134" text-anchor="middle" fill="var(--muted)" font-size="8.5">red band of the cup</text>
+          <text x="128" y="22" fill="var(--faint)" font-size="8.5">camera image</text>
+          <text x="20" y="92" fill="var(--faint)" font-size="8.5">a lower row</text>
+          <text x="20" y="104" fill="var(--faint)" font-size="8.5">means closer</text>
+        </g>
+        <path d="M96,96 L96,124" stroke="var(--faint)" stroke-width="1.4" marker-end="url(#arG)"/>
+      </svg>
+    </figure>
     <div class="spacer"></div>
-    <p>The release row is <b>farther away</b> than the trigger row on purpose. With both at the same row, a reading jittering across it released the robot while it still stood in front of the cup. A person lifted the cup away after each stop.</p>
+    <p>The robot stops when the band reaches row 88 for four steps, and drives on only when it climbs back above row 80. Two different rows, so a jittering reading cannot release it in front of the cup.</p>
     <div class="codeblock deckonly" style="flex:none">
       <button class="codebtn" type="button" data-code="c-cup">The trigger, in four lines</button>
     </div>
     <div class="codewrap" id="c-cup" data-open="false">
-      <p class="why"><b>What we decided.</b> The model predicts <i>where</i> the cup is, not whether the road is blocked. That way the stopping distance is a constant we can retune without recording anything again, and the decision stays in our code.</p>
+      <p class="why"><b>Why a row and not a yes or no.</b> The model predicts where the cup is, so the stopping distance stays a constant we can retune without recording anything again, and the decision stays in our code.</p>
 <pre><span class="c"># decision.py</span>
 def cup_close(percept):
     return (percept['cup_visible'] &gt;= OBSTACLE_VISIBLE_THRESHOLD   <span class="c"># 0.5</span>
@@ -565,19 +615,19 @@ def cup_close(percept):
 def cup_gone(percept):
     return (percept['cup_visible'] &lt; OBSTACLE_VISIBLE_THRESHOLD
             or percept['cup_row'] &lt; OBSTACLE_CLEAR_ROW)            <span class="c"># row 80, hysteresis</span></pre>
-      <p class="where">decision.py and config.py · in the avoidance mode a fifth question is added: is the cup in the lane</p>
+      <p class="where">decision.py and config.py · in avoidance mode a fifth question is added: is the cup in the lane</p>
     </div>
-    <p class="src">Run demo_stop_4, 90 s, no lane loss, obstacle model v1. Five of the eight stops settled at band rows 90 to 104, which the distance survey puts at roughly 25 to 40 cm; the other three stopped closer.</p>
+    <p class="src">Run demo_stop_4, 90 s, no lane loss. Five of eight stops settled at rows 90 to 104, which the distance survey puts at roughly 25 to 40 cm. A person lifted each cup away.</p>
   </div></div>
 </section>
 
 <!-- 8 around the cup -->
 <section>
   <div class="slide"><div class="inner">
-    <h2 class="sh">Turn 90, curve around the cup, turn 90 back <span class="tag t-test">written, not yet driven</span></h2>
+    <h2 class="sh">Around the cup <span class="tag t-test">written, not yet driven</span></h2>
     <div class="spacer" style="flex:.15"></div>
     <figure class="wide" style="flex:none">
-      <div class="fl">The intended path. Top view, inside of the oval</div>
+      <div class="fl">The intended path · top view, inside of the oval</div>
       <svg viewBox="0 0 560 196" role="img" aria-label="Quarter turn off the lane, one curve around the cup, quarter turn back">
         <rect x="0" y="54" width="560" height="112" fill="var(--raise)"/>
         <g stroke="var(--cat2)" stroke-width="5" stroke-linecap="round">
@@ -587,7 +637,6 @@ def cup_gone(percept):
         <circle cx="280" cy="110" r="12" fill="var(--alarm)"/>
         <circle cx="280" cy="110" r="74" fill="none" stroke="var(--alarm)" stroke-width="1" stroke-dasharray="3 5" opacity=".45"/>
         <text x="280" y="131" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--muted)">cup</text>
-        <text x="372" y="60" font-family="IBM Plex Mono, monospace" font-size="8" fill="var(--alarm)" opacity=".8">the circle the wheels drive</text>
         <path d="M20,110 L206,110" fill="none" stroke="var(--accent)" stroke-width="3.4"/>
         <path d="M206,110 A 74,74 0 0 1 354,110" fill="none" stroke="var(--accent)" stroke-width="3.4"/>
         <path d="M354,110 L540,110" fill="none" stroke="var(--accent)" stroke-width="3.4"/>
@@ -596,7 +645,7 @@ def cup_gone(percept):
           <text x="362" y="94">turn 90 the same way</text>
         </g>
         <g font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--faint)">
-          <text x="280" y="30" text-anchor="middle">one curve: outer wheel 0.37, inner 0.30, about 2.85 s</text>
+          <text x="280" y="30" text-anchor="middle">one curve · outer wheel 0.37, inner 0.30 · 2.85 s</text>
           <text x="110" y="126" text-anchor="middle">lane following</text>
           <text x="452" y="126" text-anchor="middle">lane following</text>
           <text x="206" y="188" text-anchor="middle" font-size="8">ends on the tape angle</text>
@@ -608,108 +657,60 @@ def cup_gone(percept):
       </svg>
     </figure>
     <div class="spacer"></div>
-    <p>Both turns go the same way, so the robot ends facing along the lane again, and the cup sits near the center of the curve, which is why the robot never points at it. <b>Tested on the track with no cup in place:</b> five turns of five hit 90 degrees, and the curve measured 2.85 s.</p>
-    <p class="src">turn_test.py and swerve_test.py, 29 October. The old timed swerve it replaces passed 3 of 3 times with each turn near 130 degrees instead of 45. Still to do: put these three moves into decision.py. In the test the robot finished near the outer tape, so the width is not final.</p>
+    <p>The cup sits near the center of the curve, so the robot never points at it. <b>Tested on the track without a cup:</b> 5 turns of 5 hit 90 degrees, curve 2.85 s.</p>
+    <p class="src">turn_test.py and swerve_test.py, 29 October. Next: put the three moves into decision.py. In the test the robot finished near the outer tape, so the width is not final.</p>
   </div></div>
 </section>
 
 <!-- 9 failures -->
 <section>
   <div class="slide"><div class="inner">
-    <div class="eyebrow">What failed</div>
-    <h2 class="sh">Four failures, and the cause of each</h2>
-    <div class="spacer" style="flex:.25"></div>
-    <div class="scroller" style="flex:none"><table class="ft">
-      <tr><th>What we saw</th><th>The cause</th><th>What changed</th></tr>
-      <tr><td><b>Left the lane in the sharp counterclockwise curve</b></td><td>the turn direction came from the lane center, which sits near zero there and flips sign</td><td>the curve model learned five classes and now reports the side; the turn follows it</td></tr>
-      <tr><td><b>Drove 47 s into a chair</b></td><td>a training job ran while driving, memory ran out, the camera thread died and kept returning one frozen frame</td><td>stop after 0.5 s without a new frame, and never train while the robot drives</td></tr>
-      <tr><td><b>Turned back into the cup it had passed</b></td><td>the pivots were timed from 120 deg/s; the real rate is about 305, so each 45 degree turn came out near 130</td><td>rates measured again with the camera; turns now end on the tape angle</td></tr>
-      <tr><td><b>The steering got jerkier with unchanged code</b></td><td class="m">not found yet</td><td>an A/B run ruled out the code; a motor trim and a smoothed D term are under test</td></tr>
-    </table></div>
+    <div class="eyebrow">Failures and their causes</div>
+    <h2 class="sh">Four things went wrong. Three are understood.</h2>
+    <div class="spacer" style="flex:.2"></div>
+    <div class="chains" style="flex:none">
+      <div class="chain">
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">Left the lane in the sharp curve</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">The turn direction came from the lane center, which sits near zero there and flips sign</span></div>
+        <div class="cbox c-fix"><span class="cl">fix, and it held</span><span class="ct">The curve model learned five classes and reports the side. 60 s both ways</span></div>
+      </div>
+      <div class="chain">
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">Drove 47 s into a chair</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">Training ran while driving, memory ran out, the camera died and kept returning one frozen frame</span></div>
+        <div class="cbox c-fix"><span class="cl">fix, and it held</span><span class="ct">Stop after 0.5 s without a new frame. It caught a real freeze at 46.6 s later</span></div>
+      </div>
+      <div class="chain">
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">Turned back into the cup it had passed</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">Pivots timed from 120 deg/s; the real rate is 305, so a 45 degree turn came out near 130</span></div>
+        <div class="cbox c-fix"><span class="cl">fix, under test</span><span class="ct">Turns end on the tape angle in the camera, not on a timer</span></div>
+      </div>
+      <div class="chain">
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">Steering got jerkier with unchanged code</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">Not found. An A/B run with the old commit swung just as much, so it is the robot or the track, not the code</span></div>
+        <div class="cbox c-open"><span class="cl">still open</span><span class="ct">A motor trim and a smoothed D term are under test. This is our question for today</span></div>
+      </div>
+    </div>
     <div class="spacer"></div>
-    <p>Three of the four were wrong measurements or a dead camera that still answered. The fourth is still open, and it is the one we want to ask about.</p>
-    <p class="src">Written up as problem, hypothesis, change, test, result in DECISIONS.md, entries DATA2, CURVE3, MOVE2, AB1 and STEER2.</p>
+    <p class="src">Each one written up as problem, hypothesis, change, test, result: DECISIONS.md entries DATA2, CURVE3, MOVE2, AB1, STEER2.</p>
   </div></div>
 </section>
 
-<!-- 10 what it changed -->
-<section>
-  <div class="slide"><div class="inner">
-    <h2 class="sh">What those failures put in the code</h2>
-    <div class="spacer" style="flex:.3"></div>
-    <div class="lanes" style="flex:none">
-      <div class="lane">
-        <span class="ltag">What we used to trust</span>
-        <h3>The timer</h3>
-        <p>Blind maneuvers on calculated durations, and a camera assumed to be alive because it answered.</p>
-      </div>
-      <div class="lane answer">
-        <span class="ltag">What we trust now</span>
-        <h3>Something the camera can see</h3>
-        <p>A turn ends on the tape angle. A pass ends when the cup mask loses the cup. Recovery ends on two tape lines a lane width apart. The last two run in the driving program; the tape angle so far only in the test scripts.</p>
-      </div>
-    </div>
-    <div class="spacer" style="flex:.5"></div>
-    <div class="facts" style="flex:none">
-      <div class="fact"><span class="n">0.5 s</span><span class="l">without a frame stops the robot</span></div>
-      <div class="fact"><span class="n">0.25 s</span><span class="l">without a motor update stops the wheels</span></div>
-      <div class="fact"><span class="n">11.4 V</span><span class="l">needed to start, 10.8 V ends a run</span></div>
-      <div class="fact"><span class="n">1 change</span><span class="l">per driving test, so the cause stays known</span></div>
-    </div>
-    <div class="codeblock deckonly" style="flex:none">
-      <button class="codebtn" type="button" data-code="c-safety">The four lines that caught the dead camera</button>
-    </div>
-    <div class="codewrap" id="c-safety" data-open="false">
-      <p class="why"><b>What we decided.</b> The JetBot camera returns the <i>same object</i> when its thread has died, so comparing pixels proves nothing. Identity is the only honest proof that a frame is new, and the robot is allowed to move only while that proof keeps arriving.</p>
-<pre><span class="c"># safety.py, imported by every program that can move the robot</span>
-while camera.value is old:            <span class="c"># the same object means no new frame</span>
-    if time.time() - start &gt; timeout:  <span class="c"># 0.5 s</span>
-        raise CameraFrozen()
-    time.sleep(0.005)</pre>
-      <p class="where">safety.py · the same file holds the battery guard and the motor watchdog</p>
-    </div>
-    <p class="src">A camera freeze at 46.6 s in a later run was caught by exactly this check, which is the evidence it works.</p>
-  </div></div>
-</section>
-
-<!-- 11 next -->
+<!-- 10 next -->
 <section>
   <div class="slide"><div class="inner">
     <div class="eyebrow">Next</div>
     <h2 class="sh">What we do before the next demonstration</h2>
-    <div class="spacer" style="flex:.3"></div>
-    <div class="scroller" style="flex:none"><table class="ft">
-      <tr><th>Step</th><th>Pass condition</th></tr>
-      <tr><td><b>Put the three moves into the state machine</b></td><td>recorded frames give the same state through old and new code</td></tr>
-      <tr><td><b>Drive the avoidance with a cup, filmed</b></td><td>8 of 10 passes end in lane following without a human touching the robot</td></tr>
-      <tr><td><b>Find the jerky steering</b></td><td>a run with the trim and the smoothed D term is calmer in both directions, or the change is reverted</td></tr>
-      <tr><td><b>Refresh the Task 1 table</b></td><td>the six runs repeated with today's code and models</td></tr>
-      <tr><td><b>Team: tape an intersection and a parking box</b></td><td>both exist, with the lane and tape widths measured in centimeters</td></tr>
-    </table></div>
-    <div class="spacer"></div>
-    <p>The last row is the one that blocks three tasks. Signs, intersection and parking all reuse the pipeline that already works, so the code is not the bottleneck.</p>
-    <p class="src">Steps and pass conditions from PLAN.md section 6.</p>
-  </div></div>
-</section>
-
-<!-- 12 sources -->
-<section>
-  <div class="slide"><div class="inner">
-    <h2 class="sh">Where every number on these slides comes from</h2>
-    <div class="spacer" style="flex:.3"></div>
-    <div class="srclist" style="flex:none">
-      <div><b>Task 1 comparison</b><span>results/week1/task1_results.md, six runs, 20 and 21 September</span></div>
-      <div><b>Model accuracy and error</b><span>notebooks/mini_av/models/*.json</span></div>
-      <div><b>Cup stops</b><span>run demo_stop_4, usb/logs/</span></div>
-      <div><b>Turn rates and the curve</b><span>spin_test.py, turn_test.py, swerve_test.py</span></div>
-      <div><b>Every threshold on these slides</b><span>notebooks/mini_av/config.py</span></div>
-      <div><b>Failures and decisions</b><span>DECISIONS.md, HANDOVER.md</span></div>
-      <div><b>State machine table</b><span>notebooks/mini_av/STATE_MACHINE.md</span></div>
-      <div><b>Clickable state diagram</b><span>diagrams/state-machine.html</span></div>
+    <div class="spacer" style="flex:.25"></div>
+    <div class="steps" style="flex:none">
+      <div class="step"><span class="sq"></span><span class="st">Put the three moves into the state machine</span><span class="sp">pass: recorded frames give the same state through old and new code</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Drive the avoidance with a cup, filmed</span><span class="sp">pass: 8 of 10 passes end in lane following, untouched</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Find the jerky steering</span><span class="sp">pass: calmer in both directions, or the change is reverted</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Refresh the Task 1 table</span><span class="sp">pass: the six runs repeated with today's code</span></div>
+      <div class="step block"><span class="sq"></span><span class="st">Team: tape an intersection and a parking box</span><span class="sp">blocks tasks 3, 4 and 5. Lane and tape width still unmeasured</span></div>
     </div>
     <div class="spacer"></div>
-    <p>Two measurements are missing on purpose: the lane width and the tape width in centimeters. Nobody has measured them, so distances here are image rows, the robot's own units, or a figure from the cup distance survey, and each slide says which.</p>
-    <p class="src">Press escape for the roadmap, d for the document version, t for the dark palette.</p>
+    <p>The last row is the only one that blocks other tasks. Signs, intersection and parking all reuse the pipeline that already works, so the code is not the bottleneck.</p>
+    <p class="src">Steps and pass conditions from PLAN.md section 6. Escape returns to the roadmap, d gives the document version.</p>
   </div></div>
 </section>
 
@@ -755,7 +756,7 @@ while camera.value is old:            <span class="c"># the same object means no
     index = Math.max(0, Math.min(sections.length - 1, i));
     if(view() === 'slides'){
       locked = Date.now();
-      deck.scrollTop = index * deck.clientHeight;      /* a smooth scroll fights scroll-snap */
+      deck.scrollTop = index * deck.clientHeight;
     } else if(!instant){
       sections[index].scrollIntoView({behavior:'smooth', block:'start'});
     }
@@ -773,9 +774,9 @@ while camera.value is old:            <span class="c"># the same object means no
   function closeCode(){
     var open = document.querySelector('.codewrap[data-open="true"]');
     if(!open){ return false; }
-    open.setAttribute('data-open', 'false');
+    open.setAttribute('data-open','false');
     var btn = document.querySelector('.codebtn[data-code="' + open.id + '"]');
-    if(btn){ btn.setAttribute('aria-expanded', 'false'); }
+    if(btn){ btn.setAttribute('aria-expanded','false'); }
     return true;
   }
 
@@ -784,11 +785,11 @@ while camera.value is old:            <span class="c"># the same object means no
     var btn = ev.target.closest ? ev.target.closest('.codebtn') : null;
     if(!btn){ return; }
     var panel = document.getElementById(btn.getAttribute('data-code'));
-    var open = panel.getAttribute('data-open') === 'true';
+    var wasOpen = panel.getAttribute('data-open') === 'true';
     closeCode();
-    if(!open){
-      panel.setAttribute('data-open', 'true');
-      btn.setAttribute('aria-expanded', 'true');
+    if(!wasOpen){
+      panel.setAttribute('data-open','true');
+      btn.setAttribute('aria-expanded','true');
     }
   });
 
@@ -798,15 +799,13 @@ while camera.value is old:            <span class="c"># the same object means no
     if(ev.ctrlKey || ev.metaKey || ev.altKey){ return; }
     var k = ev.key;
     if(k === 'd' || k === 'D'){ setView(view() === 'doc' ? 'slides' : 'doc'); return; }
-    if(k === 't' || k === 'T'){
-      setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); return;
-    }
+    if(k === 't' || k === 'T'){ setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); return; }
     if(k === 'Escape'){ if(!closeCode()){ setView('map'); } return; }
     if(view() === 'map'){
       if(k === 'Enter' || k === ' '){ ev.preventDefault(); index = 0; setView('slides'); }
       return;
     }
-    if(view() !== 'slides'){ return; }      /* the document scrolls normally */
+    if(view() !== 'slides'){ return; }
     if(k === 'ArrowRight' || k === 'ArrowDown' || k === ' ' || k === 'PageDown'){ ev.preventDefault(); go(index + 1); }
     else if(k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp'){ ev.preventDefault(); go(index - 1); }
     else if(k === 'Home'){ ev.preventDefault(); go(0); }
