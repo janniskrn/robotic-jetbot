@@ -2,7 +2,8 @@
 
 Working plan toward `GOAL.md`. Update it as work progresses: tick steps, add results, move the "Now" marker.
 Decisions that come out of it go into `DECISIONS.md`. Every step follows CLAUDE.md 6.1 (propose, go, implement,
-test, approval, commit).
+test, approval, commit). The weekly course rhythm (Thursday upload, Tuesday presentation with a demo) is in
+`WEEKLY.md`.
 
 Version: 2026-10-26, draft 3 (no dates in the repo; order of section 6 approved, decision ORDER).
 
