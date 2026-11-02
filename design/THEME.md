@@ -92,4 +92,37 @@ headings, no blue rules, no blue bullets. The moment a second bright thing appea
 
 ## Amendments
 
-None yet. Append dated sections here with what changed, why, and what it cost.
+**Changed 2026-11-02, building the presentation: the text greys and a dark palette.**
+
+An independent review measured the palette as it was actually used and found two text colors below their
+floors on this ground: `--faint` at **3.07:1**, used for every source line, every fact label and every table
+header, and `--muted` at **5.15:1**, used for all body text, against a 7:1 deck target. The accent was also
+carrying text (eyebrows, tags) at 4.70:1, which this file had already ruled out.
+
+- `--muted` #535962 becomes **#3C4047**, 7.59:1 on the ground.
+- `--faint` #767C85 becomes **#5A5F67**, 4.68:1. Small print keeps the 4.5 floor rather than the 7:1 target:
+  it is read from a laptop afterwards, not from the back of a room.
+- New `--accent-ink` **#184B84**, 6.43:1, for the few places accent-colored text is right (eyebrows, chips).
+  `--accent` stays #1E5FA8 and stays a fill.
+
+**What this costs, accepted with the change:** the page is a little heavier and flatter than the first draft.
+Muted text now sits close to the ink, so the difference between a headline and a caption rests on size and
+font rather than on color.
+
+**Added the same day: the podium dark palette.** The deck skill wants dark as a real toggle for a bright hall,
+and this file had only the light set, so the build was deviating. Measured on #171A1E: ink 14.63:1,
+muted 7.63:1, faint 5.07:1, accent #7BB2E4 7.76:1, alarm 8.15:1. Light stays the default in every mode and on
+any host theme; print forces light even when the toggle is on.
+
+```css
+:root[data-theme="dark"]{
+  --ground:#171A1E; --raise:#1F2329; --ink:#EDEBE4; --muted:#A6ACB4; --faint:#8E959E;
+  --rule:#343A42; --rule-soft:#2A3037;
+  --accent:#7BB2E4; --accent-ink:#9CC6EC; --accent-soft:rgba(123,178,228,.16);
+  --alarm:#EE9D86; --amber:#D7A75A; --cat-1:#D79355; --cat-2:#86AFC4; --ok:#6FC3A8;
+}
+```
+
+A third color joined the set for status: `--amber` #8A5A16 light, #D7A75A dark, for "written but never driven".
+Green, amber and grey are the three status colors, stated as a legend on the roadmap screen, and none of them
+is the accent.
