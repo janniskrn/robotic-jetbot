@@ -1,0 +1,1217 @@
+<meta charset="utf-8">
+<title>Room From a Robot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Karla:wght@400;500;600;700&display=swap">
+
+<style>
+/* ─── Emergence: light doc palette on bare :root ─────────────────────── */
+:root{
+  --ground:#f4f4f7; --raise:#fbfbfd; --ink:#1d1c2a; --muted:#6f6d85;
+  --faint:#74718c; --rule:#dedde8; --rule-soft:#e9e8f0;
+  --accent:#5b4bd6; --accent-soft:rgba(91,75,214,.10); --bloom2:#d64b92;
+  --ok:#3f9e78; --warn:#d98a2b; --idle:#c3c1d1;
+  --shadow:0 1px 2px rgba(29,28,42,.05),0 12px 32px -16px rgba(29,28,42,.22);
+  --step:clamp(15px,1.6vw,17px); --bloom-a:.17; --bloom-b:.11;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#131223; --raise:#1b1a30; --ink:#eceaf6; --muted:#a09dbd;
+    --faint:#7b7899; --rule:#2b2945; --rule-soft:#232139;
+    --accent:#8b7bff; --accent-soft:rgba(139,123,255,.14); --bloom2:#f06ba8;
+    --ok:#4fc196; --warn:#e0a04a; --idle:#3b3959;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -16px rgba(0,0,0,.7);
+    --bloom-a:.26; --bloom-b:.16;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131223; --raise:#1b1a30; --ink:#eceaf6; --muted:#a09dbd;
+  --faint:#7b7899; --rule:#2b2945; --rule-soft:#232139;
+  --accent:#8b7bff; --accent-soft:rgba(139,123,255,.14); --bloom2:#f06ba8;
+  --ok:#4fc196; --warn:#e0a04a; --idle:#3b3959;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -16px rgba(0,0,0,.7);
+  --bloom-a:.26; --bloom-b:.16;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} }
+
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"Karla",ui-sans-serif,system-ui,sans-serif;
+  font-size:var(--step); line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+
+/* ─── bloom field: the signature, always behind the type ─────────────── */
+.bloom{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.bloom b{position:absolute;display:block;border-radius:50%;filter:blur(40px);opacity:.5;}
+.b1{width:52vw;aspect-ratio:1;right:-14vw;top:-18vh;background:radial-gradient(circle,var(--accent) 0%,transparent 66%);opacity:var(--bloom-a);}
+.b2{width:34vw;aspect-ratio:1;left:-10vw;bottom:-14vh;background:radial-gradient(circle,var(--bloom2) 0%,transparent 68%);opacity:var(--bloom-b);}
+
+/* ─── chrome ─────────────────────────────────────────────────────────── */
+.chrome{
+  position:fixed;z-index:40;right:14px;top:12px;display:flex;gap:8px;align-items:center;
+}
+.btn{
+  font-family:"Karla",sans-serif;font-size:12px;font-weight:600;letter-spacing:.04em;
+  color:var(--muted);background:var(--raise);border:1px solid var(--rule);
+  border-radius:999px;padding:6px 13px;cursor:pointer;line-height:1.4;
+}
+.btn:hover{color:var(--ink);border-color:var(--accent);}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.btn kbd{font-family:inherit;color:var(--faint);font-weight:500;}
+
+.rail{position:fixed;z-index:40;left:0;right:0;bottom:0;height:3px;background:transparent;}
+.rail i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s ease;}
+body.doc .rail{display:none;}
+
+.dots{position:fixed;z-index:40;right:16px;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:7px;}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--idle);cursor:pointer;display:block;
+  border:0;padding:0;transition:background .2s,transform .2s;}
+.dots i.on{background:var(--accent);transform:scale(1.5);}
+body.doc .dots{display:none;}
+
+/* ─── layout ─────────────────────────────────────────────────────────── */
+#deck{position:relative;z-index:1;}
+body.deck #deck{height:100dvh;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;}
+body.deck #deck::-webkit-scrollbar{display:none;}
+
+section{position:relative;}
+body.deck section{
+  height:100dvh;scroll-snap-align:start;scroll-snap-stop:always;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:clamp(28px,5vh,64px) clamp(28px,6vw,110px);
+  overflow:hidden;
+}
+body.doc section{
+  max-width:940px;margin:0 auto;padding:52px clamp(20px,4vw,32px);
+  border-top:1px solid var(--rule-soft);
+}
+body.doc section:first-of-type{border-top:0;}
+
+.inner{width:100%;max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(12px,1.6vh,20px);min-height:0;}
+body.doc .inner{gap:18px;max-width:none;}
+
+/* ─── type ───────────────────────────────────────────────────────────── */
+.eyebrow{
+  font-size:clamp(10px,.85vw,12px);font-weight:700;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);
+}
+h1,h2{font-family:"Fraunces",Georgia,serif;font-weight:600;line-height:1.06;
+  letter-spacing:-.02em;margin:0;text-wrap:balance;}
+h1{font-size:clamp(30px,4.9vw,66px);}
+h2{font-size:clamp(24px,3.3vw,45px);}
+body.doc h1{font-size:clamp(30px,5vw,50px);}
+body.doc h2{font-size:clamp(24px,3.6vw,34px);}
+h3{font-family:"Fraunces",Georgia,serif;font-size:clamp(15px,1.35vw,19px);font-weight:600;
+  margin:0;letter-spacing:-.01em;}
+p{margin:0;color:var(--muted);max-width:66ch;}
+p.lead{font-size:clamp(15px,1.45vw,21px);color:var(--muted);}
+p.wide{max-width:none;}
+p b,li b{color:var(--ink);font-weight:600;}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px;}
+.mono{font-variant-numeric:tabular-nums;}
+code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.87em;
+  background:var(--accent-soft);padding:1px 5px;border-radius:3px;color:var(--ink);}
+
+/* ─── reusable blocks ────────────────────────────────────────────────── */
+.grid{display:grid;gap:clamp(10px,1.4vw,18px);}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr));}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr));}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr));}
+@media (max-width:820px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr);}}
+
+.card{
+  background:var(--raise);border:1px solid var(--rule);border-radius:10px;
+  padding:clamp(13px,1.5vw,20px);display:flex;flex-direction:column;gap:7px;min-width:0;
+}
+.card h3{color:var(--ink);}
+.card p{font-size:clamp(12.5px,1.05vw,15px);}
+.card ul{margin:0;padding-left:1.1em;color:var(--muted);font-size:clamp(12px,1vw,14.5px);
+  display:flex;flex-direction:column;gap:4px;}
+
+.stats{display:flex;flex-wrap:wrap;gap:clamp(16px,3vw,50px);}
+.stat{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:20ch;}
+.stat .n{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(20px,2.8vw,40px);
+  line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;}
+.stat .l{font-size:clamp(10.5px,.86vw,12.5px);color:var(--faint);line-height:1.35;}
+
+table{border-collapse:collapse;width:100%;font-size:clamp(12px,1.05vw,15px);}
+th,td{text-align:left;padding:6px 12px 6px 0;border-bottom:1px solid var(--rule-soft);vertical-align:top;}
+th{font-size:clamp(9.5px,.78vw,11px);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--faint);font-weight:700;}
+td{color:var(--muted);} td b{color:var(--ink);font-weight:600;}
+.scroller{overflow-x:auto;}
+
+figure{margin:0;display:flex;flex-direction:column;gap:8px;min-height:0;}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto;}
+body.deck figure.tall svg{height:52vh;width:100%;}
+figcaption{font-size:clamp(11px,.92vw,13px);color:var(--faint);}
+
+.shot{border-radius:8px;border:1px solid var(--rule);display:block;width:100%;height:auto;}
+
+.tag{
+  display:inline-flex;align-items:center;gap:5px;align-self:flex-start;
+  font-size:clamp(9.5px,.78vw,11px);font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;border:1px solid currentColor;
+}
+.t-ok{color:var(--ok);} .t-warn{color:var(--warn);} .t-idle{color:var(--faint);}
+.t-open{color:var(--accent);}
+
+/* ─── two lanes: robot always left, Mac always right ─────────────────── */
+.lanes{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  gap:clamp(10px,1.6vw,24px);align-items:stretch;}
+@media (max-width:820px){.lanes{grid-template-columns:minmax(0,1fr);}}
+.lane{background:var(--raise);border:1px solid var(--rule);border-radius:10px;
+  padding:clamp(13px,1.5vw,20px);display:flex;flex-direction:column;gap:9px;min-width:0;}
+.lane.rt{border-top:3px solid var(--bloom2);}
+.lane.mc{border-top:3px solid var(--accent);}
+.lanehead{display:flex;flex-direction:column;gap:2px;}
+.lanehead .who{font-size:clamp(9.5px,.78vw,11px);font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);}
+.lanehead h3{color:var(--ink);}
+.steps{display:flex;flex-direction:column;gap:7px;margin:0;padding:0;list-style:none;}
+.steps li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:9px;
+  font-size:clamp(12px,1.02vw,14.5px);color:var(--muted);align-items:start;}
+.steps li i{font-style:normal;font-variant-numeric:tabular-nums;font-weight:700;
+  font-size:clamp(10px,.82vw,12px);color:var(--accent);padding-top:.25em;}
+.lanejoin{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  color:var(--faint);font-size:clamp(10px,.82vw,12px);text-align:center;padding:0 2px;}
+.lanejoin svg{width:clamp(30px,3vw,44px);height:auto;}
+@media (max-width:820px){.lanejoin{flex-direction:row;}.lanejoin svg{transform:rotate(90deg);}}
+
+/* ─── stage bar, widths follow the measured seconds (S5) ─────────────── */
+.stagewrap{display:flex;align-items:stretch;gap:7px;}
+.endcap{flex:0 0 auto;display:flex;flex-direction:column;justify-content:center;gap:2px;
+  background:none;border:1px dashed var(--rule);border-radius:8px;padding:9px 12px;
+  cursor:pointer;font:inherit;color:inherit;text-align:left;min-width:0;}
+.stagebar{flex:1 1 auto;display:flex;gap:5px;min-width:0;}
+.sblk{
+  background:var(--raise);border:1px solid var(--rule);border-radius:8px;
+  padding:10px 11px;cursor:pointer;text-align:left;font:inherit;color:inherit;
+  display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden;
+  transition:border-color .2s,background .2s;
+}
+.sblk:hover,.endcap:hover{border-color:var(--accent);}
+.sblk[aria-pressed="true"],.endcap[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);border-style:solid;}
+.sblk.risk{border-color:var(--bloom2);}
+.sname{font-size:clamp(11.5px,1vw,14.5px);font-weight:600;color:var(--ink);white-space:nowrap;}
+.stime{font-size:clamp(10px,.82vw,12px);color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.sdetail{
+  background:var(--raise);border:1px solid var(--rule);border-left:3px solid var(--accent);
+  border-radius:8px;padding:12px 15px;font-size:clamp(12px,1.02vw,14.5px);color:var(--muted);
+  min-height:58px;
+}
+.sdetail b{color:var(--ink);font-weight:600;}
+
+/* ─── open source: the workflow rail (S6) ────────────────────────────── */
+.osflow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(8px,1.1vw,14px);}
+@media (max-width:820px){.osflow{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.oscol{display:flex;flex-direction:column;gap:7px;min-width:0;}
+.oshead{display:flex;flex-direction:column;gap:3px;padding-bottom:5px;border-bottom:2px solid var(--rule);}
+.oshead .osw{font-size:clamp(9px,.74vw,10.5px);font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;}
+.oshead .osn{font-size:clamp(12.5px,1.08vw,15.5px);font-weight:600;color:var(--ink);}
+.oscol.rt .oshead{border-bottom-color:var(--bloom2);} .oscol.rt .osw{color:var(--bloom2);}
+.oscol.mc .oshead{border-bottom-color:var(--accent);} .oscol.mc .osw{color:var(--accent);}
+.oschip{
+  background:var(--raise);border:1px solid var(--rule);border-radius:8px;
+  padding:8px 11px;cursor:pointer;text-align:left;font:inherit;color:inherit;
+  display:flex;flex-direction:column;gap:1px;min-width:0;transition:border-color .2s,background .2s;
+}
+.oschip:hover{border-color:var(--accent);}
+.oschip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);}
+.oschip.soft{border-style:dashed;}
+.oschip .cn{font-size:clamp(11.5px,.98vw,14px);font-weight:600;color:var(--ink);}
+.oschip .cr{font-size:clamp(10px,.8vw,11.5px);color:var(--faint);}
+.osdetail{
+  background:var(--raise);border:1px solid var(--rule);border-left:3px solid var(--accent);
+  border-radius:8px;padding:13px 16px;display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(170px,21vw,290px);gap:16px;align-items:start;
+  min-height:104px;font-size:clamp(12px,1.02vw,14.5px);color:var(--muted);
+}
+.osdetail.nopic{grid-template-columns:minmax(0,1fr);}
+@media (max-width:820px){.osdetail{grid-template-columns:minmax(0,1fr);}}
+.osdetail b{color:var(--ink);font-weight:600;}
+.osdetail .lic{display:block;margin-top:6px;font-size:clamp(10px,.82vw,12px);color:var(--faint);}
+.ospic{width:100%;border-radius:6px;border:1px solid var(--rule);display:block;}
+.ospic.cv{background:var(--ground);aspect-ratio:4/3;}
+
+/* ─── status board (S9) ──────────────────────────────────────────────── */
+.branch{border:1px solid var(--rule);border-radius:10px;background:var(--raise);overflow:hidden;}
+.bhead{
+  width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:clamp(10px,2vw,26px);
+  align-items:center;padding:clamp(8px,1vw,13px) clamp(13px,1.5vw,18px);
+  background:none;border:0;font:inherit;color:inherit;cursor:pointer;text-align:left;
+}
+.bhead:hover .bname{color:var(--accent);}
+.bname{font-family:"Fraunces",serif;font-size:clamp(15px,1.5vw,21px);font-weight:600;color:var(--ink);}
+.bcount{font-size:clamp(12px,1.05vw,15px);color:var(--muted);font-variant-numeric:tabular-nums;}
+.bdots{display:flex;gap:4px;}
+.bdots i{width:clamp(9px,.9vw,13px);height:clamp(9px,.9vw,13px);border-radius:3px;display:block;}
+.s-ok{background:var(--ok);} .s-warn{background:var(--warn);} .s-idle{background:var(--idle);}
+.bbody{padding:0 clamp(13px,1.5vw,18px) clamp(9px,1.1vw,14px);display:flex;flex-direction:column;gap:4px;}
+.bbody[hidden]{display:none;}
+.pkg{display:grid;grid-template-columns:14px minmax(0,1fr);gap:9px;align-items:start;
+  font-size:clamp(11.5px,.94vw,13.5px);line-height:1.45;color:var(--muted);padding-top:4px;border-top:1px solid var(--rule-soft);}
+.pkg i{width:9px;height:9px;border-radius:2px;margin-top:.45em;display:block;}
+.legend{display:flex;flex-wrap:wrap;gap:clamp(12px,2vw,26px);font-size:clamp(11px,.92vw,13.5px);color:var(--muted);}
+.legend span{display:flex;align-items:center;gap:7px;}
+.legend i{width:10px;height:10px;border-radius:2px;display:block;}
+
+/* ─── viewer (S11) ───────────────────────────────────────────────────── */
+.viewer{
+  position:relative;flex:1 1 auto;min-height:min(52vh,440px);border-radius:10px;overflow:hidden;
+  border:1px solid var(--rule);background:var(--raise);
+}
+.viewer iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;}
+.poster{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:14px;text-align:center;padding:24px;}
+.poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.2;filter:blur(2px);}
+.poster .pc{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.load{
+  font-family:"Karla",sans-serif;font-size:clamp(13px,1.15vw,16px);font-weight:700;
+  color:#fff;background:var(--accent);border:0;border-radius:999px;
+  padding:11px 26px;cursor:pointer;letter-spacing:.02em;
+}
+.load:hover{filter:brightness(1.1);} .load:focus-visible{outline:2px solid var(--ink);outline-offset:3px;}
+
+/* the finished model, turning beside the opening claim */
+/* A small box in the right-hand corner, not a full-bleed layer. Spanning the
+   slide spent most of its pixels on empty paper under the headline and forced
+   the room to be magnified to fill any of it, which thins the points per
+   screen area — and that ratio is the one thing legibility here depends on.
+   Keeping the box small works the ratio from the other side: the same 189 000
+   points over a third of the area read denser than they ever did large. The
+   type then gets the full width of the slide back. */
+canvas.pcloud{position:absolute;right:4%;top:50%;transform:translateY(-50%);
+  width:48%;height:91%;display:block;
+  z-index:0;opacity:.78;pointer-events:none;
+  -webkit-mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.5) 34%,#000 64%);
+  mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.5) 34%,#000 64%);}
+:root[data-theme="dark"] canvas.pcloud{opacity:.92;}
+/* Narrow screens have no column to give away, so it goes back to a wash
+   behind everything and leans on the fade alone. */
+@media (max-width:899px){
+  canvas.pcloud{width:100%;height:100%;top:0;transform:none;opacity:.5;
+    -webkit-mask-image:linear-gradient(to right,transparent 34%,#000 74%);
+    mask-image:linear-gradient(to right,transparent 34%,#000 74%);}
+}
+#s1 .inner{position:relative;z-index:1;}
+/* The headline breaks after "you can", and that is forced rather than styled.
+   Measured in the page: its three natural lines come to 785, 746 and 1037px
+   against an .inner of 1110, so the third alone wants 93% of the width — a
+   three-line headline and a room in the right-hand corner cannot both have it.
+   Broken into four, the widest line is 785px, 71%, and stops well clear of the
+   point where the mask lets the room become opaque.
+   The cap below never fires for this text. It is there so that a missing
+   Fraunces, whose fallback measures wider, rewraps the headline instead of
+   sliding it under the room. */
+@media (min-width:900px){
+  #s1 h1{max-width:78%;}
+  /* The lead and the four figures need a cap the headline's own breaks give it
+     for free. Measured in the page at a 1280 viewport: .inner is 1110 wide, the
+     room stops being transparent 862px in, and an uncapped lead runs to 929 —
+     67px under the carpet. 62% stops it at 773. The figures get 52% because
+     four in a row reach past the same line and put the last one, the "0",
+     inside the room; two rows of two clear it. Percentages resolve against
+     .inner, not the viewport. */
+  #s1 .lead{max-width:62%;}
+  #s1 .stats{max-width:52%;}
+}
+body.doc #s1{min-height:460px;display:flex;flex-direction:column;justify-content:center;}
+.cloudnote{position:absolute;z-index:1;right:clamp(20px,4vw,54px);bottom:clamp(16px,3vh,34px);
+  font-size:clamp(10px,.82vw,12px);color:var(--faint);text-align:right;max-width:28ch;}
+
+.hint{font-size:clamp(10.5px,.85vw,12.5px);color:var(--faint);}
+.foot{font-size:clamp(10.5px,.85vw,12.5px);color:var(--faint);max-width:88ch;}
+.foot a{color:var(--faint);}
+.notes{display:flex;flex-wrap:wrap;gap:clamp(10px,2vw,28px);font-size:clamp(10.5px,.88vw,13px);color:var(--faint);}
+.notes span{max-width:44ch;}
+.notes.wide span{max-width:none;}
+.notes b{color:var(--ink);font-weight:600;}
+body.deck .doconly{display:none;}
+body.doc .deckonly{display:none;}
+</style>
+
+<div class="bloom" aria-hidden="true"><b class="b1"></b><b class="b2"></b></div>
+
+<div class="chrome">
+  <button class="btn" id="theme" type="button">Dark <kbd>t</kbd></button>
+  <button class="btn" id="mode" type="button">Doc view <kbd>d</kbd></button>
+</div>
+<div class="rail" aria-hidden="true"><i id="railfill"></i></div>
+<div class="dots" id="dots" aria-label="Slides"></div>
+
+<main id="deck">
+
+<!-- ═══ 1 · what this is ═══ -->
+<section id="s1">
+  <canvas class="pcloud" id="pcloud-canvas" aria-hidden="true"></canvas>
+  <div class="cloudnote">The finished example model, turning: the whole of it, all 400 000 coloured blobs, each as see-through here as the model itself says it is.</div>
+  <div class="inner">
+    <div class="eyebrow">JCFS robotics project · JetBot 3D modeling</div>
+    <h1>A robot photographs a&nbsp;room.<br>A laptop turns those photos<br>into a 3D model you&nbsp;can<br>walk&nbsp;through.</h1>
+    <p class="lead">The laptop half is built and measured. The robot half has just come online. This deck shows both halves, the numbers behind them, and the parts that are still open.</p>
+    <div class="stats" style="margin-top:.5em">
+      <div class="stat"><span class="n mono">6 min</span><span class="l">From 251 photos to a finished 3D model, measured end to end</span></div>
+      <div class="stat"><span class="n mono">1280×960</span><span class="l">Photo size the robot has to deliver, still unconfirmed on the device</span></div>
+      <div class="stat"><span class="n mono">6.8 MB</span><span class="l">Size of the finished model, small enough to open on a phone</span></div>
+      <div class="stat"><span class="n mono">0</span><span class="l">Photos the robot itself has taken so far</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 2 · the idea ═══ -->
+<section id="s2">
+  <div class="inner">
+    <div class="eyebrow">The idea</div>
+    <h2>One robot, one laptop, one folder between them</h2>
+    <div class="lanes">
+      <div class="lane rt">
+        <div class="lanehead"><span class="who">Left side · the robot</span><h3>Cover the room and photograph it</h3></div>
+        <ul class="steps">
+          <li><i>1</i><span>Drive through the room so that every wall gets seen. <b>How it decides where to go is the open question</b>, and slide 7 is about it.</span></li>
+          <li><i>2</i><span>Stop. Wait 0.7 s until the chassis stops rocking.</span></li>
+          <li><i>3</i><span>Take one photo. Then drive on.</span></li>
+          <li><i>4</i><span>Save it as <code>frame_0042.jpg</code>, numbered in the order it was taken.</span></li>
+        </ul>
+        <p class="hint"><b>Photos, not video.</b> A camera in motion smears, and a smeared photo breaks the step that works out where the camera stood.</p>
+      </div>
+      <div class="lanejoin">
+        <svg viewBox="0 0 40 60" role="img" aria-label="One folder of numbered photos passes from the robot to the laptop.">
+          <path d="M6 14 h11 l3 4 h14 a3 3 0 0 1 3 3 v20 a3 3 0 0 1 -3 3 h-28 a3 3 0 0 1 -3 -3 v-24 a3 3 0 0 1 3 -3 z"
+                fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+        </svg>
+        <span>one folder<br>of photos</span>
+      </div>
+      <div class="lane mc">
+        <div class="lanehead"><span class="who">Right side · the MacBook</span><h3>Turn the photos into a model</h3></div>
+        <ul class="steps">
+          <li><i>1</i><span>Fetch the folder off the robot over Wi&#8209;Fi.</span></li>
+          <li><i>2</i><span>Work out where the camera stood for every single photo.</span></li>
+          <li><i>3</i><span>Build the 3D model from the photos, <b>visible on screen while it happens</b>.</span></li>
+          <li><i>4</i><span>Shrink it and write one HTML file that opens the room in any browser.</span></li>
+        </ul>
+        <p class="hint"><b>Every step here is built and timed.</b> Slide 5 has the seconds.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 3 · two meanings of model ═══ -->
+<section id="s3">
+  <div class="inner">
+    <div class="eyebrow">One word, two things</div>
+    <h2>&ldquo;Model&rdquo; means two different things in this project</h2>
+    <div class="grid g2">
+      <div class="card">
+        <span class="tag t-warn">On the robot · still to be built</span>
+        <h3>The driving model</h3>
+        <p>A camera image goes in, a steering decision comes out, many times a second, on the robot itself. It is trained once and then used everywhere: it works in rooms it has never seen.</p>
+        <p><b>What it would have to satisfy:</b></p>
+        <ul>
+          <li>Decide from the camera image alone. The robot has no wheel sensors, no motion sensor and no map of the room.</li>
+          <li>Run on a 2019 Jetson Nano, so it has to be a small network.</li>
+          <li>Be trained on frames we label ourselves, a few hundred of them.</li>
+        </ul>
+        <p><b>This part does not exist yet.</b> Designing it, collecting the data and training it is the work in front of us.</p>
+      </div>
+      <div class="card">
+        <span class="tag t-ok">On the Mac · built and measured</span>
+        <h3>The 3D model of the room</h3>
+        <p>A cloud of hundreds of thousands of small, coloured, see&#8209;through blobs. Each one carries a position, a size, a colour and how solid it is. Nothing else.</p>
+        <p><b>Despite the word &ldquo;training&rdquo;, nothing here learns.</b> Draw the blobs from a camera position we already know, hold the result next to the real photo, move every blob a little towards the photo. Eight thousand times.</p>
+        <p>The finished thing decides nothing and predicts nothing. <b>It is the room</b>, and it is useless in any other room.</p>
+      </div>
+    </div>
+    <p class="wide">One of them learns to drive anywhere and knows no room in particular. The other knows one room exactly and nothing else.</p>
+  </div>
+</section>
+
+<!-- ═══ 4 · architecture as an activity diagram ═══ -->
+<section id="s4">
+  <div class="inner">
+    <div class="eyebrow">Architecture</div>
+    <h2>What happens, in what order, and on which machine</h2>
+    <figure class="tall">
+      <svg viewBox="0 0 1300 500" role="img" aria-label="An activity diagram with two lanes. In the robot lane the human picks a standpoint, then a loop of drive, stop, wait and photograph repeats 8 to 12 times, then numbered files are written to a folder. The folder crosses to the MacBook lane, where the camera positions are computed, a decision checks whether enough photos were located and retries with the slow matcher when not, and then the model is built, shrunk and opened in a browser.">
+        <defs>
+          <marker id="av" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+          <marker id="avx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+
+        <!-- lane divider and headers -->
+        <line x1="650" y1="14" x2="650" y2="492" stroke="currentColor" stroke-width="1" stroke-dasharray="3 6" opacity=".4"/>
+        <text x="325" y="24" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="2.6" fill="var(--bloom2)">ROBOT</text>
+        <text x="975" y="24" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="2.6" fill="var(--accent)">MACBOOK</text>
+
+        <!-- robot lane -->
+        <rect x="40" y="44" width="570" height="32" rx="16" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+        <text x="325" y="65" text-anchor="middle" font-size="14" fill="currentColor">Human picks a standpoint, presses one key</text>
+        <line x1="325" y1="76" x2="325" y2="94" stroke="currentColor" stroke-width="1.4" marker-end="url(#av)"/>
+
+        <rect x="40" y="96" width="570" height="56" rx="9" fill="none" stroke="currentColor" stroke-width="1.7"/>
+        <text x="325" y="120" text-anchor="middle" font-size="15" font-weight="600" fill="currentColor">Drive one step · stop · wait 0.7 s</text>
+        <text x="325" y="140" text-anchor="middle" font-size="15" font-weight="600" fill="currentColor">· take one photo</text>
+        <path d="M40 110 C6 110 6 140 36 140" fill="none" stroke="currentColor" stroke-width="1.3"
+              marker-end="url(#av)" opacity=".7"/>
+        <text x="44" y="172" font-size="12" fill="currentColor" opacity=".65">repeat 8 to 12 times, one figure</text>
+        <line x1="325" y1="152" x2="325" y2="174" stroke="currentColor" stroke-width="1.4" marker-end="url(#av)"/>
+
+        <rect x="40" y="176" width="570" height="32" rx="6" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+        <text x="325" y="197" text-anchor="middle" font-size="14" fill="currentColor">Write frame_0001.jpg … into captures/</text>
+
+        <!-- the crossing: the entire interface between the two sides -->
+        <path d="M325 208 L325 240 L975 240 L975 264" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#avx)"/>
+        <text x="650" y="232" text-anchor="middle" font-size="13" font-weight="700" fill="var(--accent)">one folder of numbered photos, copied over Wi-Fi</text>
+
+        <text x="40" y="300" font-size="12.5" fill="currentColor" opacity=".6">Nothing flows back. The Mac never steers the</text>
+        <text x="40" y="319" font-size="12.5" fill="currentColor" opacity=".6">robot, and the robot computes no 3D.</text>
+
+        <!-- mac lane -->
+        <rect x="690" y="266" width="570" height="32" rx="6" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+        <text x="975" y="287" text-anchor="middle" font-size="14" fill="currentColor">Work out where every photo was taken</text>
+        <line x1="975" y1="298" x2="975" y2="320" stroke="currentColor" stroke-width="1.4" marker-end="url(#av)"/>
+
+        <path d="M975 322 L1125 356 L975 390 L825 356 z" fill="none" stroke="var(--bloom2)" stroke-width="1.7"/>
+        <text x="975" y="352" text-anchor="middle" font-size="13.5" font-weight="600" fill="var(--bloom2)">Enough photos</text>
+        <text x="975" y="369" text-anchor="middle" font-size="13.5" font-weight="600" fill="var(--bloom2)">located?</text>
+        <path d="M1125 356 L1272 356 L1272 282 L1256 282" fill="none" stroke="currentColor" stroke-width="1.3"
+              marker-end="url(#av)" opacity=".7"/>
+        <text x="1262" y="326" text-anchor="end" font-size="12" fill="currentColor" opacity=".7">no: retry with the</text>
+        <text x="1262" y="342" text-anchor="end" font-size="12" fill="currentColor" opacity=".7">slow matcher, 14 min</text>
+
+        <line x1="975" y1="390" x2="975" y2="410" stroke="currentColor" stroke-width="1.4" marker-end="url(#av)"/>
+        <text x="983" y="405" font-size="12" fill="currentColor" opacity=".7">yes</text>
+
+        <rect x="690" y="412" width="570" height="32" rx="6" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+        <text x="975" y="433" text-anchor="middle" font-size="14" fill="currentColor">Build the 3D model from the photos</text>
+        <line x1="975" y1="444" x2="975" y2="458" stroke="currentColor" stroke-width="1.4" marker-end="url(#av)"/>
+
+        <rect x="690" y="460" width="570" height="32" rx="16" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.8"/>
+        <text x="975" y="481" text-anchor="middle" font-size="14" font-weight="600" fill="var(--accent)">Shrink it, then open the room in a browser</text>
+      </svg>
+      <figcaption>The dashed line is the only boundary that matters: whatever has to answer within about 100 ms stays on the robot, everything else crosses to the Mac.</figcaption>
+    </figure>
+    <div class="notes wide">
+      <span><b>The whole interface is a folder.</b> Numbered JPEG files, no protocol and no shared code, so either side runs and can be repaired without the other.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 5 · open source on the workflow ═══ -->
+<section id="s5">
+  <div class="inner">
+    <div class="eyebrow">Open source we build on</div>
+    <h2>Six projects, and where in the run each one does its work</h2>
+    <div class="osflow" id="osflow"></div>
+    <div class="osdetail" id="osdetail"></div>
+    <p class="hint">Click a project. Nothing here was written by us: our own code drives the robot, moves the folder and chains these six together.</p>
+  </div>
+</section>
+
+<!-- ═══ 6 · what a run costs ═══ -->
+<section id="s6">
+  <div class="inner">
+    <div class="eyebrow">Numbers · every one of them measured, none estimated</div>
+    <h2>What one run costs</h2>
+    <div class="stagewrap">
+      <button class="endcap" id="cap-in" type="button" aria-pressed="false">
+        <span class="sname">251 photos</span><span class="stime">in</span>
+      </button>
+      <div class="stagebar" id="stagebar"></div>
+      <button class="endcap" id="cap-out" type="button" aria-pressed="false">
+        <span class="sname">viewer</span><span class="stime">out</span>
+      </button>
+    </div>
+    <div class="sdetail" id="sdetail"></div>
+    <div class="lanes">
+      <div class="lane rt">
+        <div class="lanehead"><span class="who">Left side · what a capture drive looks like</span><h3>On the robot</h3></div>
+        <div class="scroller"><table>
+          <tr><td>Photo size</td><td><b class="mono">1280 × 960</b>, cut down from a 1640 × 1232 sensor</td></tr>
+          <tr><td>Pause before each photo</td><td><b class="mono">0.7 s</b>, plus two frames thrown away</td></tr>
+          <tr><td>Driving time per step</td><td><b class="mono">0.30 s</b></td></tr>
+          <tr><td>Photos per figure driven</td><td><b class="mono">8 to 12</b></td></tr>
+          <tr><td>Two neighbouring photos share</td><td><b class="mono">70 to 80 %</b> of their view</td></tr>
+        </table></div>
+        <p class="hint">These are the capture script's defaults, which come to roughly one photo a second before the camera and the memory card have their say. Not one of them has met a motor, and a first real drive will move all of them.</p>
+      </div>
+      <div class="lanejoin" aria-hidden="true"></div>
+      <div class="lane mc">
+        <div class="lanehead"><span class="who">Right side · how good the model gets</span><h3>On the Mac</h3></div>
+        <svg viewBox="0 0 440 176" role="img" aria-label="Quality climbs steeply and then flattens: it reaches 97 percent of the final quality after about a third of the training time.">
+          <line x1="36" y1="128" x2="426" y2="128" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          <line x1="36" y1="18"  x2="36"  y2="128" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          <text x="2" y="24"  font-size="11" fill="currentColor" opacity=".6">better</text>
+          <text x="2" y="128" font-size="11" fill="currentColor" opacity=".6">worse</text>
+          <text x="36"  y="146" font-size="11" fill="currentColor" opacity=".6">50 s</text>
+          <text x="201" y="146" text-anchor="middle" font-size="11" fill="currentColor" opacity=".6">6 min</text>
+          <text x="426" y="146" text-anchor="end" font-size="11" fill="currentColor" opacity=".6">16 min</text>
+          <text x="36"  y="166" font-size="11" fill="currentColor" opacity=".5">time building the model, the same photos trained four times longer</text>
+
+          <line x1="201" y1="30" x2="201" y2="128" stroke="var(--bloom2)" stroke-width="1" stroke-dasharray="3 4" opacity=".8"/>
+          <polyline fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"
+            points="36,120 92,82 147,60 201,50 257,42 312,38 368,34 426,30"/>
+          <circle cx="36"  cy="120" r="2.6" fill="var(--accent)"/>
+          <circle cx="92"  cy="82"  r="2.6" fill="var(--accent)"/>
+          <circle cx="147" cy="60"  r="2.6" fill="var(--accent)"/>
+          <circle cx="257" cy="42"  r="2.6" fill="var(--accent)"/>
+          <circle cx="312" cy="38"  r="2.6" fill="var(--accent)"/>
+          <circle cx="368" cy="34"  r="2.6" fill="var(--accent)"/>
+          <circle cx="426" cy="30"  r="2.6" fill="var(--accent)"/>
+          <circle cx="201" cy="50"  r="5.5" fill="none" stroke="var(--bloom2)" stroke-width="2.2"/>
+          <text x="212" y="86"  font-size="12" font-weight="700" fill="var(--bloom2)">97 % of the quality,</text>
+          <text x="212" y="101" font-size="12" font-weight="700" fill="var(--bloom2)">a third of the time</text>
+        </svg>
+        <p class="hint"><b>The second half of a training run costs half the clock and buys almost nothing.</b> That is why a run stops early on purpose, and why the 254 seconds on the bar above are enough. Measured twice on the same photos, agreeing to 1.2 %.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 7 · three ways to drive ═══ -->
+<section id="s7">
+  <div class="inner">
+    <div class="eyebrow">The driving algorithm · the piece still to be worked out</div>
+    <h2>How does the robot decide where to drive?</h2>
+    <div class="grid g3">
+      <div class="card">
+        <span class="tag t-warn">1 · written, never run on the robot</span>
+        <h3>A fixed script</h3>
+        <p>The robot knows three figures and drives them blind:</p>
+        <ul>
+          <li><b>Orbit</b>, 12 &times; a small arc</li>
+          <li><b>Wall pass</b>, 10 &times; straight ahead</li>
+          <li><b>Panorama</b>, 8 &times; turn on the spot</li>
+        </ul>
+        <p>The human puts the robot down and presses one key. The robot drives the whole figure, stopping for a photo after every step. It senses nothing while it does so.</p>
+        <p class="hint">Two emergency stops: any keypress aborts it, and two identical photos in a row end the figure, which is what a robot pushing against furniture produces.</p>
+      </div>
+      <div class="card">
+        <span class="tag t-idle">2 · open</span>
+        <h3>Train a model that runs on the robot</h3>
+        <p>Camera image in, a steering correction out, many times a second, on the robot itself. It would take over the long wall pass, the one figure where driving blind drifts off course.</p>
+        <p><b>What it would take:</b></p>
+        <ul>
+          <li>A few hundred photos, labelled by hand: where should it have steered?</li>
+          <li>A ResNet&#8209;18, trained on the robot's own 2019 stack.</li>
+          <li>Hours of exclusive time on shared hardware.</li>
+          <li>A test it can fail: beat a network that always answers with the average.</li>
+        </ul>
+      </div>
+      <div class="card" style="border-style:dashed;border-color:var(--accent)">
+        <span class="tag t-open">3 · your idea</span>
+        <h3 style="font-size:clamp(28px,3.2vw,44px);color:var(--accent);line-height:1">?</h3>
+        <p>Something else, or a mix of the two. Whatever it is has to live with the same hardware: <b>one camera, no wheel sensors, no motion sensor, no map</b>, and a computer from 2019.</p>
+        <p class="hint"><b>This slot is deliberately empty.</b> Tell us what you would try.</p>
+      </div>
+    </div>
+    <p class="wide hint">Ruled out on purpose: the classic trained obstacle avoider. It learns to drive straight until something blocks it, then turn on the spot. The next slide is why that produces unusable photos.</p>
+  </div>
+</section>
+
+<!-- ═══ 8 · the one rule ═══ -->
+<section id="s8">
+  <div class="inner">
+    <div class="eyebrow">The test all three have to pass</div>
+    <h2>The camera has to move sideways past what it photographs</h2>
+    <figure>
+      <svg viewBox="0 0 900 200" role="img" aria-label="Spinning on the spot and driving straight at a wall both give no parallax; passing a wall sideways gives parallax between two viewpoints.">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+          <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+
+        <text x="10" y="20" font-size="12" font-weight="700" fill="currentColor">Turn on the spot</text>
+        <line x1="10" y1="46" x2="10" y2="150" stroke="currentColor" stroke-width="4" opacity=".35"/>
+        <text x="20" y="164" font-size="10" fill="currentColor" opacity=".5">wall</text>
+        <circle cx="150" cy="98" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M150 62 A36 36 0 1 1 118 116" fill="none" stroke="currentColor" stroke-width="1.5"
+              stroke-dasharray="4 4" marker-end="url(#ar2)" opacity=".75"/>
+        <text x="150" y="186" text-anchor="middle" font-size="11.5" fill="var(--bloom2)" font-weight="700">no depth</text>
+
+        <text x="315" y="20" font-size="12" font-weight="700" fill="currentColor">Drive at the wall</text>
+        <line x1="580" y1="46" x2="580" y2="150" stroke="currentColor" stroke-width="4" opacity=".35"/>
+        <circle cx="360" cy="98" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <circle cx="450" cy="98" r="11" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".45"/>
+        <line x1="378" y1="98" x2="565" y2="98" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar2)" opacity=".75"/>
+        <line x1="360" y1="98" x2="578" y2="98" stroke="var(--bloom2)" stroke-width="1" stroke-dasharray="2 3" opacity=".8"/>
+        <text x="470" y="88" text-anchor="middle" font-size="10" fill="var(--bloom2)">the middle of the picture never moves</text>
+        <text x="450" y="186" text-anchor="middle" font-size="11.5" fill="var(--bloom2)" font-weight="700">no depth where you are aiming</text>
+
+        <text x="655" y="20" font-size="12" font-weight="700" fill="currentColor">Pass it sideways</text>
+        <line x1="655" y1="46" x2="890" y2="46" stroke="currentColor" stroke-width="4" opacity=".35"/>
+        <circle cx="690" cy="120" r="11" fill="none" stroke="var(--accent)" stroke-width="1.8"/>
+        <circle cx="850" cy="120" r="11" fill="none" stroke="var(--accent)" stroke-width="1.8"/>
+        <line x1="708" y1="120" x2="832" y2="120" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#ar3)"/>
+        <line x1="690" y1="109" x2="770" y2="52" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 3" opacity=".8"/>
+        <line x1="850" y1="109" x2="770" y2="52" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 3" opacity=".8"/>
+        <circle cx="770" cy="52" r="3.5" fill="var(--accent)"/>
+        <text x="770" y="150" text-anchor="middle" font-size="10" fill="var(--accent)" opacity=".85">the same point from two directions</text>
+        <text x="770" y="186" text-anchor="middle" font-size="11.5" fill="var(--accent)" font-weight="700">depth</text>
+      </svg>
+    </figure>
+    <p class="lead wide">To rebuild a surface, the software has to see it from two positions far enough apart. Turning on the spot never moves the camera. Driving at a wall never moves it sideways. Only passing the wall does. <b>Every one of the three options has to produce that sideways motion</b>, which is why an obstacle avoider, that drives straight and then turns, delivers photos nobody can use.</p>
+  </div>
+</section>
+
+<!-- ═══ 9 · the camera angle ═══ -->
+<section id="s9">
+  <div class="inner">
+    <div class="eyebrow">The open problem</div>
+    <h2>The camera sits low, points down, and does not move</h2>
+    <figure>
+      <svg viewBox="0 0 900 290" role="img" aria-label="Side view of the robot: the camera sits about 10 centimetres above the floor on a fixed bracket that points downwards, so a large share of its field of view lands on the floor a short distance ahead, while the far wall and a strip of ceiling are still inside the frame.">
+        <defs>
+          <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+          <marker id="ad2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--bloom2)"/>
+          </marker>
+        </defs>
+
+        <!-- room -->
+        <line x1="40" y1="250" x2="860" y2="250" stroke="currentColor" stroke-width="2" opacity=".55"/>
+        <text x="44" y="266" font-size="11" fill="currentColor" opacity=".55">floor</text>
+        <line x1="800" y1="40" x2="800" y2="250" stroke="currentColor" stroke-width="2" opacity=".55"/>
+        <text x="794" y="240" text-anchor="end" font-size="11" fill="currentColor" opacity=".55">wall</text>
+        <line x1="430" y1="40" x2="800" y2="40" stroke="currentColor" stroke-width="1.6" stroke-dasharray="5 5" opacity=".35"/>
+        <text x="440" y="32" font-size="11" fill="currentColor" opacity=".45">ceiling</text>
+
+        <!-- what the camera sees -->
+        <path d="M196 204 L742 40 L800 40 L800 250 L352 250 z" fill="var(--accent)" opacity=".12"/>
+        <line x1="196" y1="204" x2="742" y2="40" stroke="var(--accent)" stroke-width="1.3" opacity=".8"/>
+        <line x1="196" y1="204" x2="364" y2="250" stroke="var(--accent)" stroke-width="1.3" opacity=".8"/>
+        <text x="470" y="228" font-size="12.5" font-weight="700" fill="var(--accent)">what the camera sees</text>
+
+        <!-- robot -->
+        <rect x="112" y="216" width="86" height="24" rx="5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <circle cx="130" cy="243" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <circle cx="180" cy="243" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <rect x="180" y="196" width="18" height="14" rx="3" fill="none" stroke="var(--bloom2)" stroke-width="1.8"/>
+        <text x="152" y="188" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">JetBot</text>
+
+        <!-- height -->
+        <line x1="94" y1="204" x2="94" y2="250" stroke="currentColor" stroke-width="1" marker-start="url(#ad)" marker-end="url(#ad)" opacity=".6"/>
+        <text x="86" y="222" text-anchor="end" font-size="11" fill="currentColor" opacity=".65">about</text>
+        <text x="86" y="236" text-anchor="end" font-size="11" fill="currentColor" opacity=".65">10 cm</text>
+
+        <!-- the three annotations -->
+        <line x1="212" y1="186" x2="272" y2="152" stroke="var(--bloom2)" stroke-width="1.1" opacity=".8" marker-start="url(#ad2)"/>
+        <text x="278" y="148" font-size="12" font-weight="700" fill="var(--bloom2)">fixed bracket, angled down. It does not tilt.</text>
+
+        <line x1="360" y1="262" x2="560" y2="262" stroke="var(--bloom2)" stroke-width="1.1" stroke-dasharray="3 3" opacity=".8"/>
+        <text x="360" y="280" font-size="12" fill="var(--bloom2)">62 % of every photo, measured</text>
+
+        <text x="792" y="180" text-anchor="end" font-size="11.5" fill="currentColor" opacity=".7">the far wall, top to bottom</text>
+        <text x="792" y="32" text-anchor="end" font-size="11.5" fill="currentColor" opacity=".55">and a strip of ceiling</text>
+      </svg>
+    </figure>
+    <p class="lead wide">If most of every photo is floor, the run produces an excellent floor and a poor room, because a surface that was never photographed cannot be rebuilt. The project's own plan asked for a camera tilted slightly upwards, and the delivered mount does the opposite. <b>Measured on the robot, standing on the floor: 62 % of every frame is bare ground.</b> The whole room, walls, furniture, people and a strip of ceiling, is squeezed into the top 38 %. So the lens reaches high enough. It simply spends most of its pixels on the floor.</p>
+  </div>
+</section>
+
+<!-- ═══ 10 · status ═══ -->
+<section id="s10">
+  <div class="inner">
+    <div class="eyebrow">Status · 9 September 2026</div>
+    <h2>Where this actually stands</h2>
+    <div class="legend">
+      <span><i class="s-ok"></i> Built and tested</span>
+      <span><i class="s-warn"></i> Written, never run on the robot</span>
+      <span><i class="s-idle"></i> Open</span>
+    </div>
+    <div class="grid" id="board" style="gap:8px;min-height:0;overflow-y:auto"></div>
+    <p class="hint">Click a branch to fold it away. The counts come straight from the project's own planning files, not from a summary written for this deck.</p>
+  </div>
+</section>
+
+<!-- ═══ 11 · the example model ═══ -->
+<section id="s11">
+  <div class="inner" style="height:100%">
+    <div class="eyebrow">Example model, built by this pipeline from example photos</div>
+    <h2>What comes out at the end</h2>
+    <div class="viewer" id="viewer">
+      <div class="poster" id="poster">
+        <img src="__IMG_F6320__" alt="">
+        <div class="pc">
+          <button class="load" id="loadbtn" type="button">Enter the room</button>
+          <div class="hint">5.5 MB, loads on click. Drag to look around, scroll to move.</div>
+        </div>
+      </div>
+    </div>
+    <p class="foot"><b>This is not a room our robot drove through.</b> The photos come from a public research dataset (Deep Blending, <i>Dr Johnson</i>, Hedman et al., 2018): 263 photos of a stranger's living room, taken by hand. Everything after that is ours. Our pipeline located all 263 of them, built the model, shrank it and packed it into this page. 159 000 blobs, 5.5 MB, no server involved. When the robot has taken its own photos, this slide changes.</p>
+  </div>
+</section>
+
+</main>
+
+<script id="pointcloud" type="application/json">__POINTCLOUD__</script>
+<script id="splats" type="application/json">__SPLATS__</script>
+<script id="roomsrc" type="text/plain">__ROOM_HTML__</script>
+
+<script>
+(function(){
+  "use strict";
+  var body=document.body, deck=document.getElementById('deck');
+  var secs=Array.prototype.slice.call(document.querySelectorAll('#deck section'));
+  var idx=0;
+
+  /* ── theme ────────────────────────────────────────────────────────── */
+  /* Light is the deliberate default in every mode and on any host theme:
+     it is the direction that was chosen. Dark stays one keypress away for a
+     hall where a pale ground washes out. */
+  var themeBtn=document.getElementById('theme');
+  function setTheme(t){
+    document.documentElement.setAttribute('data-theme',t);
+    themeBtn.innerHTML=(t==='light'?'Dark':'Light')+' <kbd>t</kbd>';
+    try{ localStorage.setItem('deck-theme',t); }catch(e){}
+  }
+  var savedTheme=null;
+  try{ savedTheme=localStorage.getItem('deck-theme'); }catch(e){}
+  setTheme(savedTheme==='dark'?'dark':'light');
+  themeBtn.addEventListener('click',function(){
+    setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+  });
+
+  /* ── mode ─────────────────────────────────────────────────────────── */
+  var modeBtn=document.getElementById('mode');
+  function setMode(m){
+    body.classList.toggle('deck', m==='deck');
+    body.classList.toggle('doc',  m==='doc');
+    modeBtn.innerHTML = m==='deck' ? 'Doc view <kbd>d</kbd>' : 'Present <kbd>d</kbd>';
+    if(m==='deck'){ deck.scrollTop = idx*deck.clientHeight; }
+    else { secs[idx].scrollIntoView({block:'start'}); }
+  }
+  var startDeck = !/[?&]mode=doc/.test(location.search);
+  setMode(startDeck?'deck':'doc');
+  modeBtn.addEventListener('click',function(){
+    setMode(body.classList.contains('deck')?'doc':'deck');
+  });
+
+  /* ── nav ──────────────────────────────────────────────────────────── */
+  var dots=document.getElementById('dots'), rail=document.getElementById('railfill');
+  secs.forEach(function(s,i){
+    var d=document.createElement('button');
+    d.type='button'; d.setAttribute('aria-label','Slide '+(i+1));
+    d.addEventListener('click',function(){ go(i); });
+    dots.appendChild(d);
+  });
+  var dotEls=Array.prototype.slice.call(dots.children);
+
+  function paint(){
+    dotEls.forEach(function(d,i){ d.classList.toggle('on', i===idx); });
+    rail.style.width = ((idx)/(secs.length-1)*100)+'%';
+  }
+  /* A programmatic scroll fires scroll events all the way to its target. Without
+     this lock the listener below reads the half-finished position, resets idx to
+     the slide we are leaving, and the next keypress goes nowhere. */
+  var lockUntil=0;
+  function go(i){
+    idx=Math.max(0,Math.min(secs.length-1,i));
+    lockUntil=Date.now()+400;
+    /* Deck slides jump, they do not glide: a smooth scroll inside a
+       scroll-snap:mandatory container is cancelled by the snap the moment it
+       starts, and a slide change should be instant in front of an audience
+       anyway. Doc mode has no snap, so it keeps the smooth scroll. */
+    if(body.classList.contains('deck')) deck.scrollTop=idx*deck.clientHeight;
+    else secs[idx].scrollIntoView({behavior:'smooth',block:'start'});
+    paint();
+  }
+  deck.addEventListener('scroll',function(){
+    if(!body.classList.contains('deck')) return;
+    if(Date.now()<lockUntil) return;
+    var n=Math.round(deck.scrollTop/deck.clientHeight);
+    if(n!==idx && n>=0 && n<secs.length){ idx=n; paint(); }
+  },{passive:true});
+
+  document.addEventListener('keydown',function(e){
+    var t=e.target.tagName;
+    if(t==='INPUT'||t==='TEXTAREA') return;
+    if(e.key==='d'||e.key==='D'){ setMode(body.classList.contains('deck')?'doc':'deck'); return; }
+    if(e.key==='t'||e.key==='T'){
+      setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'); return;
+    }
+    if(!body.classList.contains('deck')) return;
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '||e.key==='PageDown'){ e.preventDefault(); go(idx+1); }
+    else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){ e.preventDefault(); go(idx-1); }
+    else if(e.key==='Home'){ e.preventDefault(); go(0); }
+    else if(e.key==='End'){ e.preventDefault(); go(secs.length-1); }
+  });
+  paint();
+
+  /* ── the two clouds, both from the same run ───────────────────────────
+     PTS is COLMAP's sparse output and illustrates the COLMAP card on the
+     open-source slide, so it has to stay COLMAP's. SPL is the trained model
+     and carries the opening slide. The opening slide used to draw PTS and
+     could not be made to read as a room, because it is not one: a few tens
+     of thousands of separately triangulated feature points do not become a
+     room by being made denser or brighter. */
+  var PTS=JSON.parse(document.getElementById('pointcloud').textContent);
+  var SPL=JSON.parse(document.getElementById('splats').textContent);
+
+  /* `stride` thins the cloud for small canvases: 24 000 points at three device
+     pixels each cover a card-sized box several times over and come out as one
+     solid rectangle. */
+  function project(ctx,w,h,ang,cxf,scf,size,stride,dim){
+    var ca=Math.cos(ang), sa=Math.sin(ang), sc=Math.min(w,h)*scf, cx=w*cxf, cy=h*0.46;
+    for(var i=0;i<PTS.length;i+=stride){
+      var p=PTS[i], x=p[0]*ca-p[2]*sa, z=p[0]*sa+p[2]*ca, y=p[1];
+      /* nearer points read brighter and larger — cheap depth cueing */
+      var d=2.0/(2.6+z), sx=cx+x*sc*d, sy=cy+y*sc*d;
+      ctx.globalAlpha=(0.22+0.62*d)*dim;
+      ctx.fillStyle='rgb('+p[3]+','+p[4]+','+p[5]+')';
+      var s=d>0.74?size+1:size;
+      ctx.fillRect(sx,sy,s,s);
+    }
+    ctx.globalAlpha=1;
+  }
+
+  /* A still frame of the same cloud, for the COLMAP card on the open-source
+     slide. Same data, no animation: it is an illustration, not the hero.
+     The canvas is created by an innerHTML swap and has no box yet on the tick
+     that creates it, so a first draw would size it 2x2 and the browser would
+     stretch those four pixels across the card as a smear. Wait for a layout
+     before drawing, on a timer rather than a frame callback, because
+     requestAnimationFrame never fires while the deck sits in a background tab. */
+  function drawStill(el,tries){
+    if(!el || !document.body.contains(el)) return;
+    var w=el.clientWidth*2, h=el.clientHeight*2;
+    if(w<40||h<40){
+      if((tries||0)<20) setTimeout(function(){ drawStill(el,(tries||0)+1); },50);
+      return;
+    }
+    el.width=w; el.height=h;
+    var c=el.getContext('2d');
+    c.clearRect(0,0,w,h);
+    project(c,w,h,0.9,0.5,0.50,2,3,0.85);
+  }
+
+  /* ── S5 stage bar ─────────────────────────────────────────────────── */
+  /* The three timed blocks are laid out with flex-grow set to their measured
+     seconds, so the widths on screen are the times. The two endpoints cost no
+     measurable time and sit outside the bar rather than distorting it. */
+  var STAGES=[
+    {n:'Locating',    t:'99 s',  s:99,  risk:true,
+     d:'<b>This one decides whether any of it works.</b> The software works out where the camera stood for each photo, by finding the same corners and textures in photos taken next to each other. It needs texture: a carpet or a bookshelf gives it thousands of points, a white wall gives it none. <b>When it fails it usually does so quietly</b>, handing back positions that look plausible and are wrong, and the mistake only shows up as smear in the finished model.'},
+    {n:'Building',    t:'254 s', s:254, risk:false,
+     d:'<b>The model assembles itself against the photos</b>, on the Mac’s graphics chip, and ends at 400 000 blobs in a 58 MB file. You can fly through the half‑finished room while it runs, which is the part worth watching. The processor barely works: on a longer run of the same photos it spent 64 seconds against 974 seconds on the clock, because its only job is feeding the graphics chip.'},
+    {n:'Shrinking',   t:'27 s',  s:27,  risk:false,
+     d:'<b>58 MB becomes 6.8 MB</b>, small enough to open on a phone. The same tool then writes one HTML file with the model packed inside it, and that file is what gets handed out.'}
+  ];
+  var CAPS={
+    'cap-in':'<b>251 photos, numbered in the order they were taken.</b> That numbering is the whole interface between the robot and the Mac. It tells the software which photos are neighbours, which is why a skipped number costs more than a blurry photo.',
+    'cap-out':'<b>One HTML file, opened in a browser.</b> No server, no installation, no build step. Hosting only matters for the link you take home afterwards.'
+  };
+  var bar=document.getElementById('stagebar'), sdet=document.getElementById('sdetail');
+  var sbtns=[];
+  STAGES.forEach(function(s,i){
+    var b=document.createElement('button');
+    b.type='button'; b.className='sblk'+(s.risk?' risk':'');
+    b.style.flex=s.s+' 1 0'; b.setAttribute('aria-pressed','false');
+    b.innerHTML='<span class="sname">'+s.n+'</span><span class="stime">'+s.t+'</span>';
+    b.addEventListener('click',function(){ showStage(i); });
+    bar.appendChild(b); sbtns.push(b);
+  });
+  var capIn=document.getElementById('cap-in'), capOut=document.getElementById('cap-out');
+  function clearPressed(){
+    sbtns.forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+    capIn.setAttribute('aria-pressed','false'); capOut.setAttribute('aria-pressed','false');
+  }
+  function showStage(i){
+    clearPressed(); sbtns[i].setAttribute('aria-pressed','true'); sdet.innerHTML=STAGES[i].d;
+  }
+  function showCap(el){ clearPressed(); el.setAttribute('aria-pressed','true'); sdet.innerHTML=CAPS[el.id]; }
+  capIn.addEventListener('click',function(){ showCap(capIn); });
+  capOut.addEventListener('click',function(){ showCap(capOut); });
+  showStage(0);
+
+  /* ── S6 open source on the workflow ───────────────────────────────── */
+  var OSS=[
+    {col:0,name:'JetBot 0.4.3',role:'motors and camera',
+     d:'<b>Drives the wheels and reads the camera.</b> It came pre‑installed on the robot’s memory card together with a set of ready‑made notebooks, one of which already steers the robot from a browser with a live picture. We add our own capture script beside it and change nothing that was there.',
+     lic:'NVIDIA-AI-IOT/jetbot · MIT · 3.3k stars'},
+    {col:0,name:'jetson-inference',role:'recognises objects, later',
+     d:'<b>Names what the camera is looking at</b>, on the robot, using a network someone else already trained. Chair, table, monitor. Putting those labels at the right place inside the 3D model happens later on the Mac, from the camera positions we compute anyway.',
+     lic:'dusty-nv/jetson-inference · MIT · 9.0k stars', pic:'img'},
+    {col:0,name:'nerf_bridge',role:'two ideas, no code',
+     soft:true,
+     d:'<b>We took two ideas from it and none of its code.</b> First: measure how sharp a photo is before keeping it, and re‑take it if it is soft. Second: if two photos in a row look identical, the robot has stopped moving, so end the figure. Both are three lines each in our own capture script.',
+     lic:'javieryu/nerf_bridge · borrowed approach'},
+    {col:1,name:'COLMAP',role:'finds the camera positions',
+     d:'<b>Works out where the camera stood for every photo</b>, and straightens the fisheye distortion out of them. This is the step everything else depends on: if it gets a position wrong, the mistake is baked into the model and no later step removes it.',
+     lic:'colmap/colmap · BSD · 12.6k stars', pic:'cloud'},
+    {col:2,name:'Brush',role:'builds the 3D model',
+     d:'<b>Builds the model of the room out of the photos.</b> The reason we can use it: it runs on Apple’s own graphics chip, so the whole project needs no NVIDIA computer. Its own window shows the room assembling while it works, and you can fly through the half‑finished result.',
+     lic:'ArthurBrussee/brush · Apache-2.0 · 5.0k stars'},
+    {col:3,name:'SuperSplat',role:'shrinks it and shows it',
+     d:'<b>Shrinks the model by a factor of 15 and writes the viewer.</b> One HTML file with the room packed inside it, which opens in any browser without a server. It is the file embedded on the last slide of this deck.',
+     lic:'playcanvas/supersplat · MIT · 9.9k stars'}
+  ];
+  var COLS=[
+    {w:'Robot',       n:'Drive and photograph', side:'rt'},
+    {w:'Mac · step 1',n:'Find the positions',   side:'mc'},
+    {w:'Mac · step 2',n:'Build the model',      side:'mc'},
+    {w:'Mac · step 3',n:'Shrink and show',      side:'mc'}
+  ];
+  var osflow=document.getElementById('osflow'), osdet=document.getElementById('osdetail');
+  var oschips=[];
+  COLS.forEach(function(c,ci){
+    var col=document.createElement('div'); col.className='oscol '+c.side;
+    col.innerHTML='<div class="oshead"><span class="osw">'+c.w+'</span><span class="osn">'+c.n+'</span></div>';
+    OSS.forEach(function(p,pi){
+      if(p.col!==ci) return;
+      var b=document.createElement('button');
+      b.type='button'; b.className='oschip'+(p.soft?' soft':''); b.setAttribute('aria-pressed','false');
+      b.innerHTML='<span class="cn">'+p.name+'</span><span class="cr">'+p.role+'</span>';
+      b.addEventListener('click',function(){ showOss(pi); });
+      col.appendChild(b); oschips[pi]=b;
+    });
+    osflow.appendChild(col);
+  });
+  function showOss(i){
+    var p=OSS[i];
+    oschips.forEach(function(b,j){ if(b) b.setAttribute('aria-pressed', j===i?'true':'false'); });
+    var pic='';
+    if(p.pic==='img') pic='<img class="ospic" src="__IMG_DETECTNET__" alt="A camera frame with coloured boxes drawn around the objects that were recognised.">';
+    if(p.pic==='cloud') pic='<canvas class="ospic cv" id="os-cloud" aria-label="The points this project recovered from the example room."></canvas>';
+    osdet.className='osdetail'+(pic?'':' nopic');
+    osdet.innerHTML='<div>'+p.d+'<span class="lic">'+p.lic+'</span></div>'+pic;
+    if(p.pic==='cloud') drawStill(document.getElementById('os-cloud'));
+  }
+  showOss(3);
+
+  /* ── S9 status board ──────────────────────────────────────────────── */
+  var BRANCHES=[
+    {name:'pipeline-3d', sub:'the Mac half', pkgs:[
+      ['ok','The three tools run: COLMAP, Brush, the compressor'],
+      ['ok','A full reference run on a public dataset, with real measured numbers'],
+      ['ok','Camera positions found for 251 of 251 photos, distortion removed'],
+      ['ok','Everything chained into one command, resumable in three stages'],
+      ['ok','Shrunk and displayed: the room moves in a browser'],
+      ['idle','Someone outside the project repeats the run from the README alone']
+    ]},
+    {name:'robot', sub:'the JetBot half', pkgs:[
+      ['ok','On the network: booted, Wi-Fi joined, Jupyter open in the browser, wheels driving'],
+      ['warn','Live camera picture while driving, from the notebook the robot shipped with'],
+      ['warn','Capture script: written, never executed, on hardware or anywhere else'],
+      ['warn','Fetching the folder to the Mac: written, run against a stand-in, never a real robot'],
+      ['idle','One real capture drive, handed to the pipeline']
+    ]},
+    {name:'driving', sub:'how the robot moves', pkgs:[
+      ['warn','The fixed script for the three figures: built, tried against a stand-in, never a motor'],
+      ['idle','A trained steering model: open, and not decided']
+    ]}
+  ];
+  var board=document.getElementById('board');
+  BRANCHES.forEach(function(br,bi){
+    var done=br.pkgs.filter(function(p){return p[0]==='ok';}).length;
+    var wrap=document.createElement('div'); wrap.className='branch';
+    var dts=br.pkgs.map(function(p){return '<i class="s-'+p[0]+'"></i>';}).join('');
+    var bodyId='bb'+bi;
+    wrap.innerHTML=
+      '<button class="bhead" type="button" aria-expanded="true" aria-controls="'+bodyId+'">'+
+        '<span><span class="bname">'+br.name+'</span> <span class="hint">'+br.sub+'</span></span>'+
+        '<span class="bcount">'+done+' / '+br.pkgs.length+'</span>'+
+        '<span class="bdots">'+dts+'</span>'+
+      '</button>'+
+      '<div class="bbody" id="'+bodyId+'">'+
+        br.pkgs.map(function(p){return '<div class="pkg"><i class="s-'+p[0]+'"></i><span>'+p[1]+'</span></div>';}).join('')+
+      '</div>';
+    var head=wrap.querySelector('.bhead'), bod=wrap.querySelector('.bbody');
+    head.addEventListener('click',function(){
+      var open=bod.hidden;
+      bod.hidden=!open; head.setAttribute('aria-expanded', open?'true':'false');
+    });
+    board.appendChild(wrap);
+  });
+
+  var pcEl=document.getElementById('pcloud-canvas');
+  if(pcEl){
+    var sctx=pcEl.getContext('2d'), ang=0, last=0;
+    var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* The cloud arrives as two base64 blocks, not as JSON numbers: three int16
+       and four uint8 per splat cost 10 bytes where the text form cost about
+       30, which is what lets the page carry the whole model rather than a
+       filtered third of it. The fourth colour byte is the splat's own alpha.
+       Unpacked once into flat typed arrays, because an array of 400 000
+       seven-element arrays would be nearly three million property lookups per
+       frame. */
+    var N=SPL.n, INV=SPL.clip/32767;
+    var SX=new Float32Array(N), SY=new Float32Array(N), SZ=new Float32Array(N);
+    var CL;
+    (function(){
+      function bytes(b64){
+        var bin=atob(b64), n=bin.length, u=new Uint8Array(n);
+        for(var i=0;i<n;i++) u[i]=bin.charCodeAt(i);
+        return u;
+      }
+      /* Int16Array over the buffer reads in the CPU's byte order and the
+         packer writes little-endian. Every browser this opens in is x86 or
+         ARM; a big-endian one would show confetti and no error. */
+      var q=new Int16Array(bytes(SPL.pos).buffer);
+      CL=bytes(SPL.col);
+      for(var i=0,j=0;i<N;i++,j+=3){
+        SX[i]=q[j]*INV; SY[i]=q[j+1]*INV; SZ[i]=q[j+2]*INV;
+      }
+    })();
+    SPL=null;
+
+    /* Scratch space, allocated once. Per-frame allocation of six arrays this
+       size is what turns a smooth background into a stuttering one. */
+    var NB=128;                      /* depth buckets, coarse on purpose */
+    var cnt=new Int32Array(NB), ord=new Int32Array(N), bkt=new Uint8Array(N);
+    var qx=new Float32Array(N), qy=new Float32Array(N), qd=new Float32Array(N);
+    var img=null;
+
+    /* Tip the camera down a little. A room read from exactly its own
+       mid-height is seen edge-on and straight through its walls, which is the
+       one angle at which an interior does not look like an interior. */
+    var cel=Math.cos(0.34), sel=Math.sin(0.34);
+
+    /* Why this paints pixels by hand instead of calling fillRect 60 000 times.
+       Two reasons, and both of them are the difference between a haze and a
+       room. A canvas has no depth buffer, so without an explicit
+       back-to-front order the far wall paints over the near furniture in
+       whatever order the file happened to hold it — that alone was most of
+       why the first attempt was unreadable. And setting fillStyle per point
+       costs more than the drawing does at this count. The counting sort is
+       two linear passes and no comparisons. */
+    function render(){
+      /* One CSS pixel per canvas pixel, capped: this is a soft background, and
+         a 2x backing store on a projector quadruples the per-frame clear for
+         nothing anyone can see. */
+      var cw=Math.max(1,pcEl.clientWidth), ch=Math.max(1,pcEl.clientHeight);
+      var w=Math.min(1100,cw), h=Math.max(1,Math.round(w*ch/cw));
+      if(pcEl.width!==w||pcEl.height!==h||!img){
+        pcEl.width=w; pcEl.height=h; img=sctx.createImageData(w,h);
+      }
+      var data=img.data;
+      data.fill(0);
+
+      var ca=Math.cos(ang), sa=Math.sin(ang);
+      var sc=w*0.92, cx=w*0.58, cy=h*0.46;
+      var zlo=1e9, zhi=-1e9, i, z;
+      for(i=0;i<N;i++){
+        var x0=SX[i], y0=SY[i], z0=SZ[i];
+        var x=x0*ca-z0*sa; z=x0*sa+z0*ca;      /* turn about the vertical */
+        var y=y0*cel-z*sel; z=y0*sel+z*cel;    /* then tip it down */
+        /* The camera stands just inside the room rather than off at a
+           distance, because a 3DGS room seen from outside is a lump: the model
+           includes the shell, so from out there the walls hide everything the
+           slide is claiming. CAM below the room's own half-width puts the eye
+           between the walls, which is also what the viewer on the last slide
+           opens to. NEAR then throws away what ends up behind the eye — those
+           points divide by a negative depth and would otherwise be flung to
+           the far side of the canvas, mirrored. */
+        var dep=z+1.95;
+        if(dep<0.30){ qd[i]=-1e9; continue; }
+        var d=1.0/dep;
+        qx[i]=cx+x*sc*d; qy[i]=cy+y*sc*d; qd[i]=z;
+        if(z<zlo) zlo=z;
+        if(z>zhi) zhi=z;
+      }
+
+      cnt.fill(0);
+      var k=(NB-1)/((zhi-zlo)||1), b;
+      /* Clipped points get bucket 0 and are skipped when drawn; they still
+         need a bucket, because the placement pass below indexes every one. */
+      for(i=0;i<N;i++){
+        b=qd[i]===-1e9?0:(qd[i]-zlo)*k|0;
+        if(b<0) b=0; else if(b>=NB) b=NB-1;
+        bkt[i]=b; cnt[b]++;
+      }
+      /* Prefix sum walked downwards, so the farthest bucket lands at offset 0
+         and the nearest is written last, over the top of everything behind. */
+      var run=0, c;
+      for(b=NB-1;b>=0;b--){ c=cnt[b]; cnt[b]=run; run+=c; }
+      for(i=0;i<N;i++){ ord[cnt[bkt[i]]++]=i; }
+
+      for(var o=0;o<N;o++){
+        i=ord[o];
+        if(qd[i]===-1e9) continue;             /* clipped behind the eye */
+        var d2=1.0/(qd[i]+1.95);
+        /* Every point covers at least 2x2. A single pixel per splat is what
+           made this read as speckle rather than surface: legibility here is
+           coverage per screen area, and coverage is points times area each. */
+        var s=d2>0.78?2:1;
+        var sx=qx[i]|0, sy=qy[i]|0;
+        if(sx<0||sy<0||sx+s>=w||sy+s>=h) continue;
+
+        /* Each splat paints at its own opacity, straight out of the model,
+           rather than at a depth-derived guess. That is what makes drawing the
+           unfiltered model possible: the faint gaussians a 3DGS room wraps
+           itself in are faint here too, instead of arriving as solid fog the
+           way they did when every splat was painted at the same alpha.
+           Below about 1/50 a splat cannot change a pixel it lands on, so it is
+           skipped. It is still in the data; it just has no work to do. */
+        var ci=i<<2, r=CL[ci], g=CL[ci+1], bb=CL[ci+2];
+        var a=CL[ci+3]*(1/255);
+        if(a<0.02) continue;
+        for(var dy=0;dy<=s;dy++){
+          var pi=((sy+dy)*w+sx)<<2;
+          for(var dx=0;dx<=s;dx++,pi+=4){
+            /* ImageData holds straight, not premultiplied, alpha, so a plain
+               lerp towards a transparent pixel would darken it towards black
+               instead of leaving its colour alone. */
+            var da=data[pi+3]/255, oa=a+da*(1-a);
+            if(oa<=0) continue;
+            var wa=a/oa, wd=da*(1-a)/oa;
+            data[pi]  =r *wa+data[pi]  *wd;
+            data[pi+1]=g *wa+data[pi+1]*wd;
+            data[pi+2]=bb*wa+data[pi+2]*wd;
+            data[pi+3]=oa*255;
+          }
+        }
+      }
+      sctx.putImageData(img,0,0);
+    }
+
+    /* Rotation is driven by elapsed time, so a slow machine turns at the same
+       speed as a fast one and simply draws fewer frames on the way. */
+    function loop(ts){
+      var dt=last?Math.min(64,ts-last):16.7; last=ts;
+      ang+=0.0013*(dt/16.7);
+      render();
+      requestAnimationFrame(loop);
+    }
+    /* Paint the first frame synchronously. requestAnimationFrame does not fire
+       while the tab sits in the background, and a deck that opens to an empty
+       canvas because it was loaded in a second tab is worse than no canvas. */
+    render();
+    if(reduce) window.addEventListener('resize',render,{passive:true});
+    else requestAnimationFrame(loop);
+  }
+
+  /* ── S11 viewer, built only when asked ────────────────────────────── */
+  var loadbtn=document.getElementById('loadbtn');
+  loadbtn.addEventListener('click',function(){
+    loadbtn.disabled=true; loadbtn.textContent='Loading the room…';
+    setTimeout(function(){
+      var raw=document.getElementById('roomsrc').textContent;
+      var html=raw.split('__ENDSCRIPT__').join('</scr'+'ipt');
+      var fr=document.createElement('iframe');
+      fr.setAttribute('title','Interactive 3D reconstruction');
+      fr.setAttribute('allow','fullscreen; xr-spatial-tracking');
+      fr.srcdoc=html;
+      document.getElementById('viewer').appendChild(fr);
+      var poster=document.getElementById('poster');
+      setTimeout(function(){ poster.style.display='none'; }, 2500);
+    },30);
+  });
+})();
+</script>

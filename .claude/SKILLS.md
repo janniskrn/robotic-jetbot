@@ -9,6 +9,8 @@ them. Chosen 2026-10-26. Licences: `THIRD-PARTY-LICENSES.md`.
 | `slop-humanizer` | blader/humanizer via KornLabs/truss | the stricter rewrite pass. Use one of the two per text, not both (they over-correct together) |
 | `slop-diagrams` | cathrynlavery/diagram-design via KornLabs/truss | static diagrams and charts (HTML/SVG/PNG) for the slides: state machine, system flow, results. Imports Mermaid |
 | `diagrams-archify` | tt-a1i/archify via KornLabs/truss | the explorable code visualization: architecture (perception -> decision -> control) and lifecycle (state machine), with links to file and line |
+| `presentation-html` | our own, from the skill author's earlier decks | build the final presentation as one self-contained HTML file: deck mode, doc mode, PDF print. Running order, honest-numbers rules, static checks, correction rounds. Worked example in `examples/jetbot/` |
+| `design-directions` | our own | choose the look (colors, fonts) of the deck by clicking through finished options in an Artifact, then lock it in a theme file. Its `ledger.md` and the deck `decks-ledger.md` start empty |
 | `systematic-debugging` | obra/superpowers | root cause before a fix (driving problems, model regressions); matches our "rule out the code first" lessons (AB1) |
 | `verification-before-completion` | obra/superpowers | evidence before "done": a step is approved only after a test run (CLAUDE.md 6.1) |
 
