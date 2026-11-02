@@ -37,3 +37,10 @@ snapshots
 *.onnx
 # Backups of earlier model versions for replay comparisons (metrics of each version are in git history)
 notebooks/mini_av/models/old/
+
+# Archify working folders and generated receipts (keep the candidate JSON and the HTML)
+.archify/
+diagrams/*.browser-check.json
+diagrams/*.finalize.json
+diagrams/*.finalize-summary.json
+diagrams/*.delivery.json

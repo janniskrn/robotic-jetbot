@@ -1,0 +1,180 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "JetBot State Machine",
+    "output": "diagrams/state-machine.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "mainPath": [
+    "startup",
+    "road_following",
+    "obstacle_avoidance",
+    "road_recovery"
+  ],
+  "states": [
+    {
+      "id": "startup",
+      "type": "start",
+      "label": "Wait For Lane",
+      "sublabel": "motors off, up to 3 s",
+      "tag": "start",
+      "step": "01"
+    },
+    {
+      "id": "road_following",
+      "type": "active",
+      "label": "ROAD_FOLLOWING",
+      "sublabel": "PD steering, curve speed",
+      "tag": "priority 5",
+      "step": "02"
+    },
+    {
+      "id": "obstacle_avoidance",
+      "type": "active",
+      "label": "OBSTACLE_AVOIDANCE",
+      "sublabel": "swerve in 7 phases",
+      "tag": "priority 2",
+      "step": "03"
+    },
+    {
+      "id": "road_recovery",
+      "type": "active",
+      "label": "ROAD_RECOVERY",
+      "sublabel": "steer back to the lane",
+      "tag": "priority 2",
+      "step": "04"
+    },
+    {
+      "id": "slow_down",
+      "type": "waiting",
+      "label": "SLOW_DOWN",
+      "sublabel": "speed capped at 0.31",
+      "tag": "priority 4"
+    },
+    {
+      "id": "stop",
+      "type": "waiting",
+      "label": "STOP",
+      "sublabel": "wait in front of the cup",
+      "tag": "priority 3"
+    },
+    {
+      "id": "halt",
+      "type": "failure",
+      "label": "HALT",
+      "sublabel": "motors off, run ends",
+      "tag": "priority 1"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "startup-following",
+      "from": "startup",
+      "to": "road_following",
+      "label": "lane seen"
+    },
+    {
+      "id": "following-avoid",
+      "from": "road_following",
+      "to": "obstacle_avoidance",
+      "label": "cup in lane"
+    },
+    {
+      "id": "avoid-recovery",
+      "from": "obstacle_avoidance",
+      "to": "road_recovery",
+      "label": "swerve done"
+    },
+    {
+      "id": "recovery-following",
+      "from": "road_recovery",
+      "to": "road_following",
+      "label": "lane aligned",
+      "variant": "emphasis"
+    },
+    {
+      "id": "following-slow",
+      "from": "road_following",
+      "to": "slow_down",
+      "label": "sharp curve"
+    },
+    {
+      "id": "slow-following",
+      "from": "slow_down",
+      "to": "road_following",
+      "label": "curve over"
+    },
+    {
+      "id": "following-stop",
+      "from": "road_following",
+      "to": "stop",
+      "label": "stop mode",
+      "variant": "dashed"
+    },
+    {
+      "id": "stop-following",
+      "from": "stop",
+      "to": "road_following",
+      "label": "cup gone"
+    },
+    {
+      "id": "startup-halt",
+      "from": "startup",
+      "to": "halt",
+      "label": "safety stop",
+      "variant": "security"
+    },
+    {
+      "id": "following-halt",
+      "from": "road_following",
+      "to": "halt",
+      "label": "safety stop",
+      "variant": "security"
+    },
+    {
+      "id": "avoid-halt",
+      "from": "obstacle_avoidance",
+      "to": "halt",
+      "label": "safety stop",
+      "variant": "security"
+    },
+    {
+      "id": "recovery-halt",
+      "from": "road_recovery",
+      "to": "halt",
+      "label": "safety stop",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Priority Decides",
+      "items": [
+        "When two conditions hold at once, the lower number wins",
+        "HALT outranks everything, so a safety stop cannot be overruled",
+        "SLOW_DOWN is ROAD_FOLLOWING with a speed cap, so it has the same exits"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "The Numbers Behind The Arrows",
+      "items": [
+        "Sharp curve: the curve model above 0.5 enters, below 0.3 leaves",
+        "Cup in lane: close for 4 steps in a row, within 0.4 of the lane center",
+        "Lane aligned: the lane mask sees both lines and the center for 5 steps"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "What A Safety Stop Is",
+      "items": [
+        "No lane for half a second, or none at all when the run starts",
+        "Recovery found no lane within 4 s, or a cup stayed beside the robot for 4 s",
+        "Battery under 10.8 V, no camera frame for 0.5 s, or Ctrl-C"
+      ]
+    }
+  ]
+}
