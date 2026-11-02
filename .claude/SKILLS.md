@@ -11,6 +11,7 @@ them. Chosen 2026-10-26. Licences: `THIRD-PARTY-LICENSES.md`.
 | `diagrams-archify` | tt-a1i/archify via KornLabs/truss | the explorable code visualization: architecture (perception -> decision -> control) and lifecycle (state machine), with links to file and line |
 | `presentation-html` | our own, from the skill author's earlier decks | build the final presentation as one self-contained HTML file: deck mode, doc mode, PDF print. Running order, honest-numbers rules, static checks, correction rounds. Worked example in `examples/jetbot/` |
 | `design-directions` | our own | choose the look (colors, fonts) of the deck by clicking through finished options in an Artifact, then lock it in a theme file. Its `ledger.md` and the deck `decks-ledger.md` start empty |
+| `writing-like-human` | our own, English translation of the skill author's German original | write or revise text (slide text, report, README) so it does not read as AI: build before words, voice profile, `check.py` for stock phrases, `invisible_chars.py` for hidden Unicode. Hands word-level edits to `slop-prose` or `slop-humanizer` |
 | `systematic-debugging` | obra/superpowers | root cause before a fix (driving problems, model regressions); matches our "rule out the code first" lessons (AB1) |
 | `verification-before-completion` | obra/superpowers | evidence before "done": a step is approved only after a test run (CLAUDE.md 6.1) |
 
