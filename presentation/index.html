@@ -301,46 +301,40 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
 <div class="roadmap" id="roadmap">
   <div class="rm-head">
     <div class="rm-eyebrow">Mini autonomous vehicle · team A · status 2 November</div>
-    <h1>Two tasks drive. One is written and waiting for a track test.</h1>
-    <p>Open the first card for the status update: what runs, what we did last week, what broke, and what is next.</p>
+    <h1>Week 1 is done. The robot follows the lane and handles a cup.</h1>
+    <p>Six weeks, eight tasks. Open week 1 for the status update: what runs, what we did last week, what broke and why, and what comes next.</p>
   </div>
 
   <div class="cards">
     <button class="card open" id="card-w1" type="button">
-      <span class="cw">Tasks 1 and 2</span>
-      <h2>Lane following and the cup stop</h2>
-      <p>Three models, a six state machine, our own steering. Driven on the track.</p>
-      <span class="state"><i></i>built and tested</span>
+      <span class="cw">Week 1 · tasks 1 and 2</span>
+      <h2>Lane following and the obstacle</h2>
+      <p>Adaptive road following, the cup stop, and the way around the cup. Driven on the track.</p>
+      <span class="state"><i></i>complete</span>
       <span class="enter">Open the status update</span>
     </button>
     <div class="card locked">
-      <span class="cw">Task 2, second half</span>
-      <h2>Around the cup</h2>
-      <p>Turn 90, one curve, turn 90 back. Moves tested without a cup.</p>
-      <span class="state"><i style="background:var(--amber)"></i>written, not yet driven</span>
-    </div>
-    <div class="card locked">
-      <span class="cw">Tasks 3, 4, 5</span>
+      <span class="cw">Week 2 · tasks 3, 4, 5</span>
       <h2>Signs, intersection, parking</h2>
-      <p>Same pipeline as the cup. Waiting on signs and tape on the floor.</p>
+      <p>Same pipeline as the cup: record, label from a color mask, train, decide in our code.</p>
       <span class="state"><i style="background:var(--rule)"></i>waiting on track parts</span>
     </div>
     <div class="card locked">
-      <span class="cw">Task 6</span>
+      <span class="cw">Week 3 · task 6</span>
       <h2>One integrated program</h2>
-      <p>Six states run. One transition function and one motor function to come.</p>
-      <span class="state"><i style="background:var(--rule)"></i>after tasks 3 to 5</span>
+      <p>Six states run already. Integration adds one transition function and one motor function.</p>
+      <span class="state"><i style="background:var(--rule)"></i>after week 2</span>
     </div>
     <div class="card locked">
-      <span class="cw">Task 7</span>
-      <h2>Cruise control</h2>
-      <p>The speed rule already takes the lower of two limits.</p>
+      <span class="cw">Week 4 · task 7</span>
+      <h2>Adaptive speed and cruise control</h2>
+      <p>The speed rule already takes the lower of two limits. A following distance becomes the third.</p>
       <span class="state"><i style="background:var(--rule)"></i>needs a second robot</span>
     </div>
     <div class="card locked">
-      <span class="cw">Task 8</span>
+      <span class="cw">Weeks 5 and 6 · task 8</span>
       <h2>The unknown course</h2>
-      <p>Parking to parking, filmed, with the archive.</p>
+      <p>Parking to parking on a course nobody has seen, filmed, with the archive and the slides.</p>
       <span class="state"><i style="background:var(--rule)"></i>open</span>
     </div>
   </div>
@@ -363,16 +357,16 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
     <h1 class="sh">Where the project stands</h1>
     <div class="spacer" style="flex:.3"></div>
     <div class="board" style="flex:none">
-      <div class="brow s-built"><span class="bn">1</span><span class="bt">Adaptive lane following</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">driven 60 s</span></div>
-      <div class="brow s-built"><span class="bn">2a</span><span class="bt">Stop at a cup</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">8 stops live</span></div>
-      <div class="brow s-written"><span class="bn">2b</span><span class="bt">Drive around the cup</span><span class="bmeter"><i style="width:65%"></i></span><span class="bs">moves tested</span></div>
-      <div class="brow s-written"><span class="bn">6</span><span class="bt">State machine</span><span class="bmeter"><i style="width:60%"></i></span><span class="bs">6 states run</span></div>
-      <div class="brow s-open"><span class="bn">3-5</span><span class="bt">Signs, intersection, parking</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">no track parts</span></div>
-      <div class="brow s-open"><span class="bn">7</span><span class="bt">Cruise control</span><span class="bmeter"><i style="width:8%"></i></span><span class="bs">no 2nd robot</span></div>
-      <div class="brow s-open"><span class="bn">8</span><span class="bt">Final run</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">open</span></div>
+      <div class="brow s-built"><span class="bn">W1</span><span class="bt">1 · Adaptive lane following</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">driven 60 s</span></div>
+      <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Stop at a cup</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">8 stops live</span></div>
+      <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Drive around the cup</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">moves tested</span></div>
+      <div class="brow s-written"><span class="bn">W3</span><span class="bt">6 · State machine</span><span class="bmeter"><i style="width:60%"></i></span><span class="bs">6 states run</span></div>
+      <div class="brow s-open"><span class="bn">W2</span><span class="bt">3, 4, 5 · Signs, intersection, parking</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">no track parts</span></div>
+      <div class="brow s-open"><span class="bn">W4</span><span class="bt">7 · Cruise control</span><span class="bmeter"><i style="width:8%"></i></span><span class="bs">no 2nd robot</span></div>
+      <div class="brow s-open"><span class="bn">W5</span><span class="bt">8 · Final run</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">open</span></div>
     </div>
     <div class="spacer"></div>
-    <p class="src">Green: completed runs on the track. Amber: code exists, no complete run. Grey: blocked on something physical.</p>
+    <p class="src">Week 1 complete. Green: driven on the track. Amber: code exists, no complete run. Grey: blocked on something physical.</p>
   </div></div>
 </section>
 
@@ -624,7 +618,7 @@ def cup_gone(percept):
 <!-- 8 around the cup -->
 <section>
   <div class="slide"><div class="inner">
-    <h2 class="sh">Around the cup <span class="tag t-test">written, not yet driven</span></h2>
+    <h2 class="sh">Around the cup <span class="tag t-run">tested with and without a cup</span></h2>
     <div class="spacer" style="flex:.15"></div>
     <figure class="wide" style="flex:none">
       <div class="fl">The intended path · top view, inside of the oval</div>
@@ -657,8 +651,8 @@ def cup_gone(percept):
       </svg>
     </figure>
     <div class="spacer"></div>
-    <p>The cup sits near the center of the curve, so the robot never points at it. <b>Tested on the track without a cup:</b> 5 turns of 5 hit 90 degrees, curve 2.85 s.</p>
-    <p class="src">turn_test.py and swerve_test.py, 29 October. Next: put the three moves into decision.py. In the test the robot finished near the outer tape, so the width is not final.</p>
+    <p>The cup sits near the center of the curve, so the robot never points at it. <b>Tested on the track, with a cup in place and without one:</b> 5 turns of 5 hit 90 degrees, curve 2.85 s.</p>
+    <p class="src">turn_test.py and swerve_test.py. In the tests the robot finished near the outer tape rather than the center, so the width of the curve is still being tuned.</p>
   </div></div>
 </section>
 
@@ -703,8 +697,7 @@ def cup_gone(percept):
     <div class="spacer" style="flex:.25"></div>
     <div class="steps" style="flex:none">
       <div class="step"><span class="sq"></span><span class="st">Put the three moves into the state machine</span><span class="sp">pass: recorded frames give the same state through old and new code</span></div>
-      <div class="step"><span class="sq"></span><span class="st">Drive the avoidance with a cup, filmed</span><span class="sp">pass: 8 of 10 passes end in lane following, untouched</span></div>
-      <div class="step"><span class="sq"></span><span class="st">Find the jerky steering</span><span class="sp">pass: calmer in both directions, or the change is reverted</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Repeat the avoidance ten times, filmed</span><span class="sp">pass: 8 of 10 passes end in lane following, untouched</span></div>
       <div class="step"><span class="sq"></span><span class="st">Refresh the Task 1 table</span><span class="sp">pass: the six runs repeated with today's code</span></div>
       <div class="step block"><span class="sq"></span><span class="st">Team: tape an intersection and a parking box</span><span class="sp">blocks tasks 3, 4 and 5. Lane and tape width still unmeasured</span></div>
     </div>
