@@ -814,7 +814,9 @@ def cup_gone(percept):
 
   var savedView = 'map', savedTheme = 'light';
   try{
-    savedView = localStorage.getItem('jetbot-view') || 'map';
+    if(location.hash === '#slides'){ savedView = 'slides'; }
+    else if(location.hash === '#doc'){ savedView = 'doc'; }
+    else { savedView = localStorage.getItem('jetbot-view') || 'map'; }
     savedTheme = localStorage.getItem('jetbot-theme') || 'light';
   }catch(e){}
   setTheme(savedTheme);
