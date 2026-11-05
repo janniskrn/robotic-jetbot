@@ -147,8 +147,46 @@ step test from now on (slides).
       0.40 / 0.27 went only just past the inner edge; 0.37 / 0.30 is the width the user wants (curve 2.85 s).
       Open: the robot ended on the right side of the lane, almost on the outer tape (user); `lane_found` also
       fires mid-curve when the robot crosses back into the lane.
-    - [ ] S1c3 swerve phases in `decision.py` / `control.py`, `STATE_MACHINE.md`, offline tests, subagent review.
-    - [ ] S1c4 track runs (one cup, no other robot, filmed); pass as in S1 below.
+    - [x] S1c3 swerve phases in `decision.py` / `control.py` (brake 0.3 s, turn out, curve, turn back), offline
+      tests (27 checks, replays of the track tests), subagent review (no bugs; time limits split, edge rule).
+    - [x] S1c4 track runs 2026-10-29 and 2026-11-03 (team): 9 swerves, 5 back to following. All 4 that started
+      with the cup 25-30 cm away by the cup mask (band row 101-105) passed. 3 of the 4 that started at 45-55 cm
+      (band row 82-90) failed: the obstacle model's distance row was up to 28 rows too close when people and the
+      flag stood behind the cup at the far end of the straight; once it was the other way (model about 45 cm,
+      mask about 15 cm: stopped too late). The arc mark (lane edge ahead horizontal) only came on the straight
+      where it was tuned. Separately, 4 of the 7 runs on 2026-11-03 lost the lane in the sharp ccw curve
+      without a cup. Continued in S1d.
+  - [ ] **S1d avoidance in every position** (plan 2026-11-04, after the team's two-cup runs). Principle (`HYBRID`):
+    the model says a cup is there; the cup mask measures how far it is and whether it is inside the lane; the
+    swerve always starts standing still at the same distance; where the lane gives no mark (curves) the marks
+    refer to the cup. One step at a time, each with the user's go:
+    - [ ] S1d0 (offline) lane loss in the sharp ccw curve, which ends runs before any cup: replay the 4 runs of
+      2026-11-03 and find why lane_x flips sign there (start placement inside the curve, people at the curve,
+      the known `DATA2` weakness). Pass: the cause is shown for all 4; a fix only if it is clear.
+    - [ ] S1d1 (offline) distance from the cup mask: all red bands (`cup_mask`), the nearest one whose center lies
+      between the lane lines at its row (lane mask); its lower edge row gives the distance (survey 2026-09-27:
+      20 cm row 109, 30 cm row 98, 50 cm row 84); the band row is logged. Pass: on every recorded drive frame
+      with a cup, the new rule calls "close" only at 25-35 cm, never for a cup beside the lane or the second cup.
+    - [ ] S1d2 (track, `--stop-only`, no swerve) approach to a fixed distance: a cup in the lane within about
+      60 cm slows the robot to `SPEED_SHARP` while it follows the lane; it stops when the band reaches the start
+      row (about 30 cm); too close (under about 18 cm) it backs up slowly to the start row. Positions: start,
+      middle and end of the straight, gentle and sharp curve, two cups 60 cm and 100 cm apart, one cup beside the
+      lane. Pass: stops at 30 cm plus or minus 5 cm in 9 of 10 per position (ruler in the video), never for the
+      cup beside the lane.
+    - [ ] S1d3 (track) the swerve from that fixed start on the straight, at its start, middle and end. Pass: 8 of 10
+      back to following without touching the cup.
+    - [ ] S1d4 (offline, then track) turn out referred to the cup: turn until the cup band reaches the image edge
+      on the other side (the cup at about 90 degrees to the robot, the right start for a curve around it, also in
+      a curve), stopped early by the measured delay like `TURN_EARLY`. Needs turn tests with a cup on the straight
+      and in a gentle curve first. The tape angle stays as a cross-check on straights.
+    - [ ] S1d5 (data first) curves: record swerves in a gentle curve and decide how the arc ends where the lane
+      edge is curved: the lane found while crossing back into it (it fired mid-arc on the straight), or the turn
+      measured from the sideways image shift (spin test: about 15 % error; the turn back fixes the rest with
+      `lane_found`). Sharp curve: swerve if a mark proves reliable there, otherwise stop in front of the cup and
+      wait (team decision).
+    - [ ] S1d6 safety during the swerve: a cup band close ahead during the arc or the turn back (a second cup) stops
+      the robot. Pass: replay of the two-cup runs.
+    - [ ] S1d7 clockwise lap (pass right, never driven): 10 swerves, pass 8 of 10. Then the M2 demo.
   Original S1: Cup on a straight, 60 s runs, about 10 swerves, tune the swerve constants. Pass: 8 of 10
   swerves end in `ROAD_FOLLOWING` without touching the robot. Same runs decide `STEER2` (keep if no lane loss).
   Then the M2 demo.
@@ -234,6 +272,7 @@ step test from now on (slides).
 | 2026-10-26 | S1 first run failed; principle HYBRID; S1a fixes |
 | 2026-10-26 | Draft 3: deadlines removed (user: not for the repo); order approved: S4 restructure before M3-M5 (`ORDER`) |
 | 2026-10-29 | S1b run; turn rates measured (`MOVE2`); new swerve with camera-ended turns (`AVOID3`), S1c1 done |
+| 2026-11-04 | S1c3 and S1c4 done: early triggers from the model's distance traced; plan S1d for avoidance in every position |
 
 ## 10. Review of draft 1 (2026-10-26, independent reviewer agent)
 
