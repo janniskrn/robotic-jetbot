@@ -1,5 +1,5 @@
 """Perception: camera frame -> what the models see (lane visible, lane position, curve class, cup) plus script
-measurements from the color masks (HYBRID): lane aligned, the angle of the lane edge ahead, and where the cup band is.
+measurements from the color masks (HYBRID): lane aligned, the angle of the lane edge ahead, and where the cup bands are.
 
 No decisions and no motor commands here.
 """
@@ -54,7 +54,7 @@ class Perception(object):
         curve_dir (-1 left .. 1 right), curve_class, cup_visible (probability), cup_row (lower edge of the cup's
         band, 0 top .. 1 bottom), cup_x (-1..1), inference_ms;
         from the color masks: lane_aligned (True/False), tape_angle (degrees, 0 = horizontal, None without a large
-        tape piece), mask_cup_x (-1..1, None without a red band), mask_cup_pixels (size of the band, 0 without one)"""
+        tape piece), cup_bands (every red band as (x -1..1, lower edge row 0..1, pixels), nearest first)"""
         start = time.time()
         image = preprocess(frame).unsqueeze(0).cuda().half()
         lane = self.lane_model(image)[0].float()
@@ -67,7 +67,7 @@ class Perception(object):
         self.frame_count += 1
         curve_probs, curve_dir = split_curve_probs(self.curve_model_probs)
         cup = self.cup
-        band = cup_mask.find_cup(frame)
+        height, width = frame.shape[:2]
         return {
             'lane_visible': torch.sigmoid(lane[0]).item(),
             'lane_x': max(-1.0, min(1.0, lane[1].item())),
@@ -79,7 +79,7 @@ class Perception(object):
             'cup_x': cup[2],
             'lane_aligned': lane_mask.lane_aligned(frame),
             'tape_angle': lane_mask.tape_angle(frame),
-            'mask_cup_x': None if band is None else band[0] / (frame.shape[1] / 2.0) - 1.0,
-            'mask_cup_pixels': 0 if band is None else band[2],
+            'cup_bands': [(x / (width / 2.0) - 1.0, row / float(height), pixels)
+                          for x, row, pixels in cup_mask.find_cups(frame)],
             'inference_ms': (time.time() - start) * 1000.0,
         }

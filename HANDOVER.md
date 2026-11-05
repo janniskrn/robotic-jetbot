@@ -1,26 +1,27 @@
-# Handover (2026-10-12, end of session 5)
+# Handover (2026-11-05, end of session)
 
-For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest: DEMO1, MOVE1, AVOID1, SM1, OBST4,
-OBST5), `notebooks/mini_av/STATE_MACHINE.md`.
+For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest: AVOID3, GAP2, OBST6, OBST7),
+`PLAN.md` section 6 step S1d, `notebooks/mini_av/STATE_MACHINE.md`.
 
-**The team wants fast progress without side tracks.** Current plan: `PLAN.md`.
+**The team wants fast progress without side tracks, and simple solutions over precise ones.** Current plan: `PLAN.md`.
 
 ## Where we are
 
-- Task 1 works. Task 2: stop at a cup shown live to the professor (DEMO1). **AVOID / ROAD_RECOVERY are coded and
-  tested offline only (AVOID1): first job is the track test.** Swerve timings come from MOVE1.
-- State machine with the guide's names in `decision.py` + `STATE_MACHINE.md` (SM1). TURN_LEFT/RIGHT, PARKING and the
-  STOP sign are only in the table: no signs, intersection, parking space or second JetBot exist yet (team to build).
-- Obstacle model v3 in use (OBST5). `03_train.py` now keeps the epoch with the best position error (not the loss).
-- Camera fault of session 3 was a loose ribbon cable (fixed). The robot lost power during a training: keep it on the
-  charger for trainings.
+- Task 1 works; a lane-gap fix for the sharp ccw curve (`GAP2`) is in, not yet confirmed on the track.
+- Task 2: the cup's distance comes from the cup mask (`OBST6`). Stop-only mode with slow approach, brake pulse and one
+  backup (`OBST7`) stops in front of the cup at about 35-40 cm (3 runs, `stop_s1d2_1..3`). Driving on after the cup is
+  lifted (needs the lane in sight) is coded but not yet seen on the track.
+- The swerve (`AVOID3`: brake, turn 90 degrees, curve, turn back) works on the straight it was tuned on and fails
+  elsewhere: its camera marks need a straight lane edge.
+- Offline test: kept in the session scratchpad only (lost twice); the user has not decided on a repo copy yet.
 
-## Next steps
+## Next steps (agreed with the user 2026-11-05)
 
-1. AVOID track test: cup in the middle of a straight, robot about 1.5 m before it (passes a curve first, so the pass
-   side is known), 60 s runs, about 10 swerves; tune the swerve constants (`AVOID3`) from the logs and what the team sees.
-2. As soon as signs exist: record sign laps (Task 3), labels, a sign model like the obstacle model, STOP state.
-3. Intersection (Task 4), parking (Task 5), ACC (Task 7) when the track parts / second JetBot exist.
+1. Teach the distances: the user places the robot 20, 30, 40, 50, 60 cm before a cup on the straight and 30, 40 cm in
+   the gentle curve; `notebooks/mini_av/cup_distance.py <cm> [label]` takes the picture (motors off); build a cm table.
+2. Simpler, wider swerve: stop at the fixed distance, turn 90 degrees, a wider curve (about 1.4 times) until
+   `lane_found`, then lane following (no turn back on the spot); offline tests, then the track: straight, then curve.
+3. Open: the growing swing at the gentle-curve entry (run 2026-11-03_04-51-54); the clockwise lap (pass right).
 
 ## Session 3 (2026-10-01) in short
 

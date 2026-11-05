@@ -160,14 +160,17 @@ step test from now on (slides).
     the model says a cup is there; the cup mask measures how far it is and whether it is inside the lane; the
     swerve always starts standing still at the same distance; where the lane gives no mark (curves) the marks
     refer to the cup. One step at a time, each with the user's go:
-    - [ ] S1d0 (offline) lane loss in the sharp ccw curve, which ends runs before any cup: replay the 4 runs of
-      2026-11-03 and find why lane_x flips sign there (start placement inside the curve, people at the curve,
-      the known `DATA2` weakness). Pass: the cause is shown for all 4; a fix only if it is clear.
-    - [ ] S1d1 (offline) distance from the cup mask: all red bands (`cup_mask`), the nearest one whose center lies
-      between the lane lines at its row (lane mask); its lower edge row gives the distance (survey 2026-09-27:
-      20 cm row 109, 30 cm row 98, 50 cm row 84); the band row is logged. Pass: on every recorded drive frame
-      with a cup, the new rule calls "close" only at 25-35 cm, never for a cup beside the lane or the second cup.
-    - [ ] S1d2 (track, `--stop-only`, no swerve) approach to a fixed distance: a cup in the lane within about
+    - [x] S1d0 (offline) lane loss: the 4 runs of 2026-11-03 explained. 2 in the sharp ccw curve: hold kept a turn
+      out of the curve, fixed (`GAP2`, replay only, needs the track). 1 a growing swing at the entry of the gentle
+      curve at 0.39 (lane_x -0.11, +0.24, -0.40, +0.42), cause of the swing open. 1 the robot drove the lap
+      backwards after an early swerve (turn_in accepted the lane facing backwards: S1d6).
+    - [x] S1d1 (offline) distance from the cup mask (`OBST6`): the nearest red band within `CUP_IN_LANE` of lane_x,
+      its lower edge row against `OBSTACLE_ROW` 94 (about 35 cm); band row and count are logged. The line-based
+      in-lane check was dropped (cups on a lane line hide it). Offline: right at the survey's 20, 30, 50 cm; the 4
+      good swerves start at the same moments, the 4 early ones not; no cup missed. Needs the track (S1d2).
+    - [ ] S1d2 (track, `--stop-only`, no swerve) approach to a fixed distance (`OBST7`; 2026-11-05: 3 runs, stops at
+      about 35-40 cm after one backup; driving on and cups 2-4 still to see). Simpler setup agreed: 4 cups, 30 cm
+      ruler; the user and Claude teach the distances with `cup_distance.py` (next session). Original text: a cup in the lane within about
       60 cm slows the robot to `SPEED_SHARP` while it follows the lane; it stops when the band reaches the start
       row (about 30 cm); too close (under about 18 cm) it backs up slowly to the start row. Positions: start,
       middle and end of the straight, gentle and sharp curve, two cups 60 cm and 100 cm apart, one cup beside the
@@ -185,7 +188,8 @@ step test from now on (slides).
       `lane_found`). Sharp curve: swerve if a mark proves reliable there, otherwise stop in front of the cup and
       wait (team decision).
     - [ ] S1d6 safety during the swerve: a cup band close ahead during the arc or the turn back (a second cup) stops
-      the robot. Pass: replay of the two-cup runs.
+      the robot; the turn back must not accept the lane facing backwards (run 2026-11-03_04-52-58 drove the lap
+      backwards after an early swerve). Pass: replay of the two-cup runs and of that run.
     - [ ] S1d7 clockwise lap (pass right, never driven): 10 swerves, pass 8 of 10. Then the M2 demo.
   Original S1: Cup on a straight, 60 s runs, about 10 swerves, tune the swerve constants. Pass: 8 of 10
   swerves end in `ROAD_FOLLOWING` without touching the robot. Same runs decide `STEER2` (keep if no lane loss).
@@ -273,6 +277,8 @@ step test from now on (slides).
 | 2026-10-26 | Draft 3: deadlines removed (user: not for the repo); order approved: S4 restructure before M3-M5 (`ORDER`) |
 | 2026-10-29 | S1b run; turn rates measured (`MOVE2`); new swerve with camera-ended turns (`AVOID3`), S1c1 done |
 | 2026-11-04 | S1c3 and S1c4 done: early triggers from the model's distance traced; plan S1d for avoidance in every position |
+| 2026-11-04 | S1d0 lane losses explained, hold fix (`GAP2`); S1d1 cup distance from the mask (`OBST6`); both offline only |
+| 2026-11-05 | S1d2 stop at a fixed distance on the track (`OBST7`); next: distance teaching, simpler and wider swerve |
 
 ## 10. Review of draft 1 (2026-10-26, independent reviewer agent)
 

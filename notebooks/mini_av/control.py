@@ -47,16 +47,19 @@ class Controller(object):
         steering_speed = config.SPEED_STRAIGHT - turning * (config.SPEED_STRAIGHT - config.SPEED_SHARP)
         return min(model_speed, steering_speed)
 
-    def feedforward(self, curve_probs, curve_dir):
-        """Base turn from the curve model: a curve needs a sustained turn that P alone only gives with a
-        large error. Size from how sharp the curve is, direction from which way it bends (both curve model).
-        None when the robot is already inside the curve: then P steers it back to the center."""
+    def curve_turn(self, curve_probs, curve_dir):
+        """Base turn for the curve the curve model sees: a curve needs a sustained turn that P alone only gives
+        with a large error. Size from how sharp the curve is, direction from which way it bends (both curve model)"""
         if abs(curve_dir) < config.FEEDFORWARD_MIN_DIR:
-            return 0.0
-        if self.lane_x * curve_dir < 0 and abs(self.lane_x) > config.FEEDFORWARD_MAX_INSIDE:
             return 0.0
         size = curve_probs[1] * config.FEEDFORWARD_GENTLE + curve_probs[2] * config.FEEDFORWARD_SHARP
         return size if curve_dir > 0 else -size
+
+    def feedforward(self, curve_probs, curve_dir):
+        """The curve turn, or none when the robot is already inside the curve: then P steers it back to the center"""
+        if self.lane_x * curve_dir < 0 and abs(self.lane_x) > config.FEEDFORWARD_MAX_INSIDE:
+            return 0.0
+        return self.curve_turn(curve_probs, curve_dir)
 
     def update(self, lane_x, curve_probs, curve_dir, dt, speed_limit=None):
         """Returns (left, right) wheel speeds; speed_limit caps the target speed (state SLOW_DOWN)"""
@@ -91,10 +94,11 @@ class Controller(object):
 
     def hold(self, curve_probs, curve_dir, dt):
         """Returns (left, right) for a short gap in which the lane is not visible (lane_x is not trained on
-        such frames). In a curve the robot keeps turning into it, at least as hard as the feedforward: holding
-        the last raw command held a turn out of the sharp ccw curve in both failed runs (DATA2). On a straight
-        the last command is kept."""
-        turn = self.feedforward(curve_probs, curve_dir)
+        such frames). In a curve the robot keeps turning into it, at least as hard as the curve turn: holding
+        the last raw command held a turn out of the sharp ccw curve in both failed runs (DATA2). Without the
+        inside rule: lane_x reached +0.10 just before the gap and the rule then held a turn out of the curve
+        (S1d0, 2 runs on 2026-11-03). On a straight the last command is kept."""
+        turn = self.curve_turn(curve_probs, curve_dir)
         if turn != 0.0 and (self.steering * turn <= 0.0 or abs(self.steering) < abs(turn)):
             self.steering = limit_change(turn, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
         return self.wheels()
@@ -107,13 +111,22 @@ class Controller(object):
         side: 'left' or 'right', the pass side; elapsed: seconds since the phase started (the kick).
         """
         if phase == 'brake':
-            return 0.0, 0.0
+            return self.stop(phase, elapsed)
         toward = -1.0 if side == 'left' else 1.0  # sign of a turn toward the pass side (positive turns right)
         if phase == 'arc':
             outer, inner = config.ARC_WHEELS
             return (inner, outer) if toward > 0 else (outer, inner)
         spin = toward * turn_speed(elapsed)
         return spin, -spin
+
+    def stop(self, phase, elapsed):
+        """Returns (left, right) standing in front of a cup (decision.STOP_PHASES): brake = a short reverse pulse,
+        because at 0 the motor board lets the wheels coast; back = slowly backwards; wait = off"""
+        if phase == 'back':
+            return -config.BACKUP_SPEED, -config.BACKUP_SPEED
+        if phase == 'brake' and elapsed < config.BRAKE[1]:
+            return -config.BRAKE[0], -config.BRAKE[0]
+        return 0.0, 0.0
 
     def recover(self, side):
         """Returns (left, right) while the lane is not seen after the swerve: slowly forward, turning gently away

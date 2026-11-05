@@ -55,16 +55,24 @@ LANE_LOST_TIMEOUT = 0.5  # seconds without a visible lane before the robot stops
 SLOW_DOWN_ENTER = 0.5    # p_sharp above which the state machine enters SLOW_DOWN (speed capped at SPEED_SHARP)
 SLOW_DOWN_EXIT = 0.3     # p_sharp below which it returns to ROAD_FOLLOWING (hysteresis)
 OBSTACLE_VISIBLE_THRESHOLD = 0.5  # obstacle model probability above which a cup counts as seen
-OBSTACLE_ROW = 88 / 224.0  # cup_row (lower edge of the red band) from which the cup is close: about 45 cm as the model
-                           # sees it. Triggered at row 98-112 the robot stood at row 134-138 (10-12 cm, run
-                           # stop_cups_1): debounce, about 0.14 s camera lag and rolling on after the stop;
-                           # this should stop it at about 25 cm
-OBSTACLE_CLEAR_ROW = 80 / 224.0  # the cup only counts as gone when unseen or above this row (hysteresis: at the same row
-                                 # as the trigger, a reading jittering around it released the robot in front of the cup)
+# Cup distances by the lower edge of the red band (cup mask, OBST6): 10 cm row 149 (ruler, run stop_s1d2_1),
+# 20 cm row 109, 30 cm row 98, 50 cm row 84 (survey 2026-09-27)
+APPROACH_ROW = 77 / 224.0  # a cup in the lane at or below this row (about 60 cm) slows the robot (SLOW_DOWN): it
+                           # rolls on less after the stop
+OBSTACLE_ROW = 91 / 224.0  # nearest red band in the lane at or below this row: the cup is close (about 40 cm). At 0.35
+                           # the robot rolled on 17 cm after STOP (camera delay, coasting: STOP at row 102 = 27 cm,
+                           # at rest at 10 cm, run stop_s1d2_1); slowed to 0.31 and braked it should rest at about 30 cm
+OBSTACLE_CLEAR_ROW = 85 / 224.0  # the cup only counts as gone when no red band is at or below this row (about 48 cm;
+                                 # hysteresis: at the trigger row a jittering reading released the robot early)
+BRAKE = (0.31, 0.1)        # reverse wheel speed and seconds right after a stop: at 0 the motor board lets the wheels coast
+BACKUP_ROW = 109 / 224.0   # standing with the nearest band at or below this row (20 cm or closer), the robot backs up
+BACKUP_TARGET_ROW = 101 / 224.0  # until the band is above this row (about 27 cm; it rolls on a little backwards too)
+BACKUP_SPEED = 0.31        # backwards, the slowest that moves the robot
+BACKUP_MAX = 2.0           # seconds of backing up at most (a misread band must not drive it back far)
 OBSTACLE_FRAMES = 4        # control steps in a row with a close cup before the robot counts as blocked (debounce;
                            # 2 fresh readings, the obstacle model runs every OBSTACLE_EVERY-th step)
 OBSTACLE_CLEAR_FRAMES = 5  # control steps in a row with the cup gone before it drives on (stop-only mode)
-CUP_IN_LANE = 0.4          # |cup_x - lane_x| below which a close cup is in the lane and gets avoided
+CUP_IN_LANE = 0.4          # |band x - lane_x| below which a cup is in the lane (a cup beside it is not in the way)
 
 # Avoidance (AVOID3): swerve to the inside of the oval as turn 90 degrees toward the pass side in place, curve around
 # the cup, turn back onto the lane. No encoders or gyro (MOVE2): every phase ends on a camera mark (HYBRID) and has a

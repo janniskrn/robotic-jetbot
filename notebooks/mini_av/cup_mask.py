@@ -1,9 +1,9 @@
 """Classical detection of the obstacle cups with a color mask: white paper cups (about 8 cm high)
 marked with a red tape band all around.
 
-A helper for data collection and automatic labels, like lane_mask.py. The driving program detects cups with the
-learned obstacle model; it uses this only to follow a cup it is passing (HYBRID): the mask also finds the band at
-the image edge, where the model misses cups (OBST3).
+A helper for data collection and automatic labels, like lane_mask.py. The driving program uses it to measure how far
+the cups are (HYBRID): the learned obstacle model says a cup is there, but its distance was up to 28 rows off with
+people behind the cup (S1d1); the band's lower edge is a direct measurement.
 """
 
 import cv2
@@ -29,12 +29,14 @@ def red_mask(bgr):
     return mask
 
 
+def find_cups(bgr):
+    """Returns (center x, lower edge row, pixels) of every red blob large enough to be a cup, nearest (lowest) first"""
+    count, _, stats, _ = cv2.connectedComponentsWithStats((red_mask(bgr) > 0).astype(np.uint8))
+    cups = [(x + w / 2.0, y + h - 1, int(pixels)) for x, y, w, h, pixels in stats[1:] if pixels >= MIN_PIXELS]
+    return sorted(cups, key=lambda cup: -cup[1])
+
+
 def find_cup(bgr):
     """Returns (center x, lower edge row, pixels) of the largest red blob, or None if there is no cup"""
-    count, _, stats, _ = cv2.connectedComponentsWithStats((red_mask(bgr) > 0).astype(np.uint8))
-    if count < 2:
-        return None
-    x, y, w, h, pixels = max(stats[1:], key=lambda s: s[4])
-    if pixels < MIN_PIXELS:
-        return None
-    return x + w / 2.0, y + h - 1, int(pixels)
+    cups = find_cups(bgr)
+    return max(cups, key=lambda cup: cup[2]) if cups else None

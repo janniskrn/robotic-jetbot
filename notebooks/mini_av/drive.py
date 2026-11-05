@@ -19,7 +19,7 @@ from jetbot import Camera, Robot
 
 import config
 from control import Controller
-from decision import FOLLOWING, HALT, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision
+from decision import FOLLOWING, HALT, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision, cup_ahead
 from logger import RunLogger
 from perception import Perception
 from recorder import Recorder
@@ -130,11 +130,11 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                 with watchdog.lock:
                     robot.set_motors(left, right)
                 watchdog.feed()
-            elif state == STOP:  # wait in front of the cup; drive on (from slow) once it is gone
+            elif state == STOP:  # brake, back up if too close, wait; drive on (from slow) once the cup is gone
+                left, right = controller.stop(decision.stop_phase, now - decision.phase_since)
                 with watchdog.lock:
-                    robot.stop()
+                    robot.set_motors(left, right)
                 watchdog.feed()
-                left = right = 0.0
             else:
                 robot.stop()
                 reason = {ROAD_RECOVERY: 'lane not found after avoiding',
@@ -142,6 +142,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                           }.get(previous_state, 'lane lost')
                 left = right = 0.0
             probs = percept['curve_probs']
+            ahead = cup_ahead(percept)  # the cup the decision looks at, for the log
             log.step(time=now - start, dt=dt, mode=state, lane_visible=percept['lane_visible'],
                      lane_x=percept['lane_x'], p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2],
                      curve_dir=percept['curve_dir'],
@@ -149,8 +150,9 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                      left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
                      cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'],
                      lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
-                     mask_cup_x=percept['mask_cup_x'], mask_cup_pixels=percept['mask_cup_pixels'],
-                     avoid_phase=decision.avoid_phase if state == OBSTACLE_AVOIDANCE else '')
+                     band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None,
+                     bands=len(percept['cup_bands']),
+                     phase={OBSTACLE_AVOIDANCE: decision.avoid_phase, STOP: decision.stop_phase}.get(state, ''))
             if state == HALT:
                 break
     except NoLaneAtStart:
