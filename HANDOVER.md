@@ -13,7 +13,7 @@ For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest
   lifted (needs the lane in sight) is coded but not yet seen on the track.
 - The swerve (`AVOID3`: brake, turn 90 degrees, curve, turn back) works on the straight it was tuned on and fails
   elsewhere: its camera marks need a straight lane edge.
-- Offline test: kept in the session scratchpad only (lost twice); the user has not decided on a repo copy yet.
+- Offline test (34 checks): `/home/jetbot/usb/logs/test_avoid.py` (USB stick, not in the repo; run with `python3 -B test_avoid.py ~/jetbot/notebooks/mini_av`).
 
 ## Next steps (agreed with the user 2026-11-05)
 
