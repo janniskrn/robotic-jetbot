@@ -123,7 +123,8 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                 watchdog.feed()
             elif state in (OBSTACLE_AVOIDANCE, ROAD_RECOVERY):
                 if state == OBSTACLE_AVOIDANCE:
-                    left, right = controller.avoid(decision.avoid_turn(), decision.pass_side())
+                    left, right = controller.avoid(decision.avoid_phase, decision.pass_side(),
+                                                   now - decision.phase_since)
                 else:
                     left, right = controller.recover(decision.pass_side())
                 with watchdog.lock:
@@ -137,7 +138,8 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
             else:
                 robot.stop()
                 reason = {ROAD_RECOVERY: 'lane not found after avoiding',
-                          OBSTACLE_AVOIDANCE: 'cup still beside the robot after the pass'}.get(previous_state, 'lane lost')
+                          OBSTACLE_AVOIDANCE: 'swerve %s did not reach its camera mark' % decision.avoid_phase
+                          }.get(previous_state, 'lane lost')
                 left = right = 0.0
             probs = percept['curve_probs']
             log.step(time=now - start, dt=dt, mode=state, lane_visible=percept['lane_visible'],
@@ -146,9 +148,9 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                      curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
                      left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
                      cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'],
-                     lane_aligned=int(percept['lane_aligned']), mask_cup_x=percept['mask_cup_x'],
-                     mask_cup_pixels=percept['mask_cup_pixels'],
-                     avoid_phase=config.AVOID_STEPS[decision.avoid_phase][0] if state == OBSTACLE_AVOIDANCE else '')
+                     lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
+                     mask_cup_x=percept['mask_cup_x'], mask_cup_pixels=percept['mask_cup_pixels'],
+                     avoid_phase=decision.avoid_phase if state == OBSTACLE_AVOIDANCE else '')
             if state == HALT:
                 break
     except NoLaneAtStart:

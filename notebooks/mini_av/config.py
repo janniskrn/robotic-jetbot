@@ -66,39 +66,32 @@ OBSTACLE_FRAMES = 4        # control steps in a row with a close cup before the 
 OBSTACLE_CLEAR_FRAMES = 5  # control steps in a row with the cup gone before it drives on (stop-only mode)
 CUP_IN_LANE = 0.4          # |cup_x - lane_x| below which a close cup is in the lane and gets avoided
 
-# Avoidance (D7, AVOID1, AVOID2): swerve to the inside of the oval, from the measured motion (MOVE1: at wheel speed
-# 0.35 about 25 cm/s straight and about 125 deg/s turning in place). Symmetric: the way back mirrors the way out,
-# so a slower pivot (low battery) changes both turns alike. Only the pass uses the camera (cup mask, HYBRID)
-AVOID_SPEED = 0.35
-AVOID_STEPS = [            # (name, seconds, turn): turn +1 toward the pass side in place, -1 away from it, 0 straight
-    ('turn_out', 0.36, 1),        # about 45 degrees toward the pass side
-    ('out', 0.8, 0),              # about 20 cm diagonally: about 14 cm sideways, out of the lane
-    ('turn_parallel', 0.36, -1),  # back parallel to the lane
-    ('pass', 1.4, 0),             # at least this long (about 35 cm), then until the cup is behind (AVOID_PASS_CLEAR)
-    ('turn_in', 0.36, -1),        # about 45 degrees toward the lane
-    ('in', 0.8, 0),               # the same 14 cm sideways back to the lane center
-    ('turn_straight', 0.36, 1),   # parallel to the lane again: without it recovery turned the robot crosswise
-]
-AVOID_PASS_CLEAR = 1.0     # seconds the pass goes on after the cup mask last saw the cup on its side: the cup leaves
-                           # the wide-angle image while still beside the robot's front (run avoid_ccw_1)
-AVOID_PASS_MAX = 4.0       # seconds after which a cup still beside the robot stops the run (HALT)
-AVOID_BESIDE_PIXELS = 80   # smallest red band (pixels) that counts as the cup being passed: in avoid_ccw_1 it had
-                           # 93-168, the next cup further along the track 34-68 (it must not stretch the pass)
-# Turns in place ended by the camera (AVOID3, under test with turn_test.py): spin test 2026-10-29 at 12 V, wheel
-# speed 0.35 turned about 305 deg/s, 0.30 about 200, 0.27 about 100, 0.26 did not start
+# Avoidance (AVOID3): swerve to the inside of the oval as turn 90 degrees toward the pass side in place, curve around
+# the cup, turn back onto the lane. No encoders or gyro (MOVE2): every phase ends on a camera mark (HYBRID) and has a
+# time limit. Turn rates in place, spin test 2026-10-29 at 12 V: wheel speed 0.35 about 305 deg/s, 0.30 about 200,
+# 0.27 about 100, 0.26 did not start
+AVOID_BRAKE = 0.3          # seconds standing still before the first turn: turning while still rolling carried the robot
+                           # toward the lane edge, which then left the image before it looked horizontal (avoid3_ccw_1)
 TURN_SPEED = 0.27          # slowest wheel speed that turns reliably: little overshoot from the camera delay
 TURN_KICK = (0.35, 0.1)    # wheel speed and seconds at the start of a turn (0.26 and below did not start on their own)
 TURN_EARLY = 13.0          # tape angle (degrees) before horizontal at which a 90-degree turn stops: the robot turned
                            # on by 11-14 degrees of tape angle after a stop at horizontal (camera delay, braking)
-TURN_MAX = 3.0             # seconds a turn may take before the robot stops (a stall or the tape not found)
+TURN_LOST = 25.0           # tape angle (degrees) before horizontal from which the edge leaving the image also counts as
+                           # 90 degrees: close to the edge it is horizontal below the camera's view (avoid3_ccw_1: last
+                           # seen at 16 degrees, then gone)
+TURN_JUMP = 10.0           # degrees the reading may jump back before it counts as another tape piece (the edge has left)
+TURN_OUT_MAX = 2.5         # seconds the turn out may take before the robot stops: 90 degrees took 0.8 s at about
+                           # 100 deg/s, but about 60 deg/s on the track (avoid3_ccw_1, the user saw 180 degrees in 3 s)
+TURN_IN_MAX = 3.0          # seconds the turn back may take (it took up to 1.9 s)
 ARC_WHEELS = (0.37, 0.30)  # outer and inner wheel in the curve around the cup. A wheel moves only above about 0.24
                            # and then about in proportion to (speed - 0.24) (spin test): 0.40 / 0.27 went only about
                            # 20 cm to the side, the user asked for 1.8 times the distance (swerve_test 2026-10-29)
 ARC_MIN = 1.0              # seconds the curve lasts at least (it starts with the lane edge horizontal ahead)
-ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends: it turns slower than a
-                           # spin in place, so it overshoots less (first guess, swerve_test.py)
-ARC_MAX = 6.0              # seconds the curve may take before the robot stops
-RECOVER_SPEED = 0.31      # forward speed while looking for the lane (the slowest that moves the robot)
+ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends (facing the lane again):
+                           # it turns slower than a spin in place, so it overshoots less
+ARC_MAX = 4.0              # seconds the curve may take before the robot stops (it took 2.85 s; longer drives blind
+                           # over the lane and the cup)
+RECOVER_SPEED = 0.31       # forward speed while looking for the lane (the slowest that moves the robot)
 RECOVER_TURN = 0.04        # gentle turn toward the lane while it is not seen yet
 RECOVER_CENTERED = 0.15    # |lane_x| below which the lane counts as found (and the lane mask must see the robot
                            # aligned: crosswise tape gave lane_x near 0, run avoid_ccw_1)

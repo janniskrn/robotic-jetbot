@@ -18,7 +18,7 @@ OBST5), `notebooks/mini_av/STATE_MACHINE.md`.
 ## Next steps
 
 1. AVOID track test: cup in the middle of a straight, robot about 1.5 m before it (passes a curve first, so the pass
-   side is known), 60 s runs, about 10 swerves; tune `AVOID_STEPS` from the logs and what the team sees.
+   side is known), 60 s runs, about 10 swerves; tune the swerve constants (`AVOID3`) from the logs and what the team sees.
 2. As soon as signs exist: record sign laps (Task 3), labels, a sign model like the obstacle model, STOP state.
 3. Intersection (Task 4), parking (Task 5), ACC (Task 7) when the track parts / second JetBot exist.
 

@@ -18,25 +18,14 @@ from jetbot import Camera, Robot
 
 import config
 import lane_mask
-from decision import lane_found
+from control import turn_speed
+from decision import lane_found, reached_horizontal
 from perception import Perception
 from recorder import DATASET_ROOT
 from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
 
 HOLD_SECONDS = 2.0  # standing still after each turn: the overshoot settles and can be seen in the frames
 WARMUP_FRAMES = 5   # model calls with the motors off (the first call took up to 1.1 s)
-
-
-def turn_speed(elapsed):
-    """Wheel speed of a turn: a short kick to break the robot free, then the slow speed"""
-    return config.TURN_KICK[0] if elapsed < config.TURN_KICK[1] else config.TURN_SPEED
-
-
-def reached_horizontal(angle, direction, early):
-    """True if a turn (direction -1 left, +1 right) has brought the near lane edge to within `early` degrees before
-    horizontal: turning left its angle rises toward 0, turning right it falls. A window, not a limit: a lane line
-    leaning the other way (+39 degrees at one start) must not end a left turn"""
-    return angle is not None and 0 <= direction * angle <= early
 
 
 def main():
@@ -71,8 +60,8 @@ def main():
                     found = lane_found(perception.observe(frame))
                     if direction == 0:
                         done = elapsed >= HOLD_SECONDS
-                    elif elapsed >= config.TURN_MAX:
-                        raise RuntimeError('%s turn took longer than %.1f s' % (name, config.TURN_MAX))
+                    elif elapsed >= (config.TURN_OUT_MAX if name == 'out' else config.TURN_IN_MAX):
+                        raise RuntimeError('%s turn took too long' % name)
                     elif name == 'out':
                         done = reached_horizontal(angle, direction, config.TURN_EARLY)
                     else:

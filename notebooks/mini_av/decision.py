@@ -2,11 +2,12 @@
 
 States (names from PROJECT_GUIDE_1.md), highest priority first; the full table with entry condition, action,
 exit condition and priority, plus the diagram, is in STATE_MACHINE.md and must stay in step with this file.
-    HALT                lane lost, recovery timeout, cup still beside after the pass time (battery and camera stops
-                        are in drive.py): the run ends
-    OBSTACLE_AVOIDANCE  a cup is close ahead in the lane: swerve to the inside of the oval in phases
-                        (config.AVOID_STEPS, control.avoid); the pass lasts until the cup mask sees the cup behind
-    ROAD_RECOVERY       after the swerve: back to the lane until it is seen near the center and aligned for a few steps
+    HALT                lane lost, recovery timeout, a swerve phase that does not reach its camera mark in time
+                        (battery and camera stops are in drive.py): the run ends
+    OBSTACLE_AVOIDANCE  a cup is close ahead in the lane: swerve to the inside of the oval in AVOID_PHASES (stop, turn
+                        90 degrees, curve around the cup, turn back onto the lane; control.avoid), the turns and the
+                        curve each ended by a camera mark
+    ROAD_RECOVERY       after the swerve: steer on the lane until it is seen near the center and aligned for a few steps
     STOP                required stop: with stop_only, wait in front of a cup until it is gone
     SLOW_DOWN           sharp curve ahead: lane following with the speed capped
     ROAD_FOLLOWING      normal lane following
@@ -23,6 +24,7 @@ ROAD_RECOVERY = 'ROAD_RECOVERY'
 STOP = 'STOP'
 HALT = 'HALT'
 FOLLOWING = (ROAD_FOLLOWING, SLOW_DOWN)  # the states that follow the lane with the normal controller
+AVOID_PHASES = ('brake', 'turn_out', 'arc', 'turn_in')  # the swerve (AVOID3), in this order
 
 
 def cup_close(percept):
@@ -43,13 +45,19 @@ def cup_in_lane(percept):
             and abs(percept['cup_x'] - percept['lane_x']) < config.CUP_IN_LANE)
 
 
-def cup_beside(percept, pass_side):
-    """True if the cup mask sees a large red band on the cup's side of the image while passing it (HYBRID): passing
-    on the left, the cup is on the right; a small band is a cup further along the track. The mask also finds the
-    band at the image edge, where the model misses cups"""
-    x = percept['mask_cup_x']
-    return (percept['mask_cup_pixels'] >= config.AVOID_BESIDE_PIXELS
-            and (x > 0 if pass_side == 'left' else x < 0))
+def reached_horizontal(angle, direction, early):
+    """True if a turn (direction -1 left, +1 right) has brought the lane edge ahead to within `early` degrees before
+    horizontal (lane_mask.tape_angle): turning left its angle rises toward 0, turning right it falls. A window, not
+    a limit: a lane line leaning the other way (+39 degrees at one start) must not end a left turn"""
+    return angle is not None and 0 <= direction * angle <= early
+
+
+def edge_left_view(last, angle, direction):
+    """True if the lane edge, last seen within TURN_LOST degrees of horizontal, has left the image: it is gone, or the
+    largest piece is now another, steeper one. The robot then stands close to the edge, which is horizontal below the
+    camera's view (run avoid3_ccw_1)"""
+    return (reached_horizontal(last, direction, config.TURN_LOST)
+            and (angle is None or direction * angle > direction * last + config.TURN_JUMP))
 
 
 def lane_found(percept):
@@ -72,9 +80,9 @@ class Decision(object):
         self.close_frames = 0     # control steps in a row with a close cup (in the lane, unless stop_only)
         self.clear_frames = 0     # control steps in a row with the cup gone (STOP)
         self.centered_frames = 0  # control steps in a row with the lane found (ROAD_RECOVERY)
-        self.avoid_phase = 0      # index of the current swerve phase in config.AVOID_STEPS
+        self.avoid_phase = AVOID_PHASES[0]
         self.phase_since = 0.0
-        self.cup_seen_at = 0.0    # last time the cup mask saw the cup beside the robot (pass phase)
+        self.edge_angle = None    # last tape angle seen in the turn out
         self.curve_sum = 0.0      # sum of curve_dir in curves: negative = curves turn left = counterclockwise
 
     def pass_side(self):
@@ -86,35 +94,36 @@ class Decision(object):
     def enter(self, state, now):
         self.state, self.state_since = state, now
         if state == OBSTACLE_AVOIDANCE:
-            self.avoid_phase, self.phase_since = 0, now
-
-    def avoid_turn(self):
-        """Turn of the current swerve phase: +1 toward the pass side, -1 away from it, 0 straight"""
-        return config.AVOID_STEPS[self.avoid_phase][2]
+            self.avoid_phase, self.phase_since, self.edge_angle = AVOID_PHASES[0], now, None
 
     def update_avoidance(self, percept, now):
-        """Moves through the swerve phases. All are timed except the pass, which lasts at least its time and then
-        until the cup has not been seen beside the robot for AVOID_PASS_CLEAR seconds"""
-        name, seconds, _ = config.AVOID_STEPS[self.avoid_phase]
+        """Moves through the swerve phases. Passing on the left: stand still briefly, turn left until the lane edge
+        looks horizontal or leaves the image near horizontal (90 degrees), curve right until the edge ahead looks
+        horizontal again (facing the lane), turn left until the lane is found. Passing on the right mirrored. The
+        marks come from the lane mask (HYBRID). A phase that takes too long: HALT"""
         elapsed = now - self.phase_since
-        done = elapsed >= seconds
-        if name == 'pass':
-            beside = cup_beside(percept, self.pass_side())
-            if beside:
-                self.cup_seen_at = now
-                if elapsed > config.AVOID_PASS_MAX:
-                    self.enter(HALT, now)  # the cup is still beside the robot: turning in would hit it
-                    return
-            done = done and now - self.cup_seen_at >= config.AVOID_PASS_CLEAR
-        if not done:
-            return
-        self.avoid_phase += 1
-        # timed phases keep their exact length (a frame late here does not lengthen the next pivot); the pass ends now
-        self.phase_since = now if name == 'pass' else self.phase_since + seconds
-        self.cup_seen_at = now
-        if self.avoid_phase == len(config.AVOID_STEPS):
+        toward = -1 if self.pass_side() == 'left' else 1  # turn direction toward the pass side (-1 left)
+        angle = percept['tape_angle']
+        if self.avoid_phase == 'brake':
+            done, limit = elapsed >= config.AVOID_BRAKE, config.AVOID_BRAKE
+        elif self.avoid_phase == 'turn_out':
+            done = (reached_horizontal(angle, toward, config.TURN_EARLY)
+                    or edge_left_view(self.edge_angle, angle, toward))
+            limit = config.TURN_OUT_MAX
+            self.edge_angle = angle
+        elif self.avoid_phase == 'arc':  # the lane edge is horizontal ahead at its start: ARC_MIN
+            done = elapsed >= config.ARC_MIN and reached_horizontal(angle, -toward, config.ARC_EARLY)
+            limit = config.ARC_MAX
+        else:
+            done, limit = lane_found(percept), config.TURN_IN_MAX
+        if done and self.avoid_phase == AVOID_PHASES[-1]:
             self.centered_frames = 0
             self.enter(ROAD_RECOVERY, now)
+        elif done:
+            self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(self.avoid_phase) + 1]
+            self.phase_since = now
+        elif elapsed >= limit:
+            self.enter(HALT, now)  # a stall, or the mark was not seen: do not drive on blind
 
     def update(self, percept, now):
         """Returns the state for this frame"""

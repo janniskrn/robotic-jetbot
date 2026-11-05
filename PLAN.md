@@ -31,7 +31,7 @@ the floor: the team can build them now (S0).**
 | only the current state's behavior runs: `<state>_step(...) -> (steering, speed)` | if/elif in `drive.py`, controller methods return wheel speeds | **A3:** one `<state>_step` per state in `control.py`, each returning `(steering, speed)` (a pivot is speed 0, steering +-0.35) |
 | one `set_motor_commands(steering, speed)`, the only motor write | motors written in four places in `drive.py` (lines 122, 130, 134, 138); line 138 without the watchdog lock (`REVIEW2`) | **A4:** one function: clamp, motor trim, write under the lock. Negative wheel speeds stay allowed (pivots, reversing) |
 | perception returns one result per model | `Perception.observe` returns one flat dict | **A1:** `road`, `obstacle`, `sign` results; done together with the sign model (S9), not as its own step |
-| avoidance sub-phases `SLOW_DOWN -> TURNING -> PASSING -> RECOVERY` | timed list `AVOID_STEPS` | **A6:** keep the list, name the phases after the guide in logs and docs |
+| avoidance sub-phases `SLOW_DOWN -> TURNING -> PASSING -> RECOVERY` | three camera-ended phases `AVOID_PHASES` (`AVOID3`) | **A6:** name the phases after the guide in logs and docs |
 | `ROAD_LOST -> ROAD_RECOVERY` | lane lost 0.5 s -> `HALT` | **A5, deferred to M4 and changes `AVOID1` / `SM1`:** only when turns need it. Search = pivot in place toward the side the lane was last seen, no forward motion, short timeout -> `HALT`. Driving forward blind is not safe (the lane model once said "visible 0.99" on distant tape, run `v3_ccw_3`) |
 
 `STATE_MACHINE.md` stays hand-written next to the code (`SM1`); no generator script.
@@ -149,7 +149,7 @@ step test from now on (slides).
       fires mid-curve when the robot crosses back into the lane.
     - [ ] S1c3 swerve phases in `decision.py` / `control.py`, `STATE_MACHINE.md`, offline tests, subagent review.
     - [ ] S1c4 track runs (one cup, no other robot, filmed); pass as in S1 below.
-  Original S1: Cup on a straight, 60 s runs, about 10 swerves, tune `AVOID_STEPS`. Pass: 8 of 10
+  Original S1: Cup on a straight, 60 s runs, about 10 swerves, tune the swerve constants. Pass: 8 of 10
   swerves end in `ROAD_FOLLOWING` without touching the robot. Same runs decide `STEER2` (keep if no lane loss).
   Then the M2 demo.
 - [ ] **S2 PASS2** in `decision.py` (no cup trigger while the curve model says sharp). Pass: replay of cup sessions

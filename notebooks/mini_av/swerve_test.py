@@ -16,11 +16,12 @@ from jetbot import Camera, Robot
 
 import config
 import lane_mask
-from decision import lane_found
+from control import turn_speed
+from decision import lane_found, reached_horizontal
 from perception import Perception
 from recorder import DATASET_ROOT
 from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
-from turn_test import WARMUP_FRAMES, reached_horizontal, turn_speed
+from turn_test import WARMUP_FRAMES
 
 HOLD_SECONDS = 2.0  # standing still at the end: the final heading can be seen in the frames
 
@@ -39,7 +40,7 @@ def phase_done(name, elapsed, angle, found):
     """True when the phase has reached its camera mark; raises RuntimeError when it took too long"""
     if name == 'hold':
         return elapsed >= HOLD_SECONDS
-    if elapsed >= (config.ARC_MAX if name == 'arc' else config.TURN_MAX):
+    if elapsed >= {'out': config.TURN_OUT_MAX, 'arc': config.ARC_MAX, 'in': config.TURN_IN_MAX}[name]:
         raise RuntimeError('%s took too long' % name)
     if name == 'out':
         return reached_horizontal(angle, -1, config.TURN_EARLY)

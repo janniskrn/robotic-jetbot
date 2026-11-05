@@ -8,6 +8,11 @@ import config
 SPEEDS = [config.SPEED_STRAIGHT, config.SPEED_GENTLE, config.SPEED_SHARP]  # same order as CURVE_CLASSES
 
 
+def turn_speed(elapsed):
+    """Wheel speed of a turn in place: a short kick to break the robot free, then the slow speed (MOVE2)"""
+    return config.TURN_KICK[0] if elapsed < config.TURN_KICK[1] else config.TURN_SPEED
+
+
 def limit_change(target, current, up_rate, down_rate, dt):
     """Moves current toward target by at most up_rate (rising) or down_rate (falling) per second"""
     if target > current:
@@ -94,21 +99,26 @@ class Controller(object):
             self.steering = limit_change(turn, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
         return self.wheels()
 
-    def avoid(self, turn, side):
-        """Returns (left, right) for one swerve phase (config.AVOID_STEPS; the decision layer picks the phase).
+    def avoid(self, phase, side, elapsed):
+        """Returns (left, right) for a swerve phase (decision.AVOID_PHASES; the decision layer picks and ends it).
 
-        turn: +1 pivot toward the pass side, -1 away from it, 0 straight; side: 'left' or 'right', the pass side.
+        brake: stand still; turn_out, turn_in: turn in place toward the pass side; arc: curve away from it, around
+        the cup.
+        side: 'left' or 'right', the pass side; elapsed: seconds since the phase started (the kick).
         """
-        if turn == 0:
-            return config.AVOID_SPEED, config.AVOID_SPEED
+        if phase == 'brake':
+            return 0.0, 0.0
         toward = -1.0 if side == 'left' else 1.0  # sign of a turn toward the pass side (positive turns right)
-        spin = toward * turn * config.AVOID_SPEED
+        if phase == 'arc':
+            outer, inner = config.ARC_WHEELS
+            return (inner, outer) if toward > 0 else (outer, inner)
+        spin = toward * turn_speed(elapsed)
         return spin, -spin
 
     def recover(self, side):
         """Returns (left, right) while the lane is not seen after the swerve: slowly forward, turning gently away
-        from the pass side. The swerve is symmetric and should end on the lane; if the lane is not seen, the robot
-        most likely did not come all the way back (slower pivots on a low battery)"""
+        from the pass side. The swerve ends with the lane found, so this only covers frames in which the lane model
+        loses it again"""
         self.steering = (config.RECOVER_TURN if side == 'left' else -config.RECOVER_TURN)
         self.speed = config.RECOVER_SPEED
         return self.wheels()
