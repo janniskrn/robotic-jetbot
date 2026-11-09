@@ -163,11 +163,13 @@ class Decision(object):
         """The lane is lost: find it again, or end the run"""
         self.enter(LINE_RECOVERY if self.line_recovery else HALT, now)
 
-    def line_recovery_done(self, found, now):
-        """Called by drive.py when the search has ended. The robot may now face either way along the lane, so the
-        driving direction is measured anew"""
+    def line_recovery_done(self, found, now, kept_direction=False):
+        """Called by drive.py when the search has ended. Unless the robot kept its driving direction, it may now face
+        either way along the lane, so the direction is measured anew"""
         self.enter(ROAD_FOLLOWING if found else HALT, now)
-        self.lost_since, self.close_frames, self.curve_sum = None, 0, 0.0
+        self.lost_since, self.close_frames = None, 0
+        if not kept_direction:
+            self.curve_sum = 0.0
 
     def update_stop(self, percept, now):
         """Standing in front of the cup: a short reverse pulse against coasting, then wait; if the cup turns out to

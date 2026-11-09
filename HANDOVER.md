@@ -11,8 +11,10 @@ The cup-referenced swerve, the recognition fixes and the distance from the band'
 `cup_learn.py <label>` in 5 places, data `usb/logs/cup_learn_all_2026-11-08.csv`) are coded and pass the offline test
 (`usb/logs/test_avoid.py`, 62 checks). Track 2026-11-08 (3 cups, runs `avoid4_7`, `avoid4_8`, `avoid4_9`, `line1_1`): 11 of 12
 swerves came back to the road (whether a cup was touched was not observed). New state `LINE_RECOVERY` (`LINE1`,
-`find_lane.py`). Open: the recovery takes up to 48 s and can leave the
-robot driving the other way; cups entering the lane late (curve exit) trigger at 21-25 cm; the sharp-curve lane loss.
+`find_lane.py`). Uncommitted 2026-11-09: `LINE2` staged recovery (undo, sweep, search). Track: 14 of 18 swerves
+back on the road (runs `line2_1`, `_3`, `_4`, `_5`); undo not yet exercised (no lane loss while following); 0 of 4 recoveries after a failed
+swerve found the lane (1 cut by the time limit, 1 stopped at a cup, fixed; 2 ran about 110 s), 3 of 3 from the start of a run. Open: 3 of the 4 failed swerves hit the
+3.9 s curve limit without a mark; the recovery from open floor; cups entering the lane late (curve exit) trigger at 21-25 cm; the sharp-curve lane loss.
 
 ## Where we are
 

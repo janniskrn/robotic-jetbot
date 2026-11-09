@@ -9,6 +9,7 @@ Or from 04_drive.ipynb with start and stop buttons. Stop from a terminal: script
 """
 
 import argparse
+import collections
 import queue
 import threading
 import time
@@ -19,7 +20,7 @@ from jetbot import Camera, Robot
 
 import config
 from control import Controller
-from find_lane import FindLane
+from find_lane import FOUND, KEPT_DIRECTION, FindLane, StopRecovery
 from decision import FOLLOWING, HALT, LINE_RECOVERY, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision, band_cm, cup_ahead
 from logger import RunLogger
 from perception import Perception
@@ -27,6 +28,7 @@ from recorder import Recorder
 from safety import BatteryGuard, BatteryLow, CameraFrozen, MotorWatchdog, wait_for_new_frame
 
 
+UNDO_STEPS = 60    # recent wheel commands kept for the undo in LINE_RECOVERY: more than its 1 s at any loop time
 RECORD_HZ = 4.0  # camera frames saved per second as a dataset session, to see what went wrong and to retrain
 WARMUP_FRAMES = 5  # model calls with the motors off before driving (the first call took up to 1.1 s)
 STARTUP_TIMEOUT = 3.0  # seconds to wait (motors off) for the first sight of the lane: the camera's
@@ -94,6 +96,8 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
             frame = wait_for_new_frame(camera, frame)
         watchdog.start()
         left = right = 0.0
+        last_lane_x = 0.0
+        history = collections.deque(maxlen=UNDO_STEPS)  # (dt, left, right) of the recent control steps
         start = last = last_saved = time.time()
         while time.time() - start < seconds:
             if stop_event is not None and stop_event.is_set():
@@ -113,19 +117,25 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
             if state == LINE_RECOVERY:  # takes many seconds, in small steps with their own safety checks
                 with watchdog.lock:
                     robot.stop()
-                result = finder.run()
+                # where the lane should be: the way the curve bends, else where it was last seen
+                turn = percept['curve_dir'] if abs(percept['curve_dir']) >= config.FEEDFORWARD_MIN_DIR else last_lane_x
+                result = finder.run(history if previous_state in FOLLOWING else (), -1 if turn < 0 else 1,
+                                    start + seconds, stop_event)
                 log.step(time=now - start, dt=dt, mode=LINE_RECOVERY, phase=result)
                 last = time.time()
                 frame = finder.frame
-                decision.line_recovery_done(result == 'found', last)
+                decision.line_recovery_done(result in FOUND, last, result in KEPT_DIRECTION)
                 controller.reset()
-                if result == 'found':
+                history.clear()
+                if result in FOUND:
                     continue
                 reason = 'lane not found by line recovery (%s)' % result
                 break
             if state != previous_state and state in (OBSTACLE_AVOIDANCE, STOP):
                 controller.reset()  # restart slowly afterwards, without old steering or damping memory
             lane_seen = percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD
+            if lane_seen:
+                last_lane_x = percept['lane_x']
             if state in FOLLOWING or (state == ROAD_RECOVERY and lane_seen):
                 if lane_seen:
                     limit = config.SPEED_SHARP if state == SLOW_DOWN else None
@@ -168,8 +178,11 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                      band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None, band_cm=band_cm(ahead) if ahead else None,
                      bands=len(percept['cup_bands']),
                      phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''))
+            history.append((dt, left, right))
             if state == HALT:
                 break
+    except StopRecovery as over:
+        reason = str(over)
     except NoLaneAtStart:
         reason = 'no lane at start: put the robot on the lane'
     except CameraFrozen:
