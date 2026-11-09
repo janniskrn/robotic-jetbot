@@ -180,6 +180,9 @@ step test from now on (slides).
       (`OBST9`). Code for the cup-referenced swerve and recognition (`AVOID4`, `OBST8`, parts
       of S1d4 and S1d6) is written and passes 51 offline checks; not yet driven, not committed until approved on the
       track.
+    - [ ] S1f (2026-11-09) swerve and `LINE_RECOVERY` on the track with 3 cups (`AVOID4`, `LINE1`, `LINE2`): swerves come back to
+      the road in most runs (`HANDOVER.md`); next: the nudge when the turn back fails at the border, then full laps with
+      cups for the pass rate. Recovery from open floor still unreliable.
     - [ ] S1d3 (track) the swerve from that fixed start on the straight, at its start, middle and end. Pass: 8 of 10
       back to following without touching the cup.
     - [ ] S1d4 (offline, then track) turn out referred to the cup: turn until the cup band reaches the image edge

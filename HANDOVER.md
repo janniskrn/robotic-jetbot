@@ -1,19 +1,48 @@
-# Handover (2026-11-05, end of session)
+# Handover (2026-11-09, end of session)
 
-For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest: AVOID3, GAP2, OBST6, OBST7),
-`PLAN.md` section 6 step S1d, `notebooks/mini_av/STATE_MACHINE.md`.
+For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest: OBST8, OBST9, AVOID4, LEARN1, LINE1,
+LINE2), `PLAN.md` section 6 step S1, `notebooks/mini_av/STATE_MACHINE.md`.
 
-**The team wants fast progress without side tracks, and simple solutions over precise ones.** Current plan: `PLAN.md`.
+**The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
-## Update 2026-11-08 (newest decisions: OBST8, AVOID4, LEARN1)
+## Where we are (commit `092b97d`, all pushed; only the widget ID in `04_drive.ipynb` is left uncommitted on purpose)
 
-The cup-referenced swerve, the recognition fixes and the distance from the band's size (`OBST9`, learned with
-`cup_learn.py <label>` in 5 places, data `usb/logs/cup_learn_all_2026-11-08.csv`) are coded and pass the offline test
-(`usb/logs/test_avoid.py`, 62 checks). Track 2026-11-08 (3 cups, runs `avoid4_7`, `avoid4_8`, `avoid4_9`, `line1_1`): 11 of 12
-swerves came back to the road (whether a cup was touched was not observed). New state `LINE_RECOVERY` (`LINE1`,
-`find_lane.py`). Uncommitted 2026-11-09: `LINE2` staged recovery (undo, sweep, search). Track: 14 of 18 swerves
-back on the road (runs `line2_1`, `_3`, `_4`, `_5`); undo not yet exercised (no lane loss while following); 0 of 4 recoveries after a failed
-swerve found the lane (1 cut by the time limit, 1 stopped at a cup, fixed; 2 ran about 110 s), 3 of 3 from the start of a run. Later the same day: the curve ends when the border was crossed, straight after 3.5 s (run `line3_1`: 2 of 3 swerves, too few to judge). Undo tested on purpose once (back at lane 0.63, then the sweep found it in 2.5 s; a 2.1 s drive-off needed the search); after that it was relaxed to 1.5 s and not re-tested. Open: the search from open floor (1 of 3 full searches failed, a run after a failed turn back found nothing in 100 s and drove to the wall, the forward pushes now stop without tape); cups entering the lane late (curve exit) trigger at 21-25 cm; the sharp-curve lane loss.
+- **Cup distance:** from the red band's size, cm = 405 / sqrt(pixels) (`OBST9`), learned with `cup_learn.py` in 5 places.
+  Approach 65, trigger 40, clear 60 cm. The row depends on place and camera tilt; a band cut off by the lower image
+  edge counts as 0 cm.
+- **Models on single frames** (`usb/logs/models_on_frames_2026-11-08.csv`): cup found in 96-99 % of the frames up to 50 cm,
+  71 % at 60-73 cm, false alarms 0.4 %. The lane model loses the lane close to a cup (45 % at 18-25 cm).
+- **Swerve (`AVOID4`):** brake, turn out until the cup leaves the image, curve (`ARC_WHEELS` 0.36 / 0.31) straight on
+  while the cup is in view on its side, ends when the lane's border was crossed or the lane is found; straight on after
+  3.5 s; turn back. Track, 3 cups: 11 of 12 swerves (runs `avoid4_7..9`, `line1_1`), 14 of 18 (`line2_1`, `_3`, `_4`, `_5`),
+  then 2 of 3 with the crossing rule (`line3_1`, too few to judge). Whether cups were touched was not observed.
+- **`LINE_RECOVERY` (`LINE1`, `LINE2`, `find_lane.py`):** undo (1.5 s of wheel commands backwards), sweep (about 100
+  degrees each way), search (one turn, nearest tape, drive across it). Search stops with the Stop button and the time
+  limit; no forward pulse without tape in view.
+- **Offline test:** `usb/logs/test_avoid.py`, 82 checks (`python3 -B test_avoid.py ~/jetbot/notebooks/mini_av`), not in the repo.
+  Test helpers of this session: `usb/logs/session_tools_2026-11-08/` (`go.sh`, `find.sh` have paths of the old scratchpad).
+
+## Open problems, in the order to work on them
+
+1. **Turn back fails at the border (proposed, no go yet):** when `turn_in` times out the robot often stands right at the
+   lane (run `line3_1`: lane 0.49, aligned, tape under the nose), and the search then turns away and loses it. Proposal:
+   a small forward nudge and a new look before the long search; test on the failed runs, then full laps with cups.
+2. **Search from open floor is unreliable:** 2 of 3 standalone runs found the lane (22 and 113 stops); during `line3_1` it
+   found nothing in 100 s and drove to the wall (the no-tape rule came after that; not re-tested). The camera does not
+   see walls or chairs.
+3. **Undo:** tested on purpose once (back at lane 0.63, then the sweep found it in 2.5 s; a 2.1 s drive-off needed the
+   search). Relaxed afterwards (1.5 s, `UNDO_SURE` 0.6), not re-tested. No natural lane loss has reached it yet.
+4. **Lane loss in curves** while following: 8 of 8 losses in curves (5 sharp, 3 gentle), about 15 cm after the last good reading.
+5. **Cups just past a curve** count as in the lane late: triggers at 21-25 cm instead of about 37.
+6. Recovery without following keeps no heading, so the robot can end up driving the lap the other way (the pass side is
+   then measured anew; clockwise swerves worked in `line1_1`, `line2_1`).
+
+## Practical notes
+
+- Each new camera program needs `scripts/restart_camera.sh` first or Argus hangs (it restarts Jupyter too); once "camera frozen" at a start, a retry worked.
+- Battery: 11.52 V at the end, charging. Check before driving; limit 11.4 V at rest.
+- Tighten the camera mount: the tilt moved 2-4 rows since September.
+- Do not match the 4 Hz frames to log times to judge the models: that gave a false "model blind beyond 40 cm". Run the models on the single frames.
 
 ## Where we are
 
