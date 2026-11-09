@@ -255,7 +255,7 @@ body.doc .tag{font-size:.62rem; padding:.1rem .3rem; border-radius:3px}
 
 /* ════════ CODE SLIDE: real source on the left, numbered notes on the right ════════ */
 .codeslide{display:grid; grid-template-columns:1.7fr 1fr; gap:1.6cqw; min-height:0; flex:1}
-.codesrc{display:flex; flex-direction:column; gap:.45cqw; min-width:0}
+.codesrc{display:flex; flex-direction:column; gap:.25cqw; min-width:0}
 .codesrc pre{margin:0; font-family:var(--mono); font-size:.95cqw; line-height:1.48; color:var(--ink);
   background:var(--raise); border:1px solid var(--rule-soft); border-radius:.35cqw; padding:.8cqw 1cqw; overflow:auto}
 .codesrc pre .c{color:var(--faint)}
@@ -588,8 +588,6 @@ body.doc .doconly{display:block}
 <span class="ln on">60</span>lane = self.lane_model(image)[0].float()
 <span class="ln on">61</span>if self.curve_model is not None and self.frame_count % config.CURVE_EVERY == 0:
 <span class="ln">62</span>    new = torch.softmax(self.curve_model(image)[0].float(), 0).tolist()
-<span class="ln">63</span>    self.curve_model_probs = [old + config.CURVE_SMOOTHING * (n - old)
-<span class="ln">64</span>                              for old, n in zip(self.curve_model_probs, new)]
 <span class="ln on">65</span>if self.obstacle_model is not None and self.frame_count % config.OBSTACLE_EVERY == 1:
 <span class="ln">66</span>    self.cup = self.obstacle_model(image)[0].float().tolist()
 <span class="ln on">71</span>return {
@@ -607,14 +605,14 @@ body.doc .doconly{display:block}
       </div>
       <ol class="notes">
         <li><span class="nn">60</span><span><b>The lane model runs on every frame.</b> Steering needs a fresh position every step, so this one is never skipped.</span></li>
-        <li><span class="nn">61</span><span><b>The curve model runs every second frame</b> and its five class probabilities are smoothed, because single frames flickered between classes. Curvature changes slowly.</span></li>
+        <li><span class="nn">61</span><span><b>The curve model runs every second frame</b> and lines 63 and 64 smooth its five probabilities, because single frames flickered between classes. Curvature changes slowly.</span></li>
         <li><span class="nn">65</span><span><b>The cup model runs on the other frames.</b> Three models on every frame added 12 ms per step and the robot swung after the sharp curve.</span></li>
         <li><span class="nn">71</span><span><b>Everything leaves as plain numbers.</b> No tensor and no decision crosses this boundary, which is what lets the decision layer be tested without a GPU.</span></li>
         <li><span class="nn">80</span><span><b>Two color masks measure what a model should not guess:</b> whether the robot is aligned, the angle of the tape ahead, and where every red cup band is.</span></li>
         <li><span class="nn">35</span><span><b>How sharp and which way stay separate.</b> The model has five classes; this returns severity for the speed and a direction from -1 to 1 for the feedforward, so an unsure direction never steers.</span></li>
       </ol>
     </div>
-    <p class="src">That split is decision HYBRID in DECISIONS.md. It was forced by a failure: the obstacle model's distance was up to 28 rows wrong when people stood behind the cup, while the mask was right.</p>
+    <p class="src">Decision HYBRID in DECISIONS.md, forced by a failure: the cup model's distance was up to 28 rows wrong behind people, the mask was right.</p>
   </div></div>
 </section>
 
@@ -699,11 +697,8 @@ body.doc .doconly{display:block}
 <pre><span class="ln on">32</span>AVOID_PHASES = ('brake', 'turn_out', 'arc', 'turn_in')
 <span class="ln on">155</span>def enter(self, state, now):
 <span class="ln">156</span>    self.state, self.state_since = state, now
-<span class="ln">157</span>    if state == OBSTACLE_AVOIDANCE:
-<span class="ln">158</span>        self.avoid_phase, self.phase_since, self.edge_angle = AVOID_PHASES[0], now, None
 <span class="ln on">163</span>def lane_gone(self, now):
 <span class="ln">165</span>    self.enter(LINE_RECOVERY if self.line_recovery else HALT, now)
-<span class="ln">196</span>elapsed = now - self.phase_since
 <span class="ln">199</span>band = near_band(percept)
 <span class="ln on">202</span>elif self.avoid_phase == 'turn_out':
 <span class="ln">203</span>    done = cup_left_view(self.turn_cup_x, band, toward) or (band is None and (
@@ -713,7 +708,6 @@ body.doc .doconly{display:block}
 <span class="ln on">213</span>    self.go_straight = cup_beside_curve(band, toward) or elapsed &gt;=...
 <span class="ln">216</span>    crossed = self.tape_under and percept['tape_row'] &lt; config.TAPE_PAST_ROW
 <span class="ln">219</span>    done = (crossed
-<span class="ln">220</span>            or (elapsed &gt;= config.ARC_LANE_MIN and lane_found(percept,...
 <span class="ln">225</span>else:
 <span class="ln on">226</span>    done = elapsed &gt;= config.TURN_IN_MIN and lane_found(percept,...
 <span class="ln">228</span>if done and self.avoid_phase == AVOID_PHASES[-1]:
@@ -723,14 +717,14 @@ body.doc .doconly{display:block}
       </div>
       <ol class="notes">
         <li><span class="nn">32</span><span><b>The phases are a tuple, in order.</b> Line 226 advances by index, so a new phase is a new name in one place.</span></li>
-        <li><span class="nn">154</span><span><b>Every transition goes through enter().</b> It stamps the time, and that time is what every limit and every debounce counter is measured from.</span></li>
+        <li><span class="nn">154</span><span><b>Every transition goes through enter().</b> It stamps the time, which is what every limit and every debounce counter measures from; lines 157 and 158 reset a maneuver to its first phase.</span></li>
         <li><span class="nn">199</span><span><b>The turn out ends on the cup, not on a timer.</b> It is done when the cup has left the image sideways. The tape angle is only the fallback for when no cup is in view.</span></li>
         <li><span class="nn">210</span><span><b>The curve drives straight while the cup is beside it,</b> because bending at once clipped the cup. It ends when the lane tape has passed under the robot, which is a mark that exists in a curve too.</span></li>
         <li><span class="nn">220</span><span><b>The turn back ends on an aligned lane</b> within 0.4 of the middle. Visible is not enough: a crosswise tape once counted as a lane.</span></li>
         <li><span class="nn">229</span><span><b>A missed mark no longer ends the run.</b> It goes to LINE_RECOVERY, which searches for the lane instead of leaving the robot standing.</span></li>
       </ol>
     </div>
-    <p class="src">The four phases are the figure on the previous slide. Their constants are in config.py: AVOID_BRAKE 0.3 s, TURN_EARLY 13 degrees, ARC_MIN 1 s, TURN_OUT_MAX 2.5 s.</p>
+    <p class="src">The four phases are the figure on the previous slide; every constant they use is in config.py.</p>
   </div></div>
 </section>
 

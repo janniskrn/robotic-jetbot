@@ -165,21 +165,31 @@ Tag balance, em dashes, unfilled placeholders, every `cqw` class having its docu
 recomputed from their own values, every quoted line of code still sitting at the line number the slide
 claims, the appendix being current, and the palette contrasts. It needs no browser and takes a second.
 
-**Then the overflow check, which needs a browser.** Open `index_v3.html`, press `F12`, paste this in the console:
+**Then the layout check, which needs a browser.** Open `index_v3.html`, press `F12`, paste this in the
+console:
 
 ```js
 const deck=document.getElementById('deck'), secs=[...deck.querySelectorAll('section')];
-document.body.className='slides'; await new Promise(r=>setTimeout(r,300));
-const over=[];
-for(let i=0;i<secs.length;i++){ deck.scrollTop=i*deck.clientHeight; await new Promise(r=>setTimeout(r,90));
-  const n=secs[i].querySelector('.inner'); const o=n.scrollHeight-n.clientHeight; if(o>2) over.push({slide:i+1,over:o}); }
-console.table(over.length?over:[{slide:'all fit',over:0}]);
-console.table([...document.querySelectorAll('.codesrc pre')].map((p,i)=>({block:i,sideways:p.scrollWidth-p.clientWidth})));
+const BOX='.codeslide,.codesrc,.notes,.board,.week,.chains,.steps,.models,.pipe,.bars,figure,pre';
+document.body.className='slides'; await document.fonts.ready; await new Promise(r=>setTimeout(r,400));
+const bad=[];
+for(let i=0;i<secs.length;i++){ deck.scrollTop=i*deck.clientHeight; await new Promise(r=>setTimeout(r,80));
+  const inner=secs[i].querySelector('.inner'), ib=inner.getBoundingClientRect();
+  if(inner.scrollHeight-inner.clientHeight>2) bad.push(`${i+1}: text runs off the slide`);
+  inner.querySelectorAll(BOX).forEach(e=>{ const r=e.getBoundingClientRect(), n=e.className.baseVal!==undefined?e.tagName:e.className;
+    if(r.bottom>ib.bottom+1) bad.push(`${i+1}: ${n} past the slide by ${Math.round(r.bottom-ib.bottom)}`);
+    if(e.scrollHeight-e.clientHeight>2) bad.push(`${i+1}: ${n} spills over what follows by ${e.scrollHeight-e.clientHeight}`);
+    if(e.scrollWidth-e.clientWidth>2) bad.push(`${i+1}: ${n} scrolls sideways by ${e.scrollWidth-e.clientWidth}`);});}
+console.log(bad.length?bad:'every slide fits');
 ```
 
-Anything over about 2 px is text that will be cut off on the projector, and it is always the last line of the
-slide, which is where the caveats live. Fix it by shortening the sentence or lowering the figure cap
-(`figure svg{max-height}`), then run it again.
+**Check each box, not only the slide.** A code column is a flex child with a fixed height: when its content
+is too tall it paints straight over the source line below it, and the slide's own scroll height never
+changes. That is why the first version of this check, which looked only at the slide, reported that two
+slides fitted while they were overlapping by 55 and 76 px.
+
+Fix an overflowing slide by cutting lines or a sentence, not by shrinking the type: at 1440 by 810 a code
+slide holds about 20 lines next to six notes, and a figure slide about 22 cqw of figure.
 
 ## Adding a new week of slides
 
