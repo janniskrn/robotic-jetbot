@@ -83,9 +83,9 @@ Most weeks only the first four steps change anything.
    cause, `c-fix` the fix. Use `c-open` instead of `c-fix` while the cause is unknown, and say so out loud.
 5. **Next** (slide 19, `.steps`): one `.step` per step with its pass condition. Add `block` to the step that
    blocks other tasks.
-6. **Code slides** (5 to 13): whenever a quoted file changed, which `check.py` tells you line by line.
-   It prints the file's current line next to what the slide shows, so renumbering is mechanical: fix the
-   numbers, fix any line whose text changed, run `build_appendix.py`, then `check.py` again.
+6. **Code slides** (5 to 13): run `build_appendix.py`, then `check.py index_v3.html --fix`. Moved lines
+   are renumbered for you; the few whose code really changed are listed, and those are the only ones to
+   read and rewrite by hand. This is a weekly job, not an occasional one: the code moves every week.
 7. **Numbers**: only if a new run happened. Sources are listed below.
 
 ## Where every number comes from
@@ -155,8 +155,11 @@ cannot ship a stale listing. To add a file, put it in `FILES` in `build_appendix
 ## Checks before you present
 
 ```bash
-python presentation/check.py index_v3.html
+python presentation/check.py index_v3.html --fix
 ```
+
+`--fix` first follows the code: any quoted line that has merely moved gets its new number, and only the
+lines whose text actually changed are printed for you to fix on the slide. Without `--fix` it only reports.
 
 Tag balance, em dashes, unfilled placeholders, every `cqw` class having its document twin, the bar widths
 recomputed from their own values, every quoted line of code still sitting at the line number the slide

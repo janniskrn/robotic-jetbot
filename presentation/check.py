@@ -1,6 +1,9 @@
 """Static checks on the presentation, without a browser.
 
-    python presentation/check.py [index_v3.html]
+    python presentation/check.py [index_v3.html] [--fix]
+
+With --fix the line numbers of quoted lines that have merely moved are rewritten first, and only the
+lines whose code actually changed are reported.
 
 Tag balance, em dashes, unfilled placeholders, document twins for every class sized in cqw, bar widths
 recomputed from their own values, every quoted code line still at the line number the slide
@@ -16,7 +19,7 @@ import sys
 from html.parser import HTMLParser
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PAGE = os.path.join(HERE, sys.argv[1] if len(sys.argv) > 1 else 'index.html')
+PAGE = os.path.join(HERE, next((a for a in sys.argv[1:] if not a.startswith('-')), 'index.html'))
 SOURCE_DIR = os.path.join(os.path.dirname(HERE), 'notebooks', 'mini_av')
 
 # text that has to be readable from the back of a room: 7:1. Small print: 4.5:1.
@@ -76,6 +79,51 @@ def code_line(line):
     return (int(number.group(1)) if number and number.group(1) else None), text
 
 
+def source_lines(name):
+    return [l.split('#')[0].strip() for l in open(os.path.join(SOURCE_DIR, name), encoding='utf-8')]
+
+
+def find_text(source, text, near):
+    """Line numbers whose code is this text, nearest to `near` first (a line may occur twice)"""
+    if text.endswith('...'):
+        hits = [i + 1 for i, l in enumerate(source) if l.startswith(text[:-3]) and text[:-3]]
+    else:
+        hits = [i + 1 for i, l in enumerate(source) if l == text]
+    return sorted(hits, key=lambda n: abs(n - near))
+
+
+def renumber(page):
+    """Rewrite the line numbers of every quoted line that has simply moved, and say what is left.
+
+    The code changes every week; the numbers must not be maintained by hand. A line whose text has
+    changed cannot be guessed, so it is reported and fixed on the slide.
+    """
+    out, last, changed = [], 0, 0
+    for match in re.finditer(r'<pre[^>]*>(.*?)</pre>', page, re.S):
+        names = re.findall(r'([\w.]+\.py)', page[max(0, match.start() - 200):match.start()]
+                           + ' ' + match.group(1).split('\n')[0])
+        if not names or not os.path.exists(os.path.join(SOURCE_DIR, names[-1])):
+            continue
+        source, lines = source_lines(names[-1]), []
+        for line in match.group(1).split('\n'):
+            number, text = code_line(line)
+            if number is not None and text and text != '...':
+                hits = find_text(source, text, number)
+                if hits and hits[0] != number:
+                    line = re.sub(r'(<span class="ln[^"]*">)\d+(</span>)',
+                                  r'\g<1>%d\g<2>' % hits[0], line, count=1)
+                    changed += 1
+                elif not hits:
+                    print('  by hand: %s has no line "%s" (slide says %d)' % (names[-1], text, number))
+            lines.append(line)
+        out.append(page[last:match.start(1)])
+        out.append('\n'.join(lines))
+        last = match.end(1)
+    out.append(page[last:])
+    print('renumbered %d lines' % changed)
+    return ''.join(out)
+
+
 def check_code_blocks(page):
     """Every quoted line must still exist in the file named in the block's first comment.
 
@@ -127,6 +175,10 @@ def check_appendix(page):
 
 def main():
     page = open(PAGE, encoding='utf-8').read()
+
+    if '--fix' in sys.argv:  # the code moved: follow it, then check what is left
+        page = renumber(page)
+        open(PAGE, 'w', encoding='utf-8', newline='').write(page)
 
     if '—' in page or '–' in page:
         fail('em or en dash in the text: %d found' % (page.count('—') + page.count('–')))

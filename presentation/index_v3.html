@@ -398,7 +398,7 @@ body.doc .doconly{display:block}
     <div class="board" style="flex:none">
       <div class="brow s-built"><span class="bn">W1</span><span class="bt">1 · Adaptive lane following</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">driven 60 s</span></div>
       <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Stop in front of a cup</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">3 runs, 35 to 40 cm</span></div>
-      <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Drive around the cup</span><span class="bmeter"><i style="width:92%"></i></span><span class="bs">11 of 12 swerves</span></div>
+      <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Drive around the cup</span><span class="bmeter"><i style="width:92%"></i></span><span class="bs">14 of 18 swerves</span></div>
       <div class="brow s-written"><span class="bn">W3</span><span class="bt">6 · State machine</span><span class="bmeter"><i style="width:65%"></i></span><span class="bs">7 states run</span></div>
       <div class="brow s-open"><span class="bn">W2</span><span class="bt">3, 4, 5 · Signs, intersection, parking</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">no track parts</span></div>
       <div class="brow s-open"><span class="bn">W4</span><span class="bt">7 · Cruise control</span><span class="bmeter"><i style="width:8%"></i></span><span class="bs">no 2nd robot</span></div>
@@ -422,9 +422,9 @@ body.doc .doconly{display:block}
         <span class="wp">4 of the 9 started far too early, and the marks only worked on the one straight.</span>
       </div>
       <div class="wday good">
-        <span class="wd">4 to 5 Nov · the distance</span>
-        <span class="wt">The mask measures it</span>
-        <span class="wp">The model's distance was up to 28 rows wrong behind people. Stop-only: 35 to 40 cm, 3 runs.</span>
+        <span class="wd">8 Nov · track, 3 cups</span>
+        <span class="wt">11 of 12 swerves</span>
+        <span class="wp">The swerve aims at the cup now, not at the tape, so it also works away from that straight.</span>
       </div>
       <div class="wday good">
         <span class="wd">8 Nov · the robot measured</span>
@@ -432,9 +432,9 @@ body.doc .doconly{display:block}
         <span class="wp">cup_learn.py: the robot backs away from a cup in pulses, 139 stops in 5 places, and learns cm.</span>
       </div>
       <div class="wday now">
-        <span class="wd">8 Nov · track, 3 cups</span>
-        <span class="wt">11 of 12 swerves</span>
-        <span class="wp">The swerve now aims at the cup, not the tape. A lost lane is searched for instead of ending the run.</span>
+        <span class="wd">9 Nov · track, 18 swerves</span>
+        <span class="wt">14 came back</span>
+        <span class="wp">A lost lane is now searched for in three stages instead of ending the run: undo, sweep, search.</span>
       </div>
     </div>
     <div class="spacer"></div>
@@ -542,32 +542,32 @@ body.doc .doconly{display:block}
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">drive.py · run() · lines 98 to 183, shortened</div>
-<pre><span class="ln">98</span>while time.time() - start &lt; seconds:
-<span class="ln on">102</span>    frame = wait_for_new_frame(camera, frame)
-<span class="ln on">105</span>    percept = perception.observe(frame)
-<span class="ln on">112</span>    previous_state, state = decision.state, decision.update(percept, now)
-<span class="ln on">113</span>    if state == LINE_RECOVERY:
-<span class="ln">116</span>        result = finder.run()
-<span class="ln">120</span>        decision.line_recovery_done(result == 'found', last)
-<span class="ln">128</span>    lane_seen = percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD
-<span class="ln">129</span>    if state in FOLLOWING or (state == ROAD_RECOVERY and lane_seen):
-<span class="ln on">132</span>        left, right = controller.update(percept['lane_x'], percept['curve_probs'],...
-<span class="ln on">136</span>        with watchdog.lock:
-<span class="ln">137</span>            robot.set_motors(left, right)
-<span class="ln">138</span>        watchdog.feed()
-<span class="ln">139</span>    elif state in (OBSTACLE_AVOIDANCE, ROAD_RECOVERY):
-<span class="ln on">175</span>except CameraFrozen:
-<span class="ln">177</span>except BatteryLow as low:
-<span class="ln">179</span>except KeyboardInterrupt:
-<span class="ln">181</span>finally:
-<span class="ln">182</span>    watchdog.running = False
-<span class="ln">183</span>    robot.stop()</pre>
+<pre><span class="ln">102</span>while time.time() - start &lt; seconds:
+<span class="ln on">106</span>    frame = wait_for_new_frame(camera, frame)
+<span class="ln on">109</span>    percept = perception.observe(frame)
+<span class="ln on">116</span>    previous_state, state = decision.state, decision.update(percept, now)
+<span class="ln on">117</span>    if state == LINE_RECOVERY:
+<span class="ln">122</span>        result = finder.run(history if previous_state in FOLLOWING else (),...
+<span class="ln">127</span>        decision.line_recovery_done(result in FOUND, last, result in KEPT_DIRECTION)
+<span class="ln">136</span>    lane_seen = percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD
+<span class="ln">139</span>    if state in FOLLOWING or (state == ROAD_RECOVERY and lane_seen):
+<span class="ln on">142</span>        left, right = controller.update(percept['lane_x'], percept['curve_probs'],...
+<span class="ln on">146</span>        with watchdog.lock:
+<span class="ln">147</span>            robot.set_motors(left, right)
+<span class="ln">148</span>        watchdog.feed()
+<span class="ln">149</span>    elif state in (OBSTACLE_AVOIDANCE, ROAD_RECOVERY):
+<span class="ln on">188</span>except CameraFrozen:
+<span class="ln">190</span>except BatteryLow as low:
+<span class="ln">192</span>except KeyboardInterrupt:
+<span class="ln">194</span>finally:
+<span class="ln">195</span>    watchdog.running = False
+<span class="ln">196</span>    robot.stop()</pre>
       </div>
       <ol class="notes">
         <li><span class="nn">102</span><span><b>Never a stale image.</b> The camera thread dies silently on a read error and then returns the same array forever, so this waits for a different object and gives up after 0.5 s.</span></li>
         <li><span class="nn">105</span><span><b>Perception only reads.</b> It returns a dictionary of plain numbers and can take no action.</span></li>
         <li><span class="nn">112</span><span><b>One state per frame.</b> The loop asks the decision layer and decides nothing itself.</span></li>
-        <li><span class="nn">113</span><span><b>One state runs outside the loop.</b> Searching for a lost lane takes many seconds in small steps with the motors off, so the loop hands over to find_lane.py and is told whether it worked.</span></li>
+        <li><span class="nn">113</span><span><b>One state runs outside the loop.</b> Searching for a lost lane takes many seconds in small steps with the motors off, so the loop hands over to find_lane.py, passing where the lane should be, and is told whether it worked and whether the robot still faces the same way.</span></li>
         <li><span class="nn">132</span><span><b>Control turns numbers into wheel speeds.</b> Each state calls its own command function; line 139 is the swerve and the recovery.</span></li>
         <li><span class="nn">136</span><span><b>The lock belongs to the watchdog.</b> Motor writes go over I2C and the watchdog thread may stop the motors in the same moment.</span></li>
         <li><span class="nn">175</span><span><b>Four ways a run ends, all caught,</b> and whatever happens, including a crash we did not foresee, the finally on line 181 stops the motors.</span></li>
@@ -658,7 +658,7 @@ body.doc .doconly{display:block}
 
           <rect x="196" y="104" width="150" height="34" rx="5" fill="var(--raise)" stroke="var(--accent)"/>
           <text x="271" y="120" text-anchor="middle" fill="var(--accent-ink)">LINE_RECOVERY</text>
-          <text x="271" y="132" text-anchor="middle" fill="var(--muted)" font-size="8">find_lane.py searches, motors off</text>
+          <text x="271" y="132" text-anchor="middle" fill="var(--muted)" font-size="8">undo, sweep, search · motors off</text>
           <g stroke="var(--faint)" stroke-width="1.7" fill="none" marker-end="url(#arG)">
             <path d="M118,60 L160,60 L160,112 L192,112"/>
             <path d="M192,126 L172,126 L172,74 L104,74 L104,64"/>
@@ -703,22 +703,22 @@ body.doc .doconly{display:block}
 <span class="ln">157</span>        self.avoid_phase, self.phase_since, self.edge_angle = AVOID_PHASES[0], now, None
 <span class="ln on">162</span>def lane_gone(self, now):
 <span class="ln">164</span>    self.enter(LINE_RECOVERY if self.line_recovery else HALT, now)
-<span class="ln">193</span>elapsed = now - self.phase_since
-<span class="ln">196</span>band = near_band(percept)
-<span class="ln on">199</span>elif self.avoid_phase == 'turn_out':
-<span class="ln">200</span>    done = cup_left_view(self.turn_cup_x, band, toward) or (band is None and (
-<span class="ln">206</span>elif self.avoid_phase == 'arc':
-<span class="ln">207</span>    if cup_in_the_way(band):
-<span class="ln">208</span>        self.enter(HALT, now)
-<span class="ln on">210</span>    self.cup_beside = cup_beside_curve(band, toward)
-<span class="ln">213</span>    done = (elapsed &gt;= config.ARC_LONGEST
-<span class="ln">214</span>            or (elapsed &gt;= config.ARC_LANE_MIN and lane_found(percept,...
-<span class="ln">219</span>else:
-<span class="ln on">220</span>    done = elapsed &gt;= config.TURN_IN_MIN and lane_found(percept,...
-<span class="ln">222</span>if done and self.avoid_phase == AVOID_PHASES[-1]:
-<span class="ln">226</span>    self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(self.avoid_phase) + 1]
-<span class="ln">228</span>elif elapsed &gt;= limit:
-<span class="ln on">229</span>    self.lane_gone(now)</pre>
+<span class="ln">195</span>elapsed = now - self.phase_since
+<span class="ln">198</span>band = near_band(percept)
+<span class="ln on">201</span>elif self.avoid_phase == 'turn_out':
+<span class="ln">202</span>    done = cup_left_view(self.turn_cup_x, band, toward) or (band is None and (
+<span class="ln">208</span>elif self.avoid_phase == 'arc':
+<span class="ln">209</span>    if cup_in_the_way(band):
+<span class="ln">210</span>        self.enter(HALT, now)
+<span class="ln on">212</span>    self.cup_beside = cup_beside_curve(band, toward)
+<span class="ln">215</span>    done = (elapsed &gt;= config.ARC_LONGEST
+<span class="ln">216</span>            or (elapsed &gt;= config.ARC_LANE_MIN and lane_found(percept,...
+<span class="ln">221</span>else:
+<span class="ln on">222</span>    done = elapsed &gt;= config.TURN_IN_MIN and lane_found(percept,...
+<span class="ln">224</span>if done and self.avoid_phase == AVOID_PHASES[-1]:
+<span class="ln">228</span>    self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(self.avoid_phase) + 1]
+<span class="ln">230</span>elif elapsed &gt;= limit:
+<span class="ln on">231</span>    self.lane_gone(now)</pre>
       </div>
       <ol class="notes">
         <li><span class="nn">32</span><span><b>The phases are a tuple, in order.</b> Line 226 advances by index, so a new phase is a new name in one place.</span></li>
@@ -741,25 +741,25 @@ body.doc .doconly{display:block}
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">decision.py · update() · lines 233 to 287, shortened</div>
-<pre><span class="ln on">233</span>if self.state in (HALT, LINE_RECOVERY):
-<span class="ln">234</span>    return self.state
-<span class="ln on">235</span>if self.state == OBSTACLE_AVOIDANCE:
-<span class="ln">236</span>    self.update_avoidance(percept, now)
-<span class="ln">237</span>    return self.state
-<span class="ln on">238</span>if self.state == ROAD_RECOVERY:
-<span class="ln">239</span>    self.centered_frames = self.centered_frames + 1 if lane_found(percept) else 0
-<span class="ln">240</span>    if self.centered_frames &gt;= config.RECOVER_FRAMES:
-<span class="ln">243</span>        self.enter(ROAD_FOLLOWING, now)
-<span class="ln">244</span>    elif now - self.state_since &gt; config.RECOVER_TIMEOUT:
-<span class="ln">245</span>        self.lane_gone(now)
-<span class="ln on">248</span>close = cup_close(percept)
-<span class="ln">249</span>self.close_frames = self.close_frames + 1 if close else 0
-<span class="ln">263</span>elif self.close_frames &gt;= config.OBSTACLE_FRAMES:
-<span class="ln">264</span>    self.enter(OBSTACLE_AVOIDANCE, now)
-<span class="ln on">270</span>if self.state == ROAD_FOLLOWING and (p_sharp &gt; config.SLOW_DOWN_ENTER or near):
-<span class="ln">271</span>    self.enter(SLOW_DOWN, now)
-<span class="ln on">286</span>if now - self.lost_since &gt;= config.LANE_LOST_TIMEOUT:
-<span class="ln">287</span>    self.lane_gone(now)</pre>
+<pre><span class="ln on">235</span>if self.state in (HALT, LINE_RECOVERY):
+<span class="ln">236</span>    return self.state
+<span class="ln on">237</span>if self.state == OBSTACLE_AVOIDANCE:
+<span class="ln">238</span>    self.update_avoidance(percept, now)
+<span class="ln">236</span>    return self.state
+<span class="ln on">240</span>if self.state == ROAD_RECOVERY:
+<span class="ln">241</span>    self.centered_frames = self.centered_frames + 1 if lane_found(percept) else 0
+<span class="ln">242</span>    if self.centered_frames &gt;= config.RECOVER_FRAMES:
+<span class="ln">245</span>        self.enter(ROAD_FOLLOWING, now)
+<span class="ln">246</span>    elif now - self.state_since &gt; config.RECOVER_TIMEOUT:
+<span class="ln">247</span>        self.lane_gone(now)
+<span class="ln on">250</span>close = cup_close(percept)
+<span class="ln">251</span>self.close_frames = self.close_frames + 1 if close else 0
+<span class="ln">265</span>elif self.close_frames &gt;= config.OBSTACLE_FRAMES:
+<span class="ln">266</span>    self.enter(OBSTACLE_AVOIDANCE, now)
+<span class="ln on">272</span>if self.state == ROAD_FOLLOWING and (p_sharp &gt; config.SLOW_DOWN_ENTER or near):
+<span class="ln">273</span>    self.enter(SLOW_DOWN, now)
+<span class="ln on">288</span>if now - self.lost_since &gt;= config.LANE_LOST_TIMEOUT:
+<span class="ln">289</span>    self.lane_gone(now)</pre>
       </div>
       <ol class="notes">
         <li><span class="nn">233</span><span><b>Priority is not a comment.</b> It is the order the questions are asked in, and the first match returns. A cup can never be overruled by a curve.</span></li>
@@ -1018,7 +1018,7 @@ body.doc .doconly{display:block}
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>iv</i>results · task 2, the swerve</div>
-    <h2 class="sh">Obstacle circumvention and lane recovery <span class="tag t-run">11 of 12 in the last 4 runs</span></h2>
+    <h2 class="sh">Obstacle circumvention and lane recovery <span class="tag t-run">14 of 18 on 9 November</span></h2>
     <div class="spacer" style="flex:.15"></div>
     <figure class="wide" style="flex:none">
       <div class="fl">The intended path · top view, inside of the oval</div>
@@ -1052,7 +1052,7 @@ body.doc .doconly{display:block}
     </figure>
     <div class="spacer"></div>
     <p>Every phase now refers to the cup instead of the lane: the turn stops when the cup has left the image sideways, and the curve drives straight while the cup is still beside it. That is what made it work away from the one straight it was tuned on.</p>
-    <p class="src">Runs avoid4_7 to avoid4_9 and line1_1, 8 November, three cups on the track: 11 of 12 swerves came back to the road. Whether a cup was touched was not observed, so that is still open.</p>
+    <p class="src">Runs line2_1 to line2_5, 9 November: 14 of 18 swerves came back to the road, after 11 of 12 on 8 November. Three of the four failures hit the 3.9 s limit of the curve without finding their mark. Whether a cup was touched was not observed.</p>
   </div></div>
 </section>
 
@@ -1075,8 +1075,8 @@ body.doc .doconly{display:block}
       </div>
       <div class="chain">
         <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">A lost lane ended the run and the team had to carry the robot back</span></div>
-        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">HALT was the only answer to a lost lane, however recoverable the situation was</span></div>
-        <div class="cbox c-open"><span class="cl">fix, still rough</span><span class="ct">LINE_RECOVERY searches. It worked once in a run, but takes up to 48 s and can leave the robot facing the other way</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">HALT was the only answer to a lost lane. The first scan never found it: 4 of 4, because it looked the wrong way first</span></div>
+        <div class="cbox c-open"><span class="cl">fix, still rough</span><span class="ct">LINE_RECOVERY searches in three stages. 3 of 3 from the start of a run, but 0 of 4 after a failed swerve, and one took 48 s</span></div>
       </div>
       <div class="chain">
         <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">A growing swing at the entry of the gentle curve, at speed 0.39</span></div>
@@ -1096,9 +1096,9 @@ body.doc .doconly{display:block}
     <h2 class="sh">Next plan and pass criteria</h2>
     <div class="spacer" style="flex:.25"></div>
     <div class="steps" style="flex:none">
-      <div class="step"><span class="sq"></span><span class="st">Make the lane search faster and give it a direction</span><span class="sp">pass: under 20 s, and the robot drives on the way it came</span></div>
-      <div class="step"><span class="sq"></span><span class="st">Cups that enter the lane late, at the curve exit</span><span class="sp">pass: they trigger at 40 cm like the others, not at 21 to 25 cm</span></div>
-      <div class="step"><span class="sq"></span><span class="st">Watch whether a cup is touched during the swerve</span><span class="sp">pass: 8 of 10 swerves filmed from the side, none touching</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Make the search work after a failed swerve, on open floor</span><span class="sp">pass: 3 of 4 found, under 20 s, and the robot drives on the way it came</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Give the curve a mark it can always find</span><span class="sp">pass: no swerve ends on the 3.9 s limit; 3 of 4 failures did</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Film the swerve from the side and watch the cup</span><span class="sp">pass: 8 of 10 filmed, none touching; cups at the curve exit trigger at 40 cm</span></div>
       <div class="step"><span class="sq"></span><span class="st">Find the swing at the gentle curve entry</span><span class="sp">pass: a logged cause, or a speed limit that removes it</span></div>
       <div class="step block"><span class="sq"></span><span class="st">Team: tape an intersection and a parking box</span><span class="sp">blocks tasks 3, 4 and 5. Lane and tape width still unmeasured</span></div>
     </div>
@@ -1114,9 +1114,9 @@ body.doc .doconly{display:block}
 <div class="appendix doconly">
   <h2>Appendix: the full driving program</h2>
   <p>Every file that runs while the robot drives, complete, with the line numbers the slides cite.
-  1113 lines of the 2703 we wrote. The rest (recording, labeling, training, the test scripts) is in the repository under <span class="path">notebooks/mini_av/</span>.</p>
+  1262 lines of the 2703 we wrote. The rest (recording, labeling, training, the test scripts) is in the repository under <span class="path">notebooks/mini_av/</span>.</p>
 <div class="srcfile">
-  <h3>drive.py <span class="fn">207 lines</span></h3>
+  <h3>drive.py <span class="fn">220 lines</span></h3>
 <pre><span class="ln">1</span>"""Driving program: camera -&gt; perception -&gt; decision -&gt; control -&gt; motors, with logging.
 <span class="ln">2</span>
 <span class="ln">3</span>    python3 drive.py --name adaptive --seconds 60            # our controller (Task 1)
@@ -1128,202 +1128,215 @@ body.doc .doconly{display:block}
 <span class="ln">9</span>"""
 <span class="ln">10</span>
 <span class="ln">11</span>import argparse
-<span class="ln">12</span>import queue
-<span class="ln">13</span>import threading
-<span class="ln">14</span>import time
-<span class="ln">15</span>
-<span class="ln">16</span>import cv2
-<span class="ln">17</span>
-<span class="ln">18</span>from jetbot import Camera, Robot
-<span class="ln">19</span>
-<span class="ln">20</span>import config
-<span class="ln">21</span>from control import Controller
-<span class="ln">22</span>from find_lane import FindLane
-<span class="ln">23</span>from decision import FOLLOWING, HALT, LINE_RECOVERY, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision, band_cm, cup_ahead
-<span class="ln">24</span>from logger import RunLogger
-<span class="ln">25</span>from perception import Perception
-<span class="ln">26</span>from recorder import Recorder
-<span class="ln">27</span>from safety import BatteryGuard, BatteryLow, CameraFrozen, MotorWatchdog, wait_for_new_frame
-<span class="ln">28</span>
+<span class="ln">12</span>import collections
+<span class="ln">13</span>import queue
+<span class="ln">14</span>import threading
+<span class="ln">15</span>import time
+<span class="ln">16</span>
+<span class="ln">17</span>import cv2
+<span class="ln">18</span>
+<span class="ln">19</span>from jetbot import Camera, Robot
+<span class="ln">20</span>
+<span class="ln">21</span>import config
+<span class="ln">22</span>from control import Controller
+<span class="ln">23</span>from find_lane import FOUND, KEPT_DIRECTION, FindLane, StopRecovery
+<span class="ln">24</span>from decision import FOLLOWING, HALT, LINE_RECOVERY, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision, band_cm, cup_ahead
+<span class="ln">25</span>from logger import RunLogger
+<span class="ln">26</span>from perception import Perception
+<span class="ln">27</span>from recorder import Recorder
+<span class="ln">28</span>from safety import BatteryGuard, BatteryLow, CameraFrozen, MotorWatchdog, wait_for_new_frame
 <span class="ln">29</span>
-<span class="ln">30</span>RECORD_HZ = 4.0  # camera frames saved per second as a dataset session, to see what went wrong and to retrain
-<span class="ln">31</span>WARMUP_FRAMES = 5  # model calls with the motors off before driving (the first call took up to 1.1 s)
-<span class="ln">32</span>STARTUP_TIMEOUT = 3.0  # seconds to wait (motors off) for the first sight of the lane: the camera's
-<span class="ln">33</span>                       # exposure needs a moment after start, and the first frames can be too dark
-<span class="ln">34</span>
-<span class="ln">35</span>
-<span class="ln">36</span>def start_frame_saver(recorder):
-<span class="ln">37</span>    """Saves frames in a background thread, so a slow USB write never blocks the control loop.
-<span class="ln">38</span>
-<span class="ln">39</span>    Put camera frames into the returned queue (full queue: the frame is skipped); put None to finish.
-<span class="ln">40</span>    """
-<span class="ln">41</span>    frames = queue.Queue(maxsize=8)
-<span class="ln">42</span>
-<span class="ln">43</span>    def save():
-<span class="ln">44</span>        while True:
-<span class="ln">45</span>            frame = frames.get()
-<span class="ln">46</span>            if frame is None:
-<span class="ln">47</span>                return
-<span class="ln">48</span>            recorder.offer(bytes(cv2.imencode('.jpg', frame)[1]))
-<span class="ln">49</span>
-<span class="ln">50</span>    thread = threading.Thread(target=save, daemon=True)
-<span class="ln">51</span>    thread.start()
-<span class="ln">52</span>    return frames, thread
-<span class="ln">53</span>
-<span class="ln">54</span>
-<span class="ln">55</span>class NoLaneAtStart(Exception):
-<span class="ln">56</span>    """The lane was not visible when the run started: put the robot on the lane"""
-<span class="ln">57</span>
-<span class="ln">58</span>
-<span class="ln">59</span>def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_only=False, pass_side=None):
-<span class="ln">60</span>    """Drives until the time is up, the lane is lost, a safety check fails or stop_event is set.
-<span class="ln">61</span>
-<span class="ln">62</span>    stop_only: wait in front of a cup instead of avoiding it; pass_side: 'left'/'right' or None (measured).
+<span class="ln">30</span>
+<span class="ln">31</span>UNDO_STEPS = 60    # recent wheel commands kept for the undo in LINE_RECOVERY: more than its 1 s at any loop time
+<span class="ln">32</span>RECORD_HZ = 4.0  # camera frames saved per second as a dataset session, to see what went wrong and to retrain
+<span class="ln">33</span>WARMUP_FRAMES = 5  # model calls with the motors off before driving (the first call took up to 1.1 s)
+<span class="ln">34</span>STARTUP_TIMEOUT = 3.0  # seconds to wait (motors off) for the first sight of the lane: the camera's
+<span class="ln">35</span>                       # exposure needs a moment after start, and the first frames can be too dark
+<span class="ln">36</span>
+<span class="ln">37</span>
+<span class="ln">38</span>def start_frame_saver(recorder):
+<span class="ln">39</span>    """Saves frames in a background thread, so a slow USB write never blocks the control loop.
+<span class="ln">40</span>
+<span class="ln">41</span>    Put camera frames into the returned queue (full queue: the frame is skipped); put None to finish.
+<span class="ln">42</span>    """
+<span class="ln">43</span>    frames = queue.Queue(maxsize=8)
+<span class="ln">44</span>
+<span class="ln">45</span>    def save():
+<span class="ln">46</span>        while True:
+<span class="ln">47</span>            frame = frames.get()
+<span class="ln">48</span>            if frame is None:
+<span class="ln">49</span>                return
+<span class="ln">50</span>            recorder.offer(bytes(cv2.imencode('.jpg', frame)[1]))
+<span class="ln">51</span>
+<span class="ln">52</span>    thread = threading.Thread(target=save, daemon=True)
+<span class="ln">53</span>    thread.start()
+<span class="ln">54</span>    return frames, thread
+<span class="ln">55</span>
+<span class="ln">56</span>
+<span class="ln">57</span>class NoLaneAtStart(Exception):
+<span class="ln">58</span>    """The lane was not visible when the run started: put the robot on the lane"""
+<span class="ln">59</span>
+<span class="ln">60</span>
+<span class="ln">61</span>def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_only=False, pass_side=None):
+<span class="ln">62</span>    """Drives until the time is up, the lane is lost, a safety check fails or stop_event is set.
 <span class="ln">63</span>
-<span class="ln">64</span>    Returns the stop reason and the log folder. The camera frames go to a dataset session drive_&lt;name&gt;.
-<span class="ln">65</span>    """
-<span class="ln">66</span>    battery = BatteryGuard()
-<span class="ln">67</span>    if not battery.start_ok():
-<span class="ln">68</span>        return 'battery %.2f V is too low: charge first' % battery.volts, None
-<span class="ln">69</span>    perception = Perception(use_curve=use_curve and not baseline)
-<span class="ln">70</span>    controller = Controller(baseline=baseline, use_curve=use_curve)
-<span class="ln">71</span>    decision = Decision(stop_only=stop_only, pass_side=pass_side, line_recovery=not baseline)
-<span class="ln">72</span>    robot = Robot()
-<span class="ln">73</span>    camera = Camera.instance()
-<span class="ln">74</span>    log = RunLogger(name, {'baseline': baseline, 'use_curve': use_curve, 'seconds': seconds,
-<span class="ln">75</span>                           'stop_only': stop_only, 'pass_side': pass_side,
-<span class="ln">76</span>                           'battery_start_v': round(battery.volts, 2)})
-<span class="ln">77</span>    recorder = Recorder(period=1.0 / RECORD_HZ)
-<span class="ln">78</span>    recorder.start('drive_' + name, {'mode': 'drive', 'curves_trusted': False, 'log': log.dir, 'baseline': baseline, 'use_curve': use_curve,
-<span class="ln">79</span>                                     'frame_width': camera.width, 'frame_height': camera.height})
-<span class="ln">80</span>    frames, saver = start_frame_saver(recorder)
-<span class="ln">81</span>    watchdog = MotorWatchdog(robot)
-<span class="ln">82</span>    finder = FindLane(perception, robot, camera, watchdog, battery)
-<span class="ln">83</span>    reason = 'time up'
-<span class="ln">84</span>    try:
-<span class="ln">85</span>        frame = wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
-<span class="ln">86</span>        for _ in range(WARMUP_FRAMES):
-<span class="ln">87</span>            frame = wait_for_new_frame(camera, frame)
-<span class="ln">88</span>            perception.observe(frame)
-<span class="ln">89</span>        # wait for the lane with the motors off instead of judging one unsettled frame
-<span class="ln">90</span>        waited = time.time()
-<span class="ln">91</span>        while perception.observe(frame)['lane_visible'] &lt; config.LANE_VISIBLE_THRESHOLD:
-<span class="ln">92</span>            if time.time() - waited &gt; STARTUP_TIMEOUT:
-<span class="ln">93</span>                raise NoLaneAtStart()
-<span class="ln">94</span>            frame = wait_for_new_frame(camera, frame)
-<span class="ln">95</span>        watchdog.start()
-<span class="ln">96</span>        left = right = 0.0
-<span class="ln">97</span>        start = last = last_saved = time.time()
-<span class="ln">98</span>        while time.time() - start &lt; seconds:
-<span class="ln">99</span>            if stop_event is not None and stop_event.is_set():
-<span class="ln">100</span>                reason = 'stopped by hand'
-<span class="ln">101</span>                break
-<span class="ln">102</span>            frame = wait_for_new_frame(camera, frame)
-<span class="ln">103</span>            now = time.time()
-<span class="ln">104</span>            dt, last = max(now - last, 1e-3), now
-<span class="ln">105</span>            percept = perception.observe(frame)
-<span class="ln">106</span>            if now - last_saved &gt;= 1.0 / RECORD_HZ:
-<span class="ln">107</span>                last_saved = now
-<span class="ln">108</span>                try:
-<span class="ln">109</span>                    frames.put_nowait(frame)
-<span class="ln">110</span>                except queue.Full:
-<span class="ln">111</span>                    pass
-<span class="ln">112</span>            previous_state, state = decision.state, decision.update(percept, now)
-<span class="ln">113</span>            if state == LINE_RECOVERY:  # takes many seconds, in small steps with their own safety checks
-<span class="ln">114</span>                with watchdog.lock:
-<span class="ln">115</span>                    robot.stop()
-<span class="ln">116</span>                result = finder.run()
-<span class="ln">117</span>                log.step(time=now - start, dt=dt, mode=LINE_RECOVERY, phase=result)
-<span class="ln">118</span>                last = time.time()
-<span class="ln">119</span>                frame = finder.frame
-<span class="ln">120</span>                decision.line_recovery_done(result == 'found', last)
-<span class="ln">121</span>                controller.reset()
-<span class="ln">122</span>                if result == 'found':
-<span class="ln">123</span>                    continue
-<span class="ln">124</span>                reason = 'lane not found by line recovery (%s)' % result
-<span class="ln">125</span>                break
-<span class="ln">126</span>            if state != previous_state and state in (OBSTACLE_AVOIDANCE, STOP):
-<span class="ln">127</span>                controller.reset()  # restart slowly afterwards, without old steering or damping memory
-<span class="ln">128</span>            lane_seen = percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD
-<span class="ln">129</span>            if state in FOLLOWING or (state == ROAD_RECOVERY and lane_seen):
-<span class="ln">130</span>                if lane_seen:
-<span class="ln">131</span>                    limit = config.SPEED_SHARP if state == SLOW_DOWN else None
-<span class="ln">132</span>                    left, right = controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'],
-<span class="ln">133</span>                                                    dt, speed_limit=limit)
-<span class="ln">134</span>                else:  # short gap: steer without lane_x, which is not trained on frames without a lane
-<span class="ln">135</span>                    left, right = controller.hold(percept['curve_probs'], percept['curve_dir'], dt)
-<span class="ln">136</span>                with watchdog.lock:
-<span class="ln">137</span>                    robot.set_motors(left, right)
-<span class="ln">138</span>                watchdog.feed()
-<span class="ln">139</span>            elif state in (OBSTACLE_AVOIDANCE, ROAD_RECOVERY):
-<span class="ln">140</span>                if state == OBSTACLE_AVOIDANCE:
-<span class="ln">141</span>                    left, right = controller.avoid(decision.avoid_action(), decision.pass_side(),
-<span class="ln">142</span>                                                   now - decision.phase_since)
-<span class="ln">143</span>                else:
-<span class="ln">144</span>                    left, right = controller.recover(decision.pass_side())
-<span class="ln">145</span>                with watchdog.lock:
-<span class="ln">146</span>                    robot.set_motors(left, right)
-<span class="ln">147</span>                watchdog.feed()
-<span class="ln">148</span>            elif state == STOP:  # brake, back up if too close, wait; drive on (from slow) once the cup is gone
-<span class="ln">149</span>                left, right = controller.stop(decision.stop_phase, now - decision.phase_since)
-<span class="ln">150</span>                with watchdog.lock:
-<span class="ln">151</span>                    robot.set_motors(left, right)
-<span class="ln">152</span>                watchdog.feed()
-<span class="ln">153</span>            else:
-<span class="ln">154</span>                robot.stop()
-<span class="ln">155</span>                reason = {ROAD_RECOVERY: 'lane not found after avoiding',
-<span class="ln">156</span>                          OBSTACLE_AVOIDANCE: 'swerve %s did not reach its camera mark' % decision.avoid_phase
-<span class="ln">157</span>                          }.get(previous_state, 'lane lost')
-<span class="ln">158</span>                left = right = 0.0
-<span class="ln">159</span>            probs = percept['curve_probs']
-<span class="ln">160</span>            ahead = cup_ahead(percept)  # the cup the decision looks at, for the log
-<span class="ln">161</span>            log.step(time=now - start, dt=dt, mode=state, lane_visible=percept['lane_visible'],
-<span class="ln">162</span>                     lane_x=percept['lane_x'], p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2],
-<span class="ln">163</span>                     curve_dir=percept['curve_dir'],
-<span class="ln">164</span>                     curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
-<span class="ln">165</span>                     left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
-<span class="ln">166</span>                     cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'],
-<span class="ln">167</span>                     lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
-<span class="ln">168</span>                     band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None, band_cm=band_cm(ahead) if ahead else None,
-<span class="ln">169</span>                     bands=len(percept['cup_bands']),
-<span class="ln">170</span>                     phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''))
-<span class="ln">171</span>            if state == HALT:
-<span class="ln">172</span>                break
-<span class="ln">173</span>    except NoLaneAtStart:
-<span class="ln">174</span>        reason = 'no lane at start: put the robot on the lane'
-<span class="ln">175</span>    except CameraFrozen:
-<span class="ln">176</span>        reason = 'camera frozen'
-<span class="ln">177</span>    except BatteryLow as low:
-<span class="ln">178</span>        reason = str(low)
-<span class="ln">179</span>    except KeyboardInterrupt:
-<span class="ln">180</span>        reason = 'stopped by hand'  # scripts/stop_robot.sh sends Ctrl-C (SIGINT)
-<span class="ln">181</span>    finally:
-<span class="ln">182</span>        watchdog.running = False
-<span class="ln">183</span>        robot.stop()
-<span class="ln">184</span>        camera.stop()
-<span class="ln">185</span>        frames.put(None)
-<span class="ln">186</span>        saver.join(timeout=2.0)
-<span class="ln">187</span>        recorder.stop()
-<span class="ln">188</span>        log.close(reason)
-<span class="ln">189</span>    return reason, log.dir
-<span class="ln">190</span>
-<span class="ln">191</span>
-<span class="ln">192</span>def main():
-<span class="ln">193</span>    parser = argparse.ArgumentParser()
-<span class="ln">194</span>    parser.add_argument('--name', default='drive')
-<span class="ln">195</span>    parser.add_argument('--seconds', type=float, default=30.0)
-<span class="ln">196</span>    parser.add_argument('--baseline', action='store_true', help='constant speed, plain P steering')
-<span class="ln">197</span>    parser.add_argument('--no-curve', action='store_true', help='our steering at the baseline speed')
-<span class="ln">198</span>    parser.add_argument('--stop-only', action='store_true', help='wait in front of a cup instead of avoiding it')
-<span class="ln">199</span>    parser.add_argument('--pass-side', choices=['left', 'right'], help='side to pass cups on (default: inside of the oval)')
-<span class="ln">200</span>    args = parser.parse_args()
-<span class="ln">201</span>    reason, log_dir = run(args.name, args.seconds, args.baseline, not args.no_curve,
-<span class="ln">202</span>                          stop_only=args.stop_only, pass_side=args.pass_side)
-<span class="ln">203</span>    print('%s, log in %s' % (reason, log_dir))
+<span class="ln">64</span>    stop_only: wait in front of a cup instead of avoiding it; pass_side: 'left'/'right' or None (measured).
+<span class="ln">65</span>
+<span class="ln">66</span>    Returns the stop reason and the log folder. The camera frames go to a dataset session drive_&lt;name&gt;.
+<span class="ln">67</span>    """
+<span class="ln">68</span>    battery = BatteryGuard()
+<span class="ln">69</span>    if not battery.start_ok():
+<span class="ln">70</span>        return 'battery %.2f V is too low: charge first' % battery.volts, None
+<span class="ln">71</span>    perception = Perception(use_curve=use_curve and not baseline)
+<span class="ln">72</span>    controller = Controller(baseline=baseline, use_curve=use_curve)
+<span class="ln">73</span>    decision = Decision(stop_only=stop_only, pass_side=pass_side, line_recovery=not baseline)
+<span class="ln">74</span>    robot = Robot()
+<span class="ln">75</span>    camera = Camera.instance()
+<span class="ln">76</span>    log = RunLogger(name, {'baseline': baseline, 'use_curve': use_curve, 'seconds': seconds,
+<span class="ln">77</span>                           'stop_only': stop_only, 'pass_side': pass_side,
+<span class="ln">78</span>                           'battery_start_v': round(battery.volts, 2)})
+<span class="ln">79</span>    recorder = Recorder(period=1.0 / RECORD_HZ)
+<span class="ln">80</span>    recorder.start('drive_' + name, {'mode': 'drive', 'curves_trusted': False, 'log': log.dir, 'baseline': baseline, 'use_curve': use_curve,
+<span class="ln">81</span>                                     'frame_width': camera.width, 'frame_height': camera.height})
+<span class="ln">82</span>    frames, saver = start_frame_saver(recorder)
+<span class="ln">83</span>    watchdog = MotorWatchdog(robot)
+<span class="ln">84</span>    finder = FindLane(perception, robot, camera, watchdog, battery)
+<span class="ln">85</span>    reason = 'time up'
+<span class="ln">86</span>    try:
+<span class="ln">87</span>        frame = wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
+<span class="ln">88</span>        for _ in range(WARMUP_FRAMES):
+<span class="ln">89</span>            frame = wait_for_new_frame(camera, frame)
+<span class="ln">90</span>            perception.observe(frame)
+<span class="ln">91</span>        # wait for the lane with the motors off instead of judging one unsettled frame
+<span class="ln">92</span>        waited = time.time()
+<span class="ln">93</span>        while perception.observe(frame)['lane_visible'] &lt; config.LANE_VISIBLE_THRESHOLD:
+<span class="ln">94</span>            if time.time() - waited &gt; STARTUP_TIMEOUT:
+<span class="ln">95</span>                raise NoLaneAtStart()
+<span class="ln">96</span>            frame = wait_for_new_frame(camera, frame)
+<span class="ln">97</span>        watchdog.start()
+<span class="ln">98</span>        left = right = 0.0
+<span class="ln">99</span>        last_lane_x = 0.0
+<span class="ln">100</span>        history = collections.deque(maxlen=UNDO_STEPS)  # (dt, left, right) of the recent control steps
+<span class="ln">101</span>        start = last = last_saved = time.time()
+<span class="ln">102</span>        while time.time() - start &lt; seconds:
+<span class="ln">103</span>            if stop_event is not None and stop_event.is_set():
+<span class="ln">104</span>                reason = 'stopped by hand'
+<span class="ln">105</span>                break
+<span class="ln">106</span>            frame = wait_for_new_frame(camera, frame)
+<span class="ln">107</span>            now = time.time()
+<span class="ln">108</span>            dt, last = max(now - last, 1e-3), now
+<span class="ln">109</span>            percept = perception.observe(frame)
+<span class="ln">110</span>            if now - last_saved &gt;= 1.0 / RECORD_HZ:
+<span class="ln">111</span>                last_saved = now
+<span class="ln">112</span>                try:
+<span class="ln">113</span>                    frames.put_nowait(frame)
+<span class="ln">114</span>                except queue.Full:
+<span class="ln">115</span>                    pass
+<span class="ln">116</span>            previous_state, state = decision.state, decision.update(percept, now)
+<span class="ln">117</span>            if state == LINE_RECOVERY:  # takes many seconds, in small steps with their own safety checks
+<span class="ln">118</span>                with watchdog.lock:
+<span class="ln">119</span>                    robot.stop()
+<span class="ln">120</span>                # where the lane should be: the way the curve bends, else where it was last seen
+<span class="ln">121</span>                turn = percept['curve_dir'] if abs(percept['curve_dir']) &gt;= config.FEEDFORWARD_MIN_DIR else last_lane_x
+<span class="ln">122</span>                result = finder.run(history if previous_state in FOLLOWING else (), -1 if turn &lt; 0 else 1,
+<span class="ln">123</span>                                    start + seconds, stop_event)
+<span class="ln">124</span>                log.step(time=now - start, dt=dt, mode=LINE_RECOVERY, phase=result)
+<span class="ln">125</span>                last = time.time()
+<span class="ln">126</span>                frame = finder.frame
+<span class="ln">127</span>                decision.line_recovery_done(result in FOUND, last, result in KEPT_DIRECTION)
+<span class="ln">128</span>                controller.reset()
+<span class="ln">129</span>                history.clear()
+<span class="ln">130</span>                if result in FOUND:
+<span class="ln">131</span>                    continue
+<span class="ln">132</span>                reason = 'lane not found by line recovery (%s)' % result
+<span class="ln">133</span>                break
+<span class="ln">134</span>            if state != previous_state and state in (OBSTACLE_AVOIDANCE, STOP):
+<span class="ln">135</span>                controller.reset()  # restart slowly afterwards, without old steering or damping memory
+<span class="ln">136</span>            lane_seen = percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD
+<span class="ln">137</span>            if lane_seen:
+<span class="ln">138</span>                last_lane_x = percept['lane_x']
+<span class="ln">139</span>            if state in FOLLOWING or (state == ROAD_RECOVERY and lane_seen):
+<span class="ln">140</span>                if lane_seen:
+<span class="ln">141</span>                    limit = config.SPEED_SHARP if state == SLOW_DOWN else None
+<span class="ln">142</span>                    left, right = controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'],
+<span class="ln">143</span>                                                    dt, speed_limit=limit)
+<span class="ln">144</span>                else:  # short gap: steer without lane_x, which is not trained on frames without a lane
+<span class="ln">145</span>                    left, right = controller.hold(percept['curve_probs'], percept['curve_dir'], dt)
+<span class="ln">146</span>                with watchdog.lock:
+<span class="ln">147</span>                    robot.set_motors(left, right)
+<span class="ln">148</span>                watchdog.feed()
+<span class="ln">149</span>            elif state in (OBSTACLE_AVOIDANCE, ROAD_RECOVERY):
+<span class="ln">150</span>                if state == OBSTACLE_AVOIDANCE:
+<span class="ln">151</span>                    left, right = controller.avoid(decision.avoid_action(), decision.pass_side(),
+<span class="ln">152</span>                                                   now - decision.phase_since)
+<span class="ln">153</span>                else:
+<span class="ln">154</span>                    left, right = controller.recover(decision.pass_side())
+<span class="ln">155</span>                with watchdog.lock:
+<span class="ln">156</span>                    robot.set_motors(left, right)
+<span class="ln">157</span>                watchdog.feed()
+<span class="ln">158</span>            elif state == STOP:  # brake, back up if too close, wait; drive on (from slow) once the cup is gone
+<span class="ln">159</span>                left, right = controller.stop(decision.stop_phase, now - decision.phase_since)
+<span class="ln">160</span>                with watchdog.lock:
+<span class="ln">161</span>                    robot.set_motors(left, right)
+<span class="ln">162</span>                watchdog.feed()
+<span class="ln">163</span>            else:
+<span class="ln">164</span>                robot.stop()
+<span class="ln">165</span>                reason = {ROAD_RECOVERY: 'lane not found after avoiding',
+<span class="ln">166</span>                          OBSTACLE_AVOIDANCE: 'swerve %s did not reach its camera mark' % decision.avoid_phase
+<span class="ln">167</span>                          }.get(previous_state, 'lane lost')
+<span class="ln">168</span>                left = right = 0.0
+<span class="ln">169</span>            probs = percept['curve_probs']
+<span class="ln">170</span>            ahead = cup_ahead(percept)  # the cup the decision looks at, for the log
+<span class="ln">171</span>            log.step(time=now - start, dt=dt, mode=state, lane_visible=percept['lane_visible'],
+<span class="ln">172</span>                     lane_x=percept['lane_x'], p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2],
+<span class="ln">173</span>                     curve_dir=percept['curve_dir'],
+<span class="ln">174</span>                     curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
+<span class="ln">175</span>                     left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
+<span class="ln">176</span>                     cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'],
+<span class="ln">177</span>                     lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
+<span class="ln">178</span>                     band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None, band_cm=band_cm(ahead) if ahead else None,
+<span class="ln">179</span>                     bands=len(percept['cup_bands']),
+<span class="ln">180</span>                     phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''))
+<span class="ln">181</span>            history.append((dt, left, right))
+<span class="ln">182</span>            if state == HALT:
+<span class="ln">183</span>                break
+<span class="ln">184</span>    except StopRecovery as over:
+<span class="ln">185</span>        reason = str(over)
+<span class="ln">186</span>    except NoLaneAtStart:
+<span class="ln">187</span>        reason = 'no lane at start: put the robot on the lane'
+<span class="ln">188</span>    except CameraFrozen:
+<span class="ln">189</span>        reason = 'camera frozen'
+<span class="ln">190</span>    except BatteryLow as low:
+<span class="ln">191</span>        reason = str(low)
+<span class="ln">192</span>    except KeyboardInterrupt:
+<span class="ln">193</span>        reason = 'stopped by hand'  # scripts/stop_robot.sh sends Ctrl-C (SIGINT)
+<span class="ln">194</span>    finally:
+<span class="ln">195</span>        watchdog.running = False
+<span class="ln">196</span>        robot.stop()
+<span class="ln">197</span>        camera.stop()
+<span class="ln">198</span>        frames.put(None)
+<span class="ln">199</span>        saver.join(timeout=2.0)
+<span class="ln">200</span>        recorder.stop()
+<span class="ln">201</span>        log.close(reason)
+<span class="ln">202</span>    return reason, log.dir
+<span class="ln">203</span>
 <span class="ln">204</span>
-<span class="ln">205</span>
-<span class="ln">206</span>if __name__ == '__main__':
-<span class="ln">207</span>    main()</pre>
+<span class="ln">205</span>def main():
+<span class="ln">206</span>    parser = argparse.ArgumentParser()
+<span class="ln">207</span>    parser.add_argument('--name', default='drive')
+<span class="ln">208</span>    parser.add_argument('--seconds', type=float, default=30.0)
+<span class="ln">209</span>    parser.add_argument('--baseline', action='store_true', help='constant speed, plain P steering')
+<span class="ln">210</span>    parser.add_argument('--no-curve', action='store_true', help='our steering at the baseline speed')
+<span class="ln">211</span>    parser.add_argument('--stop-only', action='store_true', help='wait in front of a cup instead of avoiding it')
+<span class="ln">212</span>    parser.add_argument('--pass-side', choices=['left', 'right'], help='side to pass cups on (default: inside of the oval)')
+<span class="ln">213</span>    args = parser.parse_args()
+<span class="ln">214</span>    reason, log_dir = run(args.name, args.seconds, args.baseline, not args.no_curve,
+<span class="ln">215</span>                          stop_only=args.stop_only, pass_side=args.pass_side)
+<span class="ln">216</span>    print('%s, log in %s' % (reason, log_dir))
+<span class="ln">217</span>
+<span class="ln">218</span>
+<span class="ln">219</span>if __name__ == '__main__':
+<span class="ln">220</span>    main()</pre>
 </div>
 <div class="srcfile">
   <h3>perception.py <span class="fn">85 lines</span></h3>
@@ -1414,7 +1427,7 @@ body.doc .doconly{display:block}
 <span class="ln">85</span>        }</pre>
 </div>
 <div class="srcfile">
-  <h3>decision.py <span class="fn">288 lines</span></h3>
+  <h3>decision.py <span class="fn">290 lines</span></h3>
 <pre><span class="ln">1</span>"""Decision: the state machine (Task 6). Which state the robot is in, from what perception sees.
 <span class="ln">2</span>
 <span class="ln">3</span>States (names from PROJECT_GUIDE_1.md), highest priority first; the full table with entry condition, action,
@@ -1580,129 +1593,131 @@ body.doc .doconly{display:block}
 <span class="ln">163</span>        """The lane is lost: find it again, or end the run"""
 <span class="ln">164</span>        self.enter(LINE_RECOVERY if self.line_recovery else HALT, now)
 <span class="ln">165</span>
-<span class="ln">166</span>    def line_recovery_done(self, found, now):
-<span class="ln">167</span>        """Called by drive.py when the search has ended. The robot may now face either way along the lane, so the
-<span class="ln">168</span>        driving direction is measured anew"""
+<span class="ln">166</span>    def line_recovery_done(self, found, now, kept_direction=False):
+<span class="ln">167</span>        """Called by drive.py when the search has ended. Unless the robot kept its driving direction, it may now face
+<span class="ln">168</span>        either way along the lane, so the direction is measured anew"""
 <span class="ln">169</span>        self.enter(ROAD_FOLLOWING if found else HALT, now)
-<span class="ln">170</span>        self.lost_since, self.close_frames, self.curve_sum = None, 0, 0.0
-<span class="ln">171</span>
-<span class="ln">172</span>    def update_stop(self, percept, now):
-<span class="ln">173</span>        """Standing in front of the cup: a short reverse pulse against coasting, then wait; if the cup turns out to
-<span class="ln">174</span>        be closer than BACKUP_CM (the camera shows the robot's position late), back up once until it is further than
-<span class="ln">175</span>        BACKUP_TARGET_CM. The nearest band anywhere: close in front, the cup can hide the lane"""
-<span class="ln">176</span>        bands = percept['cup_bands']
-<span class="ln">177</span>        cm = band_cm(bands[0]) if bands else float('inf')
-<span class="ln">178</span>        elapsed = now - self.phase_since
-<span class="ln">179</span>        if self.stop_phase == 'brake' and elapsed &gt;= config.BRAKE[1]:
-<span class="ln">180</span>            self.stop_phase, self.phase_since = 'wait', now
-<span class="ln">181</span>        elif self.stop_phase == 'wait' and not self.backed and cm &lt;= config.BACKUP_CM:
-<span class="ln">182</span>            self.stop_phase, self.phase_since, self.backed = 'back', now, True
-<span class="ln">183</span>        elif self.stop_phase == 'back' and (cm &gt; config.BACKUP_TARGET_CM or elapsed &gt;= config.BACKUP_MAX):
-<span class="ln">184</span>            self.stop_phase, self.phase_since = 'wait', now
-<span class="ln">185</span>
-<span class="ln">186</span>    def update_avoidance(self, percept, now):
-<span class="ln">187</span>        """Moves through the swerve phases. Passing on the left: stand still briefly; turn left until the cup has left
-<span class="ln">188</span>        the image on the right (without a cup in view: until the lane edge looks horizontal or leaves the image near
-<span class="ln">189</span>        horizontal), about 90 degrees; curve right, straight on while the cup is in view on that side, until the edge
-<span class="ln">190</span>        ahead looks horizontal again or leaves the image, or the lane is found (inside the lane, crossing it); turn left
-<span class="ln">191</span>        until the lane is found again, now along it. Passing on the right
-<span class="ln">192</span>        mirrored. The marks come from the color masks (HYBRID). A phase that takes too long: HALT"""
-<span class="ln">193</span>        elapsed = now - self.phase_since
-<span class="ln">194</span>        toward = -1 if self.pass_side() == 'left' else 1  # turn direction toward the pass side (-1 left)
-<span class="ln">195</span>        angle = percept['tape_angle']
-<span class="ln">196</span>        band = near_band(percept)
-<span class="ln">197</span>        if self.avoid_phase == 'brake':
-<span class="ln">198</span>            done, limit = elapsed &gt;= config.AVOID_BRAKE, config.AVOID_BRAKE
-<span class="ln">199</span>        elif self.avoid_phase == 'turn_out':
-<span class="ln">200</span>            done = cup_left_view(self.turn_cup_x, band, toward) or (band is None and (
-<span class="ln">201</span>                reached_horizontal(angle, toward, config.TURN_EARLY) or edge_left_view(self.edge_angle, angle, toward)))
-<span class="ln">202</span>            limit = config.TURN_OUT_MAX
-<span class="ln">203</span>            self.edge_angle = angle
-<span class="ln">204</span>            if band is not None:
-<span class="ln">205</span>                self.turn_cup_x = band[0]
-<span class="ln">206</span>        elif self.avoid_phase == 'arc':  # the lane edge is horizontal ahead at its start: ARC_MIN
-<span class="ln">207</span>            if cup_in_the_way(band):
-<span class="ln">208</span>                self.enter(HALT, now)
-<span class="ln">209</span>                return
-<span class="ln">210</span>            self.cup_beside = cup_beside_curve(band, toward)
-<span class="ln">211</span>            # the lane found means inside the lane; without it, the edge ahead looks horizontal or leaves the image close
-<span class="ln">212</span>            # to the lane (run avoid4_1: last seen at +17, then the far border was reached, avoid4_2)
-<span class="ln">213</span>            done = (elapsed &gt;= config.ARC_LONGEST
-<span class="ln">214</span>                    or (elapsed &gt;= config.ARC_LANE_MIN and lane_found(percept, config.TURN_IN_CENTERED))
-<span class="ln">215</span>                    or (elapsed &gt;= config.ARC_MIN and (reached_horizontal(angle, -toward, config.ARC_EARLY)
-<span class="ln">216</span>                                                       or edge_left_view(self.edge_angle, angle, -toward))))
-<span class="ln">217</span>            limit = config.ARC_LONGEST
-<span class="ln">218</span>            self.edge_angle = angle
-<span class="ln">219</span>        else:  # the curve ends at the lane's edge: ROAD_RECOVERY brings the robot to the center
-<span class="ln">220</span>            done = elapsed &gt;= config.TURN_IN_MIN and lane_found(percept, config.TURN_IN_CENTERED)
-<span class="ln">221</span>            limit = config.TURN_IN_MAX
-<span class="ln">222</span>        if done and self.avoid_phase == AVOID_PHASES[-1]:
-<span class="ln">223</span>            self.centered_frames = 0
-<span class="ln">224</span>            self.enter(ROAD_RECOVERY, now)
-<span class="ln">225</span>        elif done:
-<span class="ln">226</span>            self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(self.avoid_phase) + 1]
-<span class="ln">227</span>            self.phase_since = now
-<span class="ln">228</span>        elif elapsed &gt;= limit:
-<span class="ln">229</span>            self.lane_gone(now)  # a stall, or the mark was not seen: do not drive on blind
-<span class="ln">230</span>
-<span class="ln">231</span>    def update(self, percept, now):
-<span class="ln">232</span>        """Returns the state for this frame"""
-<span class="ln">233</span>        if self.state in (HALT, LINE_RECOVERY):  # drive.py runs the search and reports back
-<span class="ln">234</span>            return self.state
-<span class="ln">235</span>        if self.state == OBSTACLE_AVOIDANCE:  # the lane is not asked until the swerve is done
-<span class="ln">236</span>            self.update_avoidance(percept, now)
-<span class="ln">237</span>            return self.state
-<span class="ln">238</span>        if self.state == ROAD_RECOVERY:
-<span class="ln">239</span>            self.centered_frames = self.centered_frames + 1 if lane_found(percept) else 0
-<span class="ln">240</span>            if self.centered_frames &gt;= config.RECOVER_FRAMES:  # a distant or crosswise lane does not count
-<span class="ln">241</span>                self.lost_since = None
-<span class="ln">242</span>                self.close_frames = 0
-<span class="ln">243</span>                self.enter(ROAD_FOLLOWING, now)
-<span class="ln">244</span>            elif now - self.state_since &gt; config.RECOVER_TIMEOUT:
-<span class="ln">245</span>                self.lane_gone(now)
-<span class="ln">246</span>            return self.state
-<span class="ln">247</span>
-<span class="ln">248</span>        close = cup_close(percept)
-<span class="ln">249</span>        self.close_frames = self.close_frames + 1 if close else 0
-<span class="ln">250</span>        if self.stop_only:
-<span class="ln">251</span>            # drive on only with the lane in sight: a hand measuring in front of the camera hid the cup and the lane,
-<span class="ln">252</span>            # and the robot drove on blind (run stop_s1d2_2)
-<span class="ln">253</span>            clear = cup_gone(percept) and percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD
-<span class="ln">254</span>            self.clear_frames = self.clear_frames + 1 if clear else 0
-<span class="ln">255</span>            if self.state == STOP and self.clear_frames &gt;= config.OBSTACLE_CLEAR_FRAMES:
-<span class="ln">256</span>                self.enter(ROAD_FOLLOWING, now)
-<span class="ln">257</span>            elif self.state != STOP and self.close_frames &gt;= config.OBSTACLE_FRAMES:
-<span class="ln">258</span>                self.enter(STOP, now)
-<span class="ln">259</span>            if self.state == STOP:
-<span class="ln">260</span>                self.update_stop(percept, now)
-<span class="ln">261</span>                self.lost_since = None  # standing still is not losing the lane
-<span class="ln">262</span>                return STOP
-<span class="ln">263</span>        elif self.close_frames &gt;= config.OBSTACLE_FRAMES:
-<span class="ln">264</span>            self.enter(OBSTACLE_AVOIDANCE, now)
-<span class="ln">265</span>            return self.state
-<span class="ln">266</span>
-<span class="ln">267</span>        # following the lane: ROAD_FOLLOWING or SLOW_DOWN (sharp curve, or a cup ahead: less rolling on after a stop)
-<span class="ln">268</span>        p_sharp = percept['curve_probs'][2]
-<span class="ln">269</span>        near = cup_near(percept)
-<span class="ln">270</span>        if self.state == ROAD_FOLLOWING and (p_sharp &gt; config.SLOW_DOWN_ENTER or near):
-<span class="ln">271</span>            self.enter(SLOW_DOWN, now)
-<span class="ln">272</span>        elif self.state == SLOW_DOWN and p_sharp &lt; config.SLOW_DOWN_EXIT and not near:
-<span class="ln">273</span>            self.enter(ROAD_FOLLOWING, now)
-<span class="ln">274</span>        if percept['curve_probs'][1] + p_sharp &gt; 0.5:
-<span class="ln">275</span>            self.curve_sum += percept['curve_dir']
-<span class="ln">276</span>        if percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD:
-<span class="ln">277</span>            self.lost_since = None
-<span class="ln">278</span>            self.lane_seen = True
-<span class="ln">279</span>            return self.state
-<span class="ln">280</span>        if not self.lane_seen:
-<span class="ln">281</span>            self.enter(HALT, now)  # never start without seeing the lane (the grace time is only for short gaps)
-<span class="ln">282</span>            return HALT
-<span class="ln">283</span>        if self.lost_since is None:
-<span class="ln">284</span>            self.lost_since = now
-<span class="ln">285</span>        # a short gap (one or two bad frames) keeps following on the last steering
-<span class="ln">286</span>        if now - self.lost_since &gt;= config.LANE_LOST_TIMEOUT:
-<span class="ln">287</span>            self.lane_gone(now)
-<span class="ln">288</span>        return self.state</pre>
+<span class="ln">170</span>        self.lost_since, self.close_frames = None, 0
+<span class="ln">171</span>        if not kept_direction:
+<span class="ln">172</span>            self.curve_sum = 0.0
+<span class="ln">173</span>
+<span class="ln">174</span>    def update_stop(self, percept, now):
+<span class="ln">175</span>        """Standing in front of the cup: a short reverse pulse against coasting, then wait; if the cup turns out to
+<span class="ln">176</span>        be closer than BACKUP_CM (the camera shows the robot's position late), back up once until it is further than
+<span class="ln">177</span>        BACKUP_TARGET_CM. The nearest band anywhere: close in front, the cup can hide the lane"""
+<span class="ln">178</span>        bands = percept['cup_bands']
+<span class="ln">179</span>        cm = band_cm(bands[0]) if bands else float('inf')
+<span class="ln">180</span>        elapsed = now - self.phase_since
+<span class="ln">181</span>        if self.stop_phase == 'brake' and elapsed &gt;= config.BRAKE[1]:
+<span class="ln">182</span>            self.stop_phase, self.phase_since = 'wait', now
+<span class="ln">183</span>        elif self.stop_phase == 'wait' and not self.backed and cm &lt;= config.BACKUP_CM:
+<span class="ln">184</span>            self.stop_phase, self.phase_since, self.backed = 'back', now, True
+<span class="ln">185</span>        elif self.stop_phase == 'back' and (cm &gt; config.BACKUP_TARGET_CM or elapsed &gt;= config.BACKUP_MAX):
+<span class="ln">186</span>            self.stop_phase, self.phase_since = 'wait', now
+<span class="ln">187</span>
+<span class="ln">188</span>    def update_avoidance(self, percept, now):
+<span class="ln">189</span>        """Moves through the swerve phases. Passing on the left: stand still briefly; turn left until the cup has left
+<span class="ln">190</span>        the image on the right (without a cup in view: until the lane edge looks horizontal or leaves the image near
+<span class="ln">191</span>        horizontal), about 90 degrees; curve right, straight on while the cup is in view on that side, until the edge
+<span class="ln">192</span>        ahead looks horizontal again or leaves the image, or the lane is found (inside the lane, crossing it); turn left
+<span class="ln">193</span>        until the lane is found again, now along it. Passing on the right
+<span class="ln">194</span>        mirrored. The marks come from the color masks (HYBRID). A phase that takes too long: HALT"""
+<span class="ln">195</span>        elapsed = now - self.phase_since
+<span class="ln">196</span>        toward = -1 if self.pass_side() == 'left' else 1  # turn direction toward the pass side (-1 left)
+<span class="ln">197</span>        angle = percept['tape_angle']
+<span class="ln">198</span>        band = near_band(percept)
+<span class="ln">199</span>        if self.avoid_phase == 'brake':
+<span class="ln">200</span>            done, limit = elapsed &gt;= config.AVOID_BRAKE, config.AVOID_BRAKE
+<span class="ln">201</span>        elif self.avoid_phase == 'turn_out':
+<span class="ln">202</span>            done = cup_left_view(self.turn_cup_x, band, toward) or (band is None and (
+<span class="ln">203</span>                reached_horizontal(angle, toward, config.TURN_EARLY) or edge_left_view(self.edge_angle, angle, toward)))
+<span class="ln">204</span>            limit = config.TURN_OUT_MAX
+<span class="ln">205</span>            self.edge_angle = angle
+<span class="ln">206</span>            if band is not None:
+<span class="ln">207</span>                self.turn_cup_x = band[0]
+<span class="ln">208</span>        elif self.avoid_phase == 'arc':  # the lane edge is horizontal ahead at its start: ARC_MIN
+<span class="ln">209</span>            if cup_in_the_way(band):
+<span class="ln">210</span>                self.enter(HALT, now)
+<span class="ln">211</span>                return
+<span class="ln">212</span>            self.cup_beside = cup_beside_curve(band, toward)
+<span class="ln">213</span>            # the lane found means inside the lane; without it, the edge ahead looks horizontal or leaves the image close
+<span class="ln">214</span>            # to the lane (run avoid4_1: last seen at +17, then the far border was reached, avoid4_2)
+<span class="ln">215</span>            done = (elapsed &gt;= config.ARC_LONGEST
+<span class="ln">216</span>                    or (elapsed &gt;= config.ARC_LANE_MIN and lane_found(percept, config.TURN_IN_CENTERED))
+<span class="ln">217</span>                    or (elapsed &gt;= config.ARC_MIN and (reached_horizontal(angle, -toward, config.ARC_EARLY)
+<span class="ln">218</span>                                                       or edge_left_view(self.edge_angle, angle, -toward))))
+<span class="ln">219</span>            limit = config.ARC_LONGEST
+<span class="ln">220</span>            self.edge_angle = angle
+<span class="ln">221</span>        else:  # the curve ends at the lane's edge: ROAD_RECOVERY brings the robot to the center
+<span class="ln">222</span>            done = elapsed &gt;= config.TURN_IN_MIN and lane_found(percept, config.TURN_IN_CENTERED)
+<span class="ln">223</span>            limit = config.TURN_IN_MAX
+<span class="ln">224</span>        if done and self.avoid_phase == AVOID_PHASES[-1]:
+<span class="ln">225</span>            self.centered_frames = 0
+<span class="ln">226</span>            self.enter(ROAD_RECOVERY, now)
+<span class="ln">227</span>        elif done:
+<span class="ln">228</span>            self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(self.avoid_phase) + 1]
+<span class="ln">229</span>            self.phase_since = now
+<span class="ln">230</span>        elif elapsed &gt;= limit:
+<span class="ln">231</span>            self.lane_gone(now)  # a stall, or the mark was not seen: do not drive on blind
+<span class="ln">232</span>
+<span class="ln">233</span>    def update(self, percept, now):
+<span class="ln">234</span>        """Returns the state for this frame"""
+<span class="ln">235</span>        if self.state in (HALT, LINE_RECOVERY):  # drive.py runs the search and reports back
+<span class="ln">236</span>            return self.state
+<span class="ln">237</span>        if self.state == OBSTACLE_AVOIDANCE:  # the lane is not asked until the swerve is done
+<span class="ln">238</span>            self.update_avoidance(percept, now)
+<span class="ln">239</span>            return self.state
+<span class="ln">240</span>        if self.state == ROAD_RECOVERY:
+<span class="ln">241</span>            self.centered_frames = self.centered_frames + 1 if lane_found(percept) else 0
+<span class="ln">242</span>            if self.centered_frames &gt;= config.RECOVER_FRAMES:  # a distant or crosswise lane does not count
+<span class="ln">243</span>                self.lost_since = None
+<span class="ln">244</span>                self.close_frames = 0
+<span class="ln">245</span>                self.enter(ROAD_FOLLOWING, now)
+<span class="ln">246</span>            elif now - self.state_since &gt; config.RECOVER_TIMEOUT:
+<span class="ln">247</span>                self.lane_gone(now)
+<span class="ln">248</span>            return self.state
+<span class="ln">249</span>
+<span class="ln">250</span>        close = cup_close(percept)
+<span class="ln">251</span>        self.close_frames = self.close_frames + 1 if close else 0
+<span class="ln">252</span>        if self.stop_only:
+<span class="ln">253</span>            # drive on only with the lane in sight: a hand measuring in front of the camera hid the cup and the lane,
+<span class="ln">254</span>            # and the robot drove on blind (run stop_s1d2_2)
+<span class="ln">255</span>            clear = cup_gone(percept) and percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD
+<span class="ln">256</span>            self.clear_frames = self.clear_frames + 1 if clear else 0
+<span class="ln">257</span>            if self.state == STOP and self.clear_frames &gt;= config.OBSTACLE_CLEAR_FRAMES:
+<span class="ln">258</span>                self.enter(ROAD_FOLLOWING, now)
+<span class="ln">259</span>            elif self.state != STOP and self.close_frames &gt;= config.OBSTACLE_FRAMES:
+<span class="ln">260</span>                self.enter(STOP, now)
+<span class="ln">261</span>            if self.state == STOP:
+<span class="ln">262</span>                self.update_stop(percept, now)
+<span class="ln">263</span>                self.lost_since = None  # standing still is not losing the lane
+<span class="ln">264</span>                return STOP
+<span class="ln">265</span>        elif self.close_frames &gt;= config.OBSTACLE_FRAMES:
+<span class="ln">266</span>            self.enter(OBSTACLE_AVOIDANCE, now)
+<span class="ln">267</span>            return self.state
+<span class="ln">268</span>
+<span class="ln">269</span>        # following the lane: ROAD_FOLLOWING or SLOW_DOWN (sharp curve, or a cup ahead: less rolling on after a stop)
+<span class="ln">270</span>        p_sharp = percept['curve_probs'][2]
+<span class="ln">271</span>        near = cup_near(percept)
+<span class="ln">272</span>        if self.state == ROAD_FOLLOWING and (p_sharp &gt; config.SLOW_DOWN_ENTER or near):
+<span class="ln">273</span>            self.enter(SLOW_DOWN, now)
+<span class="ln">274</span>        elif self.state == SLOW_DOWN and p_sharp &lt; config.SLOW_DOWN_EXIT and not near:
+<span class="ln">275</span>            self.enter(ROAD_FOLLOWING, now)
+<span class="ln">276</span>        if percept['curve_probs'][1] + p_sharp &gt; 0.5:
+<span class="ln">277</span>            self.curve_sum += percept['curve_dir']
+<span class="ln">278</span>        if percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD:
+<span class="ln">279</span>            self.lost_since = None
+<span class="ln">280</span>            self.lane_seen = True
+<span class="ln">281</span>            return self.state
+<span class="ln">282</span>        if not self.lane_seen:
+<span class="ln">283</span>            self.enter(HALT, now)  # never start without seeing the lane (the grace time is only for short gaps)
+<span class="ln">284</span>            return HALT
+<span class="ln">285</span>        if self.lost_since is None:
+<span class="ln">286</span>            self.lost_since = now
+<span class="ln">287</span>        # a short gap (one or two bad frames) keeps following on the last steering
+<span class="ln">288</span>        if now - self.lost_since &gt;= config.LANE_LOST_TIMEOUT:
+<span class="ln">289</span>            self.lane_gone(now)
+<span class="ln">290</span>        return self.state</pre>
 </div>
 <div class="srcfile">
   <h3>control.py <span class="fn">145 lines</span></h3>
@@ -1853,176 +1868,310 @@ body.doc .doconly{display:block}
 <span class="ln">145</span>        return max(-1.0, min(1.0, left)), max(-1.0, min(1.0, right))</pre>
 </div>
 <div class="srcfile">
-  <h3>find_lane.py <span class="fn">169 lines</span></h3>
-<pre><span class="ln">1</span>"""Finds the lane again after the robot has left it, in small steps with the motors off between them.
+  <h3>find_lane.py <span class="fn">303 lines</span></h3>
+<pre><span class="ln">1</span>"""Finds the lane again after the robot has left it (state LINE_RECOVERY), from quick to thorough.
 <span class="ln">2</span>
-<span class="ln">3</span>    python3 find_lane.py
+<span class="ln">3</span>    python3 find_lane.py     # the full search alone, for a robot put down off the lane
 <span class="ln">4</span>
-<span class="ln">5</span>Each round: turn left in short pulses, a bit over one full turn, looking for the lane (on_lane). Lane not
-<span class="ln">6</span>found: turn on to the heading with the nearest tape and drive across it, into the lane, then the next round. Stops
-<span class="ln">7</span>for a cup close ahead. Exit code 0 with the lane found, 1 otherwise. The robot may end up facing either way along the
-<span class="ln">8</span>lane: lane_found cannot tell. Saves every stop to usb/images/datasets/&lt;time&gt;_find_lane. Run inside the container.
-<span class="ln">9</span>"""
-<span class="ln">10</span>
-<span class="ln">11</span>import os
-<span class="ln">12</span>import sys
-<span class="ln">13</span>import time
-<span class="ln">14</span>
-<span class="ln">15</span>import cv2
-<span class="ln">16</span>from jetbot import Camera, Robot
-<span class="ln">17</span>
-<span class="ln">18</span>import lane_mask
-<span class="ln">19</span>from control import turn_speed
-<span class="ln">20</span>from decision import band_cm, lane_found
-<span class="ln">21</span>from perception import Perception
-<span class="ln">22</span>from recorder import DATASET_ROOT
-<span class="ln">23</span>from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
+<span class="ln">5</span>    1. undo: drive the last second of wheel commands backwards. The lane was seen about 15 cm before it was lost (all 8
+<span class="ln">6</span>       losses up to 2026-11-08) and the robot keeps its driving direction. Only right after following, at most twice in
+<span class="ln">7</span>       a row.
+<span class="ln">8</span>    2. sweep: turn about 100 degrees to each side, first toward where the lane should be.
+<span class="ln">9</span>    3. search, in small steps with the motors off between them: turn one full turn looking for the lane; not found: turn
+<span class="ln">10</span>       the shorter way to the nearest tape and drive across it, into the lane, then the next round. A lane more than
+<span class="ln">11</span>       about 130 degrees from the heading at the start of the search is the wrong way along it and only counts in the
+<span class="ln">12</span>       last round. No forward pulse with a cup close ahead: that heading is skipped.
+<span class="ln">13</span>
+<span class="ln">14</span>Saves every stop and a stops.csv to usb/images/datasets/&lt;time&gt;_find_lane. Run inside the container.
+<span class="ln">15</span>"""
+<span class="ln">16</span>
+<span class="ln">17</span>import csv
+<span class="ln">18</span>import os
+<span class="ln">19</span>import sys
+<span class="ln">20</span>import time
+<span class="ln">21</span>
+<span class="ln">22</span>import cv2
+<span class="ln">23</span>import numpy as np
 <span class="ln">24</span>
-<span class="ln">25</span>TURN_PULSE = 0.15     # seconds of one turn pulse (kick plus a little): about 15-25 degrees
-<span class="ln">26</span>PUSH_PULSE = 0.3      # seconds of one forward pulse
-<span class="ln">27</span>PUSH_SPEED = 0.33     # wheel speed forward
-<span class="ln">28</span>PUSHES = 10           # forward pulses per round at most, about 40 cm
-<span class="ln">29</span>PAST_TAPE = 3         # forward pulses after the tape has left the image's lower edge: into the lane
-<span class="ln">30</span>SCAN_PULSES = 30      # turn pulses per round, a bit over one full turn
-<span class="ln">31</span>ROUNDS = 4            # rounds before giving up
-<span class="ln">32</span>SETTLE_SECONDS = 0.3  # standing still before looking: the camera shows the robot late
-<span class="ln">33</span>CUP_STOP_CM = 25.0    # no forward pulse with a cup this close in the middle of the image
-<span class="ln">34</span>CUP_STOP_X = 0.5
-<span class="ln">35</span>NEAR_ROW = 0.8        # fraction of the image height at which tape must be seen: close to the robot
-<span class="ln">36</span>SURE_LANE = 0.9       # lane model value that counts as standing well in the lane
-<span class="ln">37</span>BEST_SHARE = 0.8      # share of the scan's largest amount of near tape that counts as the heading of the nearest tape
-<span class="ln">38</span>NEAR_FROM = 0.7       # fraction of the image height from which tape counts as near
-<span class="ln">39</span>BOTTOM_ROW = 0.93     # fraction of the image height from which tape counts as at the robot's nose
-<span class="ln">40</span>WARMUP_FRAMES = 5     # model calls with the motors off (the first call took up to 1.1 s)
-<span class="ln">41</span>
-<span class="ln">42</span>
-<span class="ln">43</span>def on_lane(percept):
-<span class="ln">44</span>    """True if the robot stands well in the lane, pointing along it: at the border lane_found held, but the lane
-<span class="ln">45</span>    model then fell below 0.5 at the start of the drive (run avoid4_4)"""
-<span class="ln">46</span>    return lane_found(percept) and percept['lane_visible'] &gt;= SURE_LANE
-<span class="ln">47</span>
-<span class="ln">48</span>
-<span class="ln">49</span>def near_blue(frame):
-<span class="ln">50</span>    """Amount of tape in the lower part of the image: the larger, the nearer the tape"""
-<span class="ln">51</span>    return int((lane_mask.blue_mask(frame)[int(NEAR_FROM * frame.shape[0]):] &gt; 0).sum())
-<span class="ln">52</span>
-<span class="ln">53</span>
-<span class="ln">54</span>def tape_close(frame):
-<span class="ln">55</span>    """True if tape crosses the image's lower part: a distant lane also reads as found (run avoid4_5, known since v3_ccw_3)"""
-<span class="ln">56</span>    return len(lane_mask.line_centers(lane_mask.blue_mask(frame), NEAR_ROW)) &gt;= 1
-<span class="ln">57</span>
+<span class="ln">25</span>import config
+<span class="ln">26</span>import lane_mask
+<span class="ln">27</span>from control import turn_speed
+<span class="ln">28</span>from decision import band_cm, lane_found
+<span class="ln">29</span>from recorder import DATASET_ROOT
+<span class="ln">30</span>from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
+<span class="ln">31</span>
+<span class="ln">32</span>UNDO_SECONDS = 1.0    # seconds of wheel commands driven backwards
+<span class="ln">33</span>UNDO_TRIES = 2        # undos in a row before the robot looks around instead: the same curve may lose the lane again
+<span class="ln">34</span>UNDO_RESET = 5.0      # seconds after an undo from which the count of undos starts anew
+<span class="ln">35</span>TURN_PULSE = 0.15     # seconds of one turn pulse (kick plus a little)
+<span class="ln">36</span>PULSES_PER_TURN = 22  # turn pulses for one full turn: 19-25 measured, 2026-11-08
+<span class="ln">37</span>SWEEP_PULSES = 6      # turn pulses to each side in the sweep, about 100 degrees
+<span class="ln">38</span>HEADING_WINDOW = 7    # turn pulses from the heading at the start within which a found lane counts as the right way
+<span class="ln">39</span>PUSH_PULSE = 0.3      # seconds of one forward pulse
+<span class="ln">40</span>PUSH_SPEED = 0.33     # wheel speed forward
+<span class="ln">41</span>PUSHES = 10           # forward pulses per round at most
+<span class="ln">42</span>PAST_TAPE = 3         # forward pulses after the tape has left the image's lower edge: into the lane
+<span class="ln">43</span>ROUNDS = 4            # rounds of the search before giving up
+<span class="ln">44</span>SETTLE_SECONDS = 0.3  # standing still before looking: the camera shows the robot late
+<span class="ln">45</span>CONFIRM_FRAMES = 3    # further frames that must agree before the lane counts as found: a single look was borderline
+<span class="ln">46</span>CUP_STOP_CM = 25.0    # no forward pulse with a cup this close in the middle of the image
+<span class="ln">47</span>CUP_STOP_X = 0.5
+<span class="ln">48</span>NEAR_ROW = 0.8        # fraction of the image height at which tape must be seen: close to the robot
+<span class="ln">49</span>SURE_LANE = 0.9       # lane model value that counts as standing well in the lane
+<span class="ln">50</span>TAPE_ROW_PIXELS = 5   # blue pixels in an image row that count as tape in that row
+<span class="ln">51</span>TAPE_SLACK = 8        # image rows above the scan's lowest tape that still count as the heading of the nearest tape
+<span class="ln">52</span>NUDGES = 4            # extra turn pulses to reach that heading (the pulses are uneven)
+<span class="ln">53</span>BOTTOM_ROW = 0.93     # fraction of the image height from which tape counts as at the robot's nose
+<span class="ln">54</span>WARMUP_FRAMES = 5     # model calls with the motors off (the first call took up to 1.1 s)
+<span class="ln">55</span>FOUND = ('undo', 'sweep', 'search', 'search_any')  # results of run() with the lane found
+<span class="ln">56</span>KEPT_DIRECTION = ('undo', 'sweep', 'search')       # those with the robot still driving the same way along the lane
+<span class="ln">57</span>STOP_COLUMNS = ['stop', 'stage', 'heading', 'lane_visible', 'lane_x', 'lane_aligned', 'tape_row', 'tape_close']
 <span class="ln">58</span>
-<span class="ln">59</span>class FindLane(object):
-<span class="ln">60</span>    def __init__(self, perception, robot, camera, watchdog, battery):
-<span class="ln">61</span>        self.perception, self.robot, self.camera, self.watchdog, self.battery = perception, robot, camera, watchdog, battery
-<span class="ln">62</span>        self.frame = None
-<span class="ln">63</span>        self.out = None
-<span class="ln">64</span>        self.stops = 0
-<span class="ln">65</span>
-<span class="ln">66</span>    def pulse(self, seconds, wheels):
-<span class="ln">67</span>        """Runs wheels(elapsed) -&gt; (left, right) for some seconds, then motors off"""
-<span class="ln">68</span>        since = time.time()
-<span class="ln">69</span>        while time.time() - since &lt; seconds:
-<span class="ln">70</span>            with self.watchdog.lock:
-<span class="ln">71</span>                self.robot.set_motors(*wheels(time.time() - since))
-<span class="ln">72</span>            self.watchdog.feed()
-<span class="ln">73</span>            self.frame = wait_for_new_frame(self.camera, self.frame)
-<span class="ln">74</span>        with self.watchdog.lock:
-<span class="ln">75</span>            self.robot.stop()
-<span class="ln">76</span>
-<span class="ln">77</span>    def look(self):
-<span class="ln">78</span>        """Stands still, then returns what the models see now (and saves the frame)"""
-<span class="ln">79</span>        self.battery.check()
-<span class="ln">80</span>        time.sleep(SETTLE_SECONDS)
-<span class="ln">81</span>        self.frame = wait_for_new_frame(self.camera, self.camera.value)
-<span class="ln">82</span>        for _ in range(4):  # the obstacle and curve models run on every second frame
-<span class="ln">83</span>            self.frame = wait_for_new_frame(self.camera, self.frame)
-<span class="ln">84</span>            percept = self.perception.observe(self.frame)
-<span class="ln">85</span>        cv2.imwrite(os.path.join(self.out, 'frame_%05d.jpg' % self.stops), self.frame)
-<span class="ln">86</span>        self.stops += 1
-<span class="ln">87</span>        return percept
-<span class="ln">88</span>
-<span class="ln">89</span>    def turn_left(self):
-<span class="ln">90</span>        def wheels(elapsed):
-<span class="ln">91</span>            speed = turn_speed(elapsed)
-<span class="ln">92</span>            return -speed, speed
-<span class="ln">93</span>        self.pulse(TURN_PULSE, wheels)
-<span class="ln">94</span>        return self.look()
-<span class="ln">95</span>
-<span class="ln">96</span>    def cup_blocks(self, percept):
-<span class="ln">97</span>        return any(band_cm(band) &lt;= CUP_STOP_CM and abs(band[0]) &lt; CUP_STOP_X for band in percept['cup_bands'])
-<span class="ln">98</span>
-<span class="ln">99</span>    def round(self):
-<span class="ln">100</span>        """One scan and one push across the nearest tape. Returns 'found', 'blocked' or 'again'"""
-<span class="ln">101</span>        best = 0
-<span class="ln">102</span>        for _ in range(SCAN_PULSES):
-<span class="ln">103</span>            percept = self.turn_left()
-<span class="ln">104</span>            if on_lane(percept) and tape_close(self.frame):
-<span class="ln">105</span>                return 'found'
-<span class="ln">106</span>            best = max(best, near_blue(self.frame))
-<span class="ln">107</span>        for _ in range(SCAN_PULSES):  # on to the heading with the nearest tape
-<span class="ln">108</span>            if near_blue(self.frame) &gt;= BEST_SHARE * best:
-<span class="ln">109</span>                break
-<span class="ln">110</span>            percept = self.turn_left()
-<span class="ln">111</span>        over_tape, past = False, 0
-<span class="ln">112</span>        for _ in range(PUSHES):
-<span class="ln">113</span>            if self.cup_blocks(percept):
-<span class="ln">114</span>                return 'blocked'
-<span class="ln">115</span>            self.pulse(PUSH_PULSE, lambda elapsed: (PUSH_SPEED, PUSH_SPEED))
-<span class="ln">116</span>            percept = self.look()
-<span class="ln">117</span>            if on_lane(percept) and tape_close(self.frame):
-<span class="ln">118</span>                return 'found'
-<span class="ln">119</span>            at_bottom = lane_mask.blue_mask(self.frame)[int(BOTTOM_ROW * self.frame.shape[0]):].any()
-<span class="ln">120</span>            over_tape = over_tape or at_bottom
-<span class="ln">121</span>            past = past + 1 if over_tape and not at_bottom else 0
-<span class="ln">122</span>            if past &gt;= PAST_TAPE:
-<span class="ln">123</span>                break
-<span class="ln">124</span>        return 'again'
+<span class="ln">59</span>
+<span class="ln">60</span>class StopRecovery(Exception):
+<span class="ln">61</span>    """The run is over during the search: stopped by hand or time up (the text says which)"""
+<span class="ln">62</span>
+<span class="ln">63</span>
+<span class="ln">64</span>def on_lane(percept):
+<span class="ln">65</span>    """True if the robot stands well in the lane, pointing along it: at the border lane_found held, but the lane
+<span class="ln">66</span>    model then fell below 0.5 at the start of the drive (run avoid4_4)"""
+<span class="ln">67</span>    return lane_found(percept) and percept['lane_visible'] &gt;= SURE_LANE
+<span class="ln">68</span>
+<span class="ln">69</span>
+<span class="ln">70</span>def lane_back(percept):
+<span class="ln">71</span>    """True if the lane is seen again after the undo: the driving direction is known, so the two-line check (which a
+<span class="ln">72</span>    curve can fail) is not needed"""
+<span class="ln">73</span>    return percept['lane_visible'] &gt;= SURE_LANE and abs(percept['lane_x']) &lt; config.TURN_IN_CENTERED
+<span class="ln">74</span>
+<span class="ln">75</span>
+<span class="ln">76</span>def tape_row(frame):
+<span class="ln">77</span>    """Lowest image row with tape, 0 without tape: the lower, the nearer. Counting only the image's lower part gave 0
+<span class="ln">78</span>    in every direction away from the lane, and the robot wandered (run line2_3)"""
+<span class="ln">79</span>    rows = np.nonzero((lane_mask.blue_mask(frame) &gt; 0).sum(axis=1) &gt;= TAPE_ROW_PIXELS)[0]
+<span class="ln">80</span>    return int(rows[-1]) if len(rows) else 0
+<span class="ln">81</span>
+<span class="ln">82</span>
+<span class="ln">83</span>def tape_close(frame):
+<span class="ln">84</span>    """True if tape crosses the image's lower part: a distant lane also reads as found (run avoid4_5, known since v3_ccw_3)"""
+<span class="ln">85</span>    return len(lane_mask.line_centers(lane_mask.blue_mask(frame), NEAR_ROW)) &gt;= 1
+<span class="ln">86</span>
+<span class="ln">87</span>
+<span class="ln">88</span>def right_way(heading):
+<span class="ln">89</span>    """True if a heading (turn pulses, left positive) is within HEADING_WINDOW of the heading at the start, a full turn
+<span class="ln">90</span>    counting as none"""
+<span class="ln">91</span>    return abs((heading + PULSES_PER_TURN // 2) % PULSES_PER_TURN - PULSES_PER_TURN // 2) &lt;= HEADING_WINDOW
+<span class="ln">92</span>
+<span class="ln">93</span>
+<span class="ln">94</span>class FindLane(object):
+<span class="ln">95</span>    def __init__(self, perception, robot, camera, watchdog, battery):
+<span class="ln">96</span>        self.perception, self.robot, self.camera, self.watchdog, self.battery = perception, robot, camera, watchdog, battery
+<span class="ln">97</span>        self.frame = None
+<span class="ln">98</span>        self.out = None
+<span class="ln">99</span>        self.stops = 0
+<span class="ln">100</span>        self.heading = 0
+<span class="ln">101</span>        self.rows = []
+<span class="ln">102</span>        self.stage = ''
+<span class="ln">103</span>        self.deadline = None
+<span class="ln">104</span>        self.stop_event = None
+<span class="ln">105</span>        self.undos = 0
+<span class="ln">106</span>        self.last_undo = 0.0
+<span class="ln">107</span>
+<span class="ln">108</span>    def check_run(self):
+<span class="ln">109</span>        """Ends the search when the run is over, like the driving loop would"""
+<span class="ln">110</span>        if self.stop_event is not None and self.stop_event.is_set():
+<span class="ln">111</span>            raise StopRecovery('stopped by hand')
+<span class="ln">112</span>        if self.deadline is not None and time.time() &gt;= self.deadline:
+<span class="ln">113</span>            raise StopRecovery('time up')
+<span class="ln">114</span>
+<span class="ln">115</span>    def pulse(self, seconds, wheels):
+<span class="ln">116</span>        """Runs wheels(elapsed) -&gt; (left, right) for some seconds, then motors off"""
+<span class="ln">117</span>        since = time.time()
+<span class="ln">118</span>        while time.time() - since &lt; seconds:
+<span class="ln">119</span>            with self.watchdog.lock:
+<span class="ln">120</span>                self.robot.set_motors(*wheels(time.time() - since))
+<span class="ln">121</span>            self.watchdog.feed()
+<span class="ln">122</span>            self.frame = wait_for_new_frame(self.camera, self.frame)
+<span class="ln">123</span>        with self.watchdog.lock:
+<span class="ln">124</span>            self.robot.stop()
 <span class="ln">125</span>
-<span class="ln">126</span>    def run(self):
-<span class="ln">127</span>        """Searches for the lane. Returns 'found', 'blocked' or 'again' (not found)"""
-<span class="ln">128</span>        self.frame = wait_for_new_frame(self.camera, self.camera.value)
-<span class="ln">129</span>        self.out = os.path.join(DATASET_ROOT, time.strftime('%Y-%m-%d_%H-%M-%S') + '_find_lane')
-<span class="ln">130</span>        os.makedirs(self.out)
-<span class="ln">131</span>        self.stops = 0
-<span class="ln">132</span>        result = 'again'
-<span class="ln">133</span>        for number in range(ROUNDS):
-<span class="ln">134</span>            result = self.round()
-<span class="ln">135</span>            print('round %d: %s (%d stops)' % (number + 1, result, self.stops))
-<span class="ln">136</span>            if result != 'again':
-<span class="ln">137</span>                break
-<span class="ln">138</span>        return result
-<span class="ln">139</span>
-<span class="ln">140</span>
-<span class="ln">141</span>def main():
-<span class="ln">142</span>    battery = BatteryGuard()
-<span class="ln">143</span>    if not battery.start_ok():
-<span class="ln">144</span>        raise SystemExit('battery %.2f V is too low: charge first' % battery.volts)
-<span class="ln">145</span>    perception = Perception()
-<span class="ln">146</span>    robot = Robot()
-<span class="ln">147</span>    camera = Camera.instance()
-<span class="ln">148</span>    watchdog = MotorWatchdog(robot)
-<span class="ln">149</span>    finder = FindLane(perception, robot, camera, watchdog, battery)
-<span class="ln">150</span>    try:
-<span class="ln">151</span>        frame = wait_for_new_frame(camera, camera.value, timeout=2.0)
-<span class="ln">152</span>        for _ in range(WARMUP_FRAMES):
-<span class="ln">153</span>            frame = wait_for_new_frame(camera, frame)
-<span class="ln">154</span>            perception.observe(frame)
-<span class="ln">155</span>        watchdog.start()
-<span class="ln">156</span>        result = finder.run()
-<span class="ln">157</span>    except KeyboardInterrupt:
-<span class="ln">158</span>        result = 'stopped by hand'
-<span class="ln">159</span>    finally:
-<span class="ln">160</span>        watchdog.running = False
-<span class="ln">161</span>        with watchdog.lock:
-<span class="ln">162</span>            robot.stop()
-<span class="ln">163</span>        camera.stop()
-<span class="ln">164</span>    print('find_lane: %s, %d stops, frames in %s, battery %.2f V' % (result, finder.stops, finder.out, battery.volts))
-<span class="ln">165</span>    sys.exit(0 if result == 'found' else 1)
-<span class="ln">166</span>
-<span class="ln">167</span>
-<span class="ln">168</span>if __name__ == '__main__':
-<span class="ln">169</span>    main()</pre>
+<span class="ln">126</span>    def observe_next(self):
+<span class="ln">127</span>        self.frame = wait_for_new_frame(self.camera, self.frame)
+<span class="ln">128</span>        return self.perception.observe(self.frame)
+<span class="ln">129</span>
+<span class="ln">130</span>    def look(self):
+<span class="ln">131</span>        """Stands still, then returns what the models see now (saves the frame and one line for stops.csv)"""
+<span class="ln">132</span>        self.check_run()
+<span class="ln">133</span>        self.battery.check()
+<span class="ln">134</span>        time.sleep(SETTLE_SECONDS)
+<span class="ln">135</span>        self.frame = wait_for_new_frame(self.camera, self.camera.value)
+<span class="ln">136</span>        for _ in range(4):  # the obstacle and curve models run on every second frame
+<span class="ln">137</span>            percept = self.observe_next()
+<span class="ln">138</span>        cv2.imwrite(os.path.join(self.out, 'frame_%05d.jpg' % self.stops), self.frame)
+<span class="ln">139</span>        self.rows.append(dict(stop=self.stops, stage=self.stage, heading=self.heading,
+<span class="ln">140</span>                              lane_visible=round(percept['lane_visible'], 3), lane_x=round(percept['lane_x'], 3),
+<span class="ln">141</span>                              lane_aligned=int(percept['lane_aligned']), tape_row=tape_row(self.frame),
+<span class="ln">142</span>                              tape_close=int(tape_close(self.frame))))
+<span class="ln">143</span>        self.stops += 1
+<span class="ln">144</span>        return percept
+<span class="ln">145</span>
+<span class="ln">146</span>    def turn(self, direction):
+<span class="ln">147</span>        """One turn pulse, direction -1 left, +1 right, and a look"""
+<span class="ln">148</span>        def wheels(elapsed):
+<span class="ln">149</span>            spin = direction * turn_speed(elapsed)
+<span class="ln">150</span>            return spin, -spin
+<span class="ln">151</span>        self.pulse(TURN_PULSE, wheels)
+<span class="ln">152</span>        self.heading -= direction
+<span class="ln">153</span>        return self.look()
+<span class="ln">154</span>
+<span class="ln">155</span>    def confirmed(self, test, percept):
+<span class="ln">156</span>        """True if the test holds for this look and the next CONFIRM_FRAMES frames"""
+<span class="ln">157</span>        if not (test(percept) and tape_close(self.frame)):
+<span class="ln">158</span>            return False
+<span class="ln">159</span>        return all(test(self.observe_next()) and tape_close(self.frame) for _ in range(CONFIRM_FRAMES))
+<span class="ln">160</span>
+<span class="ln">161</span>    def cup_blocks(self, percept):
+<span class="ln">162</span>        return any(band_cm(band) &lt;= CUP_STOP_CM and abs(band[0]) &lt; CUP_STOP_X for band in percept['cup_bands'])
+<span class="ln">163</span>
+<span class="ln">164</span>    def undo(self, history):
+<span class="ln">165</span>        """Drives the last UNDO_SECONDS of commands backwards, newest first, until the lane is seen again. True if found"""
+<span class="ln">166</span>        self.stage = 'undo'
+<span class="ln">167</span>        remaining = UNDO_SECONDS
+<span class="ln">168</span>        for dt, left, right in reversed(list(history)):
+<span class="ln">169</span>            if remaining &lt;= 0.0:
+<span class="ln">170</span>                break
+<span class="ln">171</span>            remaining -= dt
+<span class="ln">172</span>            with self.watchdog.lock:
+<span class="ln">173</span>                self.robot.set_motors(-left, -right)
+<span class="ln">174</span>            self.watchdog.feed()
+<span class="ln">175</span>            if lane_back(self.observe_next()) and tape_close(self.frame):
+<span class="ln">176</span>                break
+<span class="ln">177</span>        with self.watchdog.lock:
+<span class="ln">178</span>            self.robot.stop()
+<span class="ln">179</span>        return self.confirmed(lane_back, self.look())
+<span class="ln">180</span>
+<span class="ln">181</span>    def sweep(self, side):
+<span class="ln">182</span>        """Turns about 100 degrees to each side, first to `side` (-1 left, +1 right), and back. True if found"""
+<span class="ln">183</span>        self.stage = 'sweep'
+<span class="ln">184</span>        for direction, pulses in ((side, SWEEP_PULSES), (-side, 2 * SWEEP_PULSES), (side, SWEEP_PULSES)):
+<span class="ln">185</span>            for _ in range(pulses):
+<span class="ln">186</span>                if self.confirmed(on_lane, self.turn(direction)):
+<span class="ln">187</span>                    return True
+<span class="ln">188</span>        return False
+<span class="ln">189</span>
+<span class="ln">190</span>    def accepted(self, percept, any_way):
+<span class="ln">191</span>        """'search' or 'search_any' if the lane is found here, else None. The wrong way along it counts only if any_way"""
+<span class="ln">192</span>        if not any_way and not right_way(self.heading):
+<span class="ln">193</span>            return None
+<span class="ln">194</span>        if not self.confirmed(on_lane, percept):
+<span class="ln">195</span>            return None
+<span class="ln">196</span>        return 'search' if right_way(self.heading) else 'search_any'
+<span class="ln">197</span>
+<span class="ln">198</span>    def search_round(self, any_way):
+<span class="ln">199</span>        """One scan and one push across the nearest tape. Returns a result of run(), or 'again'"""
+<span class="ln">200</span>        self.stage = 'search'
+<span class="ln">201</span>        amounts = []  # lowest tape row after each pulse of the scan
+<span class="ln">202</span>        for _ in range(PULSES_PER_TURN):
+<span class="ln">203</span>            percept = self.turn(-1)
+<span class="ln">204</span>            found = self.accepted(percept, any_way)
+<span class="ln">205</span>            if found:
+<span class="ln">206</span>                return found
+<span class="ln">207</span>            amounts.append(0 if self.cup_blocks(percept) else tape_row(self.frame))  # never head for a cup
+<span class="ln">208</span>        best = max(amounts)
+<span class="ln">209</span>        left = amounts.index(best) + 1  # pulses to the left from the end of the scan (a full turn: back at its start)
+<span class="ln">210</span>        direction, steps = (-1, left) if left &lt;= PULSES_PER_TURN - left else (1, PULSES_PER_TURN - left)
+<span class="ln">211</span>        for _ in range(steps):
+<span class="ln">212</span>            percept = self.turn(direction)
+<span class="ln">213</span>        for _ in range(NUDGES):
+<span class="ln">214</span>            if tape_row(self.frame) &gt;= best - TAPE_SLACK:
+<span class="ln">215</span>                break
+<span class="ln">216</span>            percept = self.turn(direction)
+<span class="ln">217</span>        over_tape, past = False, 0
+<span class="ln">218</span>        for _ in range(PUSHES):
+<span class="ln">219</span>            if self.cup_blocks(percept):  # a cup came into view on the way: the next round picks another heading
+<span class="ln">220</span>                break
+<span class="ln">221</span>            self.pulse(PUSH_PULSE, lambda elapsed: (PUSH_SPEED, PUSH_SPEED))
+<span class="ln">222</span>            percept = self.look()
+<span class="ln">223</span>            found = self.accepted(percept, any_way)
+<span class="ln">224</span>            if found:
+<span class="ln">225</span>                return found
+<span class="ln">226</span>            at_bottom = lane_mask.blue_mask(self.frame)[int(BOTTOM_ROW * self.frame.shape[0]):].any()
+<span class="ln">227</span>            over_tape = over_tape or at_bottom
+<span class="ln">228</span>            past = past + 1 if over_tape and not at_bottom else 0
+<span class="ln">229</span>            if past &gt;= PAST_TAPE:
+<span class="ln">230</span>                break
+<span class="ln">231</span>        return 'again'
+<span class="ln">232</span>
+<span class="ln">233</span>    def stages(self, history, side):
+<span class="ln">234</span>        """Tries undo, sweep and search in turn. Returns a result: FOUND or 'again'"""
+<span class="ln">235</span>        now = time.time()
+<span class="ln">236</span>        if now - self.last_undo &gt; UNDO_RESET:
+<span class="ln">237</span>            self.undos = 0
+<span class="ln">238</span>        if history and self.undos &lt; UNDO_TRIES:
+<span class="ln">239</span>            self.undos += 1
+<span class="ln">240</span>            self.last_undo = now
+<span class="ln">241</span>            if self.undo(history):
+<span class="ln">242</span>                return 'undo'
+<span class="ln">243</span>        if side != 0 and self.sweep(side):
+<span class="ln">244</span>            return 'sweep'
+<span class="ln">245</span>        result = 'again'
+<span class="ln">246</span>        for number in range(ROUNDS):
+<span class="ln">247</span>            result = self.search_round(any_way=number == ROUNDS - 1)
+<span class="ln">248</span>            if result != 'again':
+<span class="ln">249</span>                break
+<span class="ln">250</span>        return result
+<span class="ln">251</span>
+<span class="ln">252</span>    def run(self, history=(), side=0, deadline=None, stop_event=None):
+<span class="ln">253</span>        """Finds the lane. history: recent (dt, left, right) wheel commands, empty when undoing them makes no sense;
+<span class="ln">254</span>        side: where the lane should be (-1 left, +1 right, 0 unknown: no sweep); deadline: time.time() at which the run
+<span class="ln">255</span>        ends. Returns a result (FOUND or 'again'); raises StopRecovery when the run ends meanwhile"""
+<span class="ln">256</span>        self.deadline, self.stop_event = deadline, stop_event
+<span class="ln">257</span>        self.frame = wait_for_new_frame(self.camera, self.camera.value)
+<span class="ln">258</span>        self.out = os.path.join(DATASET_ROOT, time.strftime('%Y-%m-%d_%H-%M-%S') + '_find_lane')
+<span class="ln">259</span>        os.makedirs(self.out, exist_ok=True)
+<span class="ln">260</span>        self.stops, self.heading, self.rows = 0, 0, []
+<span class="ln">261</span>        try:
+<span class="ln">262</span>            result = self.stages(history, side)
+<span class="ln">263</span>        finally:
+<span class="ln">264</span>            with open(os.path.join(self.out, 'stops.csv'), 'w') as f:
+<span class="ln">265</span>                writer = csv.DictWriter(f, STOP_COLUMNS)
+<span class="ln">266</span>                writer.writeheader()
+<span class="ln">267</span>                writer.writerows(self.rows)
+<span class="ln">268</span>        print('line recovery: %s after %d stops' % (result, self.stops))
+<span class="ln">269</span>        return result
+<span class="ln">270</span>
+<span class="ln">271</span>
+<span class="ln">272</span>def main():
+<span class="ln">273</span>    from jetbot import Camera, Robot
+<span class="ln">274</span>    from perception import Perception
+<span class="ln">275</span>
+<span class="ln">276</span>    battery = BatteryGuard()
+<span class="ln">277</span>    if not battery.start_ok():
+<span class="ln">278</span>        raise SystemExit('battery %.2f V is too low: charge first' % battery.volts)
+<span class="ln">279</span>    perception = Perception()
+<span class="ln">280</span>    robot = Robot()
+<span class="ln">281</span>    camera = Camera.instance()
+<span class="ln">282</span>    watchdog = MotorWatchdog(robot)
+<span class="ln">283</span>    finder = FindLane(perception, robot, camera, watchdog, battery)
+<span class="ln">284</span>    try:
+<span class="ln">285</span>        frame = wait_for_new_frame(camera, camera.value, timeout=2.0)
+<span class="ln">286</span>        for _ in range(WARMUP_FRAMES):
+<span class="ln">287</span>            frame = wait_for_new_frame(camera, frame)
+<span class="ln">288</span>            perception.observe(frame)
+<span class="ln">289</span>        watchdog.start()
+<span class="ln">290</span>        result = finder.run()
+<span class="ln">291</span>    except KeyboardInterrupt:
+<span class="ln">292</span>        result = 'stopped by hand'
+<span class="ln">293</span>    finally:
+<span class="ln">294</span>        watchdog.running = False
+<span class="ln">295</span>        with watchdog.lock:
+<span class="ln">296</span>            robot.stop()
+<span class="ln">297</span>        camera.stop()
+<span class="ln">298</span>    print('find_lane: %s, %d stops, frames in %s, battery %.2f V' % (result, finder.stops, finder.out, battery.volts))
+<span class="ln">299</span>    sys.exit(0 if result in FOUND else 1)
+<span class="ln">300</span>
+<span class="ln">301</span>
+<span class="ln">302</span>if __name__ == '__main__':
+<span class="ln">303</span>    main()</pre>
 </div>
 <div class="srcfile">
   <h3>config.py <span class="fn">128 lines</span></h3>
