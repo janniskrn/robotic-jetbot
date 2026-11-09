@@ -136,7 +136,8 @@ class Decision(object):
         self.phase_since = 0.0
         self.edge_angle = None    # last tape angle seen in the turn out
         self.turn_cup_x = None    # last x of the cup in the turn out
-        self.cup_beside = False   # the curve is paused: the cup is in view on the side it bends to
+        self.go_straight = False  # the curve is paused: the cup is in view on the side it bends to, or it took long
+        self.tape_under = False   # the lane's border has been under the robot's nose during the curve
         self.stop_phase = STOP_PHASES[0]
         self.backed = False       # backed up once in this stop
         self.curve_sum = 0.0      # sum of curve_dir in curves: negative = curves turn left = counterclockwise
@@ -149,13 +150,13 @@ class Decision(object):
 
     def avoid_action(self):
         """What the wheels do in this swerve phase: the phase, or 'pass' while the curve is paused for the cup"""
-        return 'pass' if self.avoid_phase == 'arc' and self.cup_beside else self.avoid_phase
+        return 'pass' if self.avoid_phase == 'arc' and self.go_straight else self.avoid_phase
 
     def enter(self, state, now):
         self.state, self.state_since = state, now
         if state == OBSTACLE_AVOIDANCE:
             self.avoid_phase, self.phase_since, self.edge_angle = AVOID_PHASES[0], now, None
-            self.turn_cup_x, self.cup_beside = None, False
+            self.turn_cup_x, self.go_straight, self.tape_under = None, False, False
         if state == STOP:
             self.stop_phase, self.phase_since, self.backed = STOP_PHASES[0], now, False
 
@@ -209,14 +210,17 @@ class Decision(object):
             if cup_in_the_way(band):
                 self.enter(HALT, now)
                 return
-            self.cup_beside = cup_beside_curve(band, toward)
+            self.go_straight = cup_beside_curve(band, toward) or elapsed >= config.ARC_STRAIGHT_AFTER
+            under = percept['tape_row'] >= config.TAPE_UNDER_ROW
+            self.tape_under = self.tape_under or (under and elapsed >= config.ARC_MIN)  # at the start it is the old lane
+            crossed = self.tape_under and percept['tape_row'] < config.TAPE_PAST_ROW
             # the lane found means inside the lane; without it, the edge ahead looks horizontal or leaves the image close
             # to the lane (run avoid4_1: last seen at +17, then the far border was reached, avoid4_2)
-            done = (elapsed >= config.ARC_LONGEST
+            done = (crossed
                     or (elapsed >= config.ARC_LANE_MIN and lane_found(percept, config.TURN_IN_CENTERED))
                     or (elapsed >= config.ARC_MIN and (reached_horizontal(angle, -toward, config.ARC_EARLY)
                                                        or edge_left_view(self.edge_angle, angle, -toward))))
-            limit = config.ARC_LONGEST
+            limit = config.ARC_MAX
             self.edge_angle = angle
         else:  # the curve ends at the lane's edge: ROAD_RECOVERY brings the robot to the center
             done = elapsed >= config.TURN_IN_MIN and lane_found(percept, config.TURN_IN_CENTERED)

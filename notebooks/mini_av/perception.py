@@ -54,7 +54,7 @@ class Perception(object):
         curve_dir (-1 left .. 1 right), curve_class, cup_visible (probability), cup_row (lower edge of the cup's
         band, 0 top .. 1 bottom), cup_x (-1..1), inference_ms;
         from the color masks: lane_aligned (True/False), tape_angle (degrees, 0 = horizontal, None without a large
-        tape piece), cup_bands (every red band as (x -1..1, lower edge row 0..1, pixels), nearest first)"""
+        tape piece), tape_row (lowest row with tape 0..1, 0 without tape), cup_bands (every red band as (x -1..1, lower edge row 0..1, pixels), nearest first)"""
         start = time.time()
         image = preprocess(frame).unsqueeze(0).cuda().half()
         lane = self.lane_model(image)[0].float()
@@ -79,6 +79,7 @@ class Perception(object):
             'cup_x': cup[2],
             'lane_aligned': lane_mask.lane_aligned(frame),
             'tape_angle': lane_mask.tape_angle(frame),
+            'tape_row': lane_mask.tape_row(frame) / float(height),
             'cup_bands': [(x / (width / 2.0) - 1.0, row / float(height), pixels)
                           for x, row, pixels in cup_mask.find_cups(frame)],
             'inference_ms': (time.time() - start) * 1000.0,

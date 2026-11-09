@@ -2,14 +2,14 @@
 
     python3 find_lane.py     # the full search alone, for a robot put down off the lane
 
-    1. undo: drive the last second of wheel commands backwards. The lane was seen about 15 cm before it was lost (all 8
+    1. undo: drive the last 1.5 s of wheel commands backwards. The lane was seen about 15 cm before it was lost (all 8
        losses up to 2026-11-08) and the robot keeps its driving direction. Only right after following, at most twice in
        a row.
     2. sweep: turn about 100 degrees to each side, first toward where the lane should be.
     3. search, in small steps with the motors off between them: turn one full turn looking for the lane; not found: turn
-       the shorter way to the nearest tape and drive across it, into the lane, then the next round. A lane more than
-       about 130 degrees from the heading at the start of the search is the wrong way along it and only counts in the
-       last round. No forward pulse with a cup close ahead: that heading is skipped.
+       the shorter way to the nearest tape and drive across it, into the lane, then the next round. Right after following,
+       a lane more than about 130 degrees from the heading at the start of the search is the wrong way along it and only
+       counts in the last round. No forward pulse with a cup close ahead: that heading is skipped.
 
 Saves every stop and a stops.csv to usb/images/datasets/<time>_find_lane. Run inside the container.
 """
@@ -20,7 +20,6 @@ import sys
 import time
 
 import cv2
-import numpy as np
 
 import config
 import lane_mask
@@ -29,14 +28,16 @@ from decision import band_cm, lane_found
 from recorder import DATASET_ROOT
 from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
 
-UNDO_SECONDS = 1.0    # seconds of wheel commands driven backwards
+UNDO_SECONDS = 1.5    # seconds of wheel commands driven backwards (1.0 fell short when the lane was left in a wide turn)
+UNDO_SURE = 0.6       # lane model value that counts as the lane back after the undo: 0.63 was the lane, one small turn
+                      # later it read 0.97 (undo test 2026-11-09)
 UNDO_TRIES = 2        # undos in a row before the robot looks around instead: the same curve may lose the lane again
 UNDO_RESET = 5.0      # seconds after an undo from which the count of undos starts anew
 TURN_PULSE = 0.15     # seconds of one turn pulse (kick plus a little)
 PULSES_PER_TURN = 22  # turn pulses for one full turn: 19-25 measured, 2026-11-08
 SWEEP_PULSES = 6      # turn pulses to each side in the sweep, about 100 degrees
 HEADING_WINDOW = 7    # turn pulses from the heading at the start within which a found lane counts as the right way
-PUSH_PULSE = 0.3      # seconds of one forward pulse
+PUSH_PULSE = 0.4      # seconds of one forward pulse (out on the floor the next tape can be a meter away)
 PUSH_SPEED = 0.33     # wheel speed forward
 PUSHES = 10           # forward pulses per round at most
 PAST_TAPE = 3         # forward pulses after the tape has left the image's lower edge: into the lane
@@ -47,7 +48,6 @@ CUP_STOP_CM = 25.0    # no forward pulse with a cup this close in the middle of 
 CUP_STOP_X = 0.5
 NEAR_ROW = 0.8        # fraction of the image height at which tape must be seen: close to the robot
 SURE_LANE = 0.9       # lane model value that counts as standing well in the lane
-TAPE_ROW_PIXELS = 5   # blue pixels in an image row that count as tape in that row
 TAPE_SLACK = 8        # image rows above the scan's lowest tape that still count as the heading of the nearest tape
 NUDGES = 4            # extra turn pulses to reach that heading (the pulses are uneven)
 BOTTOM_ROW = 0.93     # fraction of the image height from which tape counts as at the robot's nose
@@ -70,14 +70,7 @@ def on_lane(percept):
 def lane_back(percept):
     """True if the lane is seen again after the undo: the driving direction is known, so the two-line check (which a
     curve can fail) is not needed"""
-    return percept['lane_visible'] >= SURE_LANE and abs(percept['lane_x']) < config.TURN_IN_CENTERED
-
-
-def tape_row(frame):
-    """Lowest image row with tape, 0 without tape: the lower, the nearer. Counting only the image's lower part gave 0
-    in every direction away from the lane, and the robot wandered (run line2_3)"""
-    rows = np.nonzero((lane_mask.blue_mask(frame) > 0).sum(axis=1) >= TAPE_ROW_PIXELS)[0]
-    return int(rows[-1]) if len(rows) else 0
+    return percept['lane_visible'] >= UNDO_SURE and abs(percept['lane_x']) < config.TURN_IN_CENTERED
 
 
 def tape_close(frame):
@@ -104,6 +97,7 @@ class FindLane(object):
         self.stop_event = None
         self.undos = 0
         self.last_undo = 0.0
+        self.direction_known = False  # the heading at the start of the search is along the lane
 
     def check_run(self):
         """Ends the search when the run is over, like the driving loop would"""
@@ -138,7 +132,7 @@ class FindLane(object):
         cv2.imwrite(os.path.join(self.out, 'frame_%05d.jpg' % self.stops), self.frame)
         self.rows.append(dict(stop=self.stops, stage=self.stage, heading=self.heading,
                               lane_visible=round(percept['lane_visible'], 3), lane_x=round(percept['lane_x'], 3),
-                              lane_aligned=int(percept['lane_aligned']), tape_row=tape_row(self.frame),
+                              lane_aligned=int(percept['lane_aligned']), tape_row=lane_mask.tape_row(self.frame),
                               tape_close=int(tape_close(self.frame))))
         self.stops += 1
         return percept
@@ -189,11 +183,10 @@ class FindLane(object):
 
     def accepted(self, percept, any_way):
         """'search' or 'search_any' if the lane is found here, else None. The wrong way along it counts only if any_way"""
-        if not any_way and not right_way(self.heading):
+        way_known = self.direction_known and right_way(self.heading)
+        if not (any_way or way_known) or not self.confirmed(on_lane, percept):
             return None
-        if not self.confirmed(on_lane, percept):
-            return None
-        return 'search' if right_way(self.heading) else 'search_any'
+        return 'search' if way_known else 'search_any'
 
     def search_round(self, any_way):
         """One scan and one push across the nearest tape. Returns a result of run(), or 'again'"""
@@ -204,14 +197,16 @@ class FindLane(object):
             found = self.accepted(percept, any_way)
             if found:
                 return found
-            amounts.append(0 if self.cup_blocks(percept) else tape_row(self.frame))  # never head for a cup
+            amounts.append(0 if self.cup_blocks(percept) else lane_mask.tape_row(self.frame))  # never head for a cup
         best = max(amounts)
+        if best == 0:  # no tape in any direction: never drive blind (run line3_1 reached the wall)
+            return 'again'
         left = amounts.index(best) + 1  # pulses to the left from the end of the scan (a full turn: back at its start)
         direction, steps = (-1, left) if left <= PULSES_PER_TURN - left else (1, PULSES_PER_TURN - left)
         for _ in range(steps):
             percept = self.turn(direction)
         for _ in range(NUDGES):
-            if tape_row(self.frame) >= best - TAPE_SLACK:
+            if lane_mask.tape_row(self.frame) >= best - TAPE_SLACK:
                 break
             percept = self.turn(direction)
         over_tape, past = False, 0
@@ -223,6 +218,8 @@ class FindLane(object):
             found = self.accepted(percept, any_way)
             if found:
                 return found
+            if not over_tape and lane_mask.tape_row(self.frame) == 0:  # the tape it was heading for is out of view
+                break
             at_bottom = lane_mask.blue_mask(self.frame)[int(BOTTOM_ROW * self.frame.shape[0]):].any()
             over_tape = over_tape or at_bottom
             past = past + 1 if over_tape and not at_bottom else 0
@@ -243,15 +240,16 @@ class FindLane(object):
         if side != 0 and self.sweep(side):
             return 'sweep'
         result = 'again'
+        self.direction_known = bool(history)
         for number in range(ROUNDS):
-            result = self.search_round(any_way=number == ROUNDS - 1)
+            result = self.search_round(any_way=not history or number == ROUNDS - 1)
             if result != 'again':
                 break
         return result
 
     def run(self, history=(), side=0, deadline=None, stop_event=None):
         """Finds the lane. history: recent (dt, left, right) wheel commands, empty when undoing them makes no sense;
-        side: where the lane should be (-1 left, +1 right, 0 unknown: no sweep); deadline: time.time() at which the run
+        side: where the lane should be (-1 left, +1 right, 0: no sweep); deadline: time.time() at which the run
         ends. Returns a result (FOUND or 'again'); raises StopRecovery when the run ends meanwhile"""
         self.deadline, self.stop_event = deadline, stop_event
         self.frame = wait_for_new_frame(self.camera, self.camera.value)

@@ -40,7 +40,7 @@ def phase_done(name, elapsed, angle, found):
     """True when the phase has reached its camera mark; raises RuntimeError when it took too long"""
     if name == 'hold':
         return elapsed >= HOLD_SECONDS
-    if elapsed >= {'out': config.TURN_OUT_MAX, 'arc': config.ARC_LONGEST, 'in': config.TURN_IN_MAX}[name]:
+    if elapsed >= {'out': config.TURN_OUT_MAX, 'arc': config.ARC_MAX, 'in': config.TURN_IN_MAX}[name]:
         raise RuntimeError('%s took too long' % name)
     if name == 'out':
         return reached_horizontal(angle, -1, config.TURN_EARLY)

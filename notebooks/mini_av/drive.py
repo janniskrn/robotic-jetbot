@@ -119,7 +119,8 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                     robot.stop()
                 # where the lane should be: the way the curve bends, else where it was last seen
                 turn = percept['curve_dir'] if abs(percept['curve_dir']) >= config.FEEDFORWARD_MIN_DIR else last_lane_x
-                result = finder.run(history if previous_state in FOLLOWING else (), -1 if turn < 0 else 1,
+                followed = previous_state in FOLLOWING  # the lane is near: undo and sweep make sense
+                result = finder.run(history if followed else (), (-1 if turn < 0 else 1) if followed else 0,
                                     start + seconds, stop_event)
                 log.step(time=now - start, dt=dt, mode=LINE_RECOVERY, phase=result)
                 last = time.time()

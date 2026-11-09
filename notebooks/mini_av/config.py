@@ -118,8 +118,13 @@ ARC_LANE_MIN = 2.5         # seconds of curve before the lane found ends it: it 
 ARC_MIN = 1.0              # seconds the curve lasts at least (it starts with the lane edge horizontal ahead)
 ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends (facing the lane again):
                            # it turns slower than a spin in place, so it overshoots less
-ARC_LONGEST = 3.9          # seconds after which the curve ends even without a mark: the good curves took 2.3-3.7 s (run
-                           # avoid4_7), longer it reached the far border of the lane (avoid4_2, avoid4_8)
+TAPE_UNDER_ROW = 215 / 224.0  # the lane's border counts as under the robot's nose when the lowest tape in the image reaches
+                              # this row
+TAPE_PAST_ROW = 175 / 224.0   # and as crossed when the lowest tape is back above this row: the good curves ended right after
+                              # that (18 of 19 recorded curves with a crossing, within 0.5 s); the curves that failed had not reached the tape yet
+ARC_STRAIGHT_AFTER = 3.5   # seconds after which the robot drives straight instead of curving, if the tape was not crossed:
+                           # started near a curve of the track, the curve would only circle on the open floor
+ARC_MAX = 8.0              # seconds the curve may take in all before the lane counts as lost
 RECOVER_SPEED = 0.31       # forward speed while looking for the lane (the slowest that moves the robot)
 RECOVER_TURN = 0.04        # gentle turn toward the lane while it is not seen yet
 RECOVER_CENTERED = 0.15    # |lane_x| below which the lane counts as found (and the lane mask must see the robot

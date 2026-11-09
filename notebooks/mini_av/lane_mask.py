@@ -21,6 +21,7 @@ LOOKAHEAD_ROW = 0.65  # row, as a fraction of the height, where the lane center 
 BAND_HALF = 5         # rows above and below the lookahead row that are combined
 MIN_GAP = 12          # pixels between two tape pieces that make them separate lines
 LANE_WIDTH = 162      # lane width in pixels at the lookahead row, measured on a straight (224x224 image)
+TAPE_ROW_PIXELS = 5   # blue pixels in an image row that count as tape in that row
 MAX_LINE_WIDTH = 50   # wider tape pieces are a line crossing the row sideways (sharp curve), not a lane edge
 NEAR_OFFSET = 0.15    # second, closer row used to see which way a single line leans
 ALIGNED_GAP = (0.6, 1.4)  # gap between the outer lines, as a fraction of LANE_WIDTH, for an aligned robot
@@ -34,6 +35,12 @@ def blue_mask(bgr):
     mask = cv2.inRange(hsv, (HUE_MIN, SAT_MIN, VAL_MIN), (HUE_MAX, 255, 255))
     mask[:int(ROI_TOP * mask.shape[0])] = 0
     return mask
+
+
+def tape_row(bgr):
+    """Lowest image row with tape, 0 without tape: the lower, the nearer"""
+    rows = np.nonzero((blue_mask(bgr) > 0).sum(axis=1) >= TAPE_ROW_PIXELS)[0]
+    return int(rows[-1]) if len(rows) else 0
 
 
 def line_centers(mask, row_frac=LOOKAHEAD_ROW):

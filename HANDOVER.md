@@ -13,8 +13,7 @@ The cup-referenced swerve, the recognition fixes and the distance from the band'
 swerves came back to the road (whether a cup was touched was not observed). New state `LINE_RECOVERY` (`LINE1`,
 `find_lane.py`). Uncommitted 2026-11-09: `LINE2` staged recovery (undo, sweep, search). Track: 14 of 18 swerves
 back on the road (runs `line2_1`, `_3`, `_4`, `_5`); undo not yet exercised (no lane loss while following); 0 of 4 recoveries after a failed
-swerve found the lane (1 cut by the time limit, 1 stopped at a cup, fixed; 2 ran about 110 s), 3 of 3 from the start of a run. Open: 3 of the 4 failed swerves hit the
-3.9 s curve limit without a mark; the recovery from open floor; cups entering the lane late (curve exit) trigger at 21-25 cm; the sharp-curve lane loss.
+swerve found the lane (1 cut by the time limit, 1 stopped at a cup, fixed; 2 ran about 110 s), 3 of 3 from the start of a run. Later the same day: the curve ends when the border was crossed, straight after 3.5 s (run `line3_1`: 2 of 3 swerves, too few to judge). Undo tested on purpose once (back at lane 0.63, then the sweep found it in 2.5 s; a 2.1 s drive-off needed the search); after that it was relaxed to 1.5 s and not re-tested. Open: the search from open floor (1 of 3 full searches failed, a run after a failed turn back found nothing in 100 s and drove to the wall, the forward pushes now stop without tape); cups entering the lane late (curve exit) trigger at 21-25 cm; the sharp-curve lane loss.
 
 ## Where we are
 
