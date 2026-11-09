@@ -405,7 +405,7 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>status</i>where the project stands</div>
-    <h1 class="sh">Week 1 drives. Week 2 waits on tape.</h1>
+    <h1 class="sh">Where the project stands</h1>
     <div class="spacer" style="flex:.3"></div>
     <div class="board" style="flex:none">
       <div class="brow s-built"><span class="bn">W1</span><span class="bt">1 · Adaptive lane following</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">driven 60 s</span></div>
@@ -425,7 +425,7 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>status</i>what we did since the last demonstration</div>
-    <h2 class="sh">Four swerves failed. We found out why.</h2>
+    <h2 class="sh">Work completed since the last demonstration</h2>
     <div class="spacer" style="flex:.3"></div>
     <div class="week" style="flex:none">
       <div class="wday bad">
@@ -458,7 +458,7 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>i</i>total architecture of the code</div>
-    <h2 class="sh">Three layers, one direction, one file at the motors</h2>
+    <h2 class="sh">Code architecture: three layers and the driving loop</h2>
     <div class="spacer" style="flex:.15"></div>
     <figure style="flex:none">
       <svg viewBox="0 0 560 236" style="max-height:24cqw" role="img" aria-label="Perception, decision and control inside the driving loop, config underneath, motors outside">
@@ -530,7 +530,7 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>i</i>total architecture of the code</div>
-    <h2 class="sh">What happens inside one camera frame</h2>
+    <h2 class="sh">Inference and control loop (per-frame)</h2>
     <div class="spacer" style="flex:.3"></div>
     <div class="pipe" style="flex:none">
       <div class="pstep"><span class="pn">1 · camera</span><span class="pt">Frame</span><span class="pd">224 by 224 pixels, about 21 per second</span></div>
@@ -550,7 +550,7 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · drive.py</div>
-    <h2 class="sh">The loop: one frame in, two wheel speeds out</h2>
+    <h2 class="sh">Main control loop: drive.py</h2>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">drive.py · run() · lines 96 to 168, shortened</div>
@@ -615,7 +615,7 @@ finally:
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · perception.py</div>
-    <h2 class="sh">Models recognize, color masks measure</h2>
+    <h2 class="sh">Perception layer: three models, two color masks</h2>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">perception.py · observe() · lines 59 to 83, shortened</div>
@@ -652,7 +652,7 @@ finally:
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · the state machine</div>
-    <h2 class="sh">Six states, and four phases inside the swerve</h2>
+    <h2 class="sh">State machine: six states and the avoidance phases</h2>
     <div class="spacer" style="flex:.15"></div>
     <figure class="wide" style="flex:none">
       <div class="fl">Driving across the top, stop mode and the ending below</div>
@@ -709,7 +709,7 @@ finally:
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · decision.py</div>
-    <h2 class="sh">Priority is the order of the branches</h2>
+    <h2 class="sh">Decision layer: priority order in decision.py</h2>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">decision.py · update() · lines 164 to 218, shortened</div>
@@ -771,7 +771,7 @@ def cup_close(percept):
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · control.py</div>
-    <h2 class="sh">Every term of the steering came from a failure</h2>
+    <h2 class="sh">Control layer: PD steering and adaptive speed</h2>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">control.py · update() and wheels() · lines 71 to 142, shortened</div>
@@ -808,7 +808,7 @@ def cup_close(percept):
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · config.py and safety.py</div>
-    <h2 class="sh">No magic numbers, and four guards that cannot be skipped</h2>
+    <h2 class="sh">Configuration constants and safety guards</h2>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">config.py · 5 of 107 values</div>
@@ -837,7 +837,7 @@ MIN_START_VOLTAGE = 11.4  <span class="c"># volts at rest (about 50 %) needed to
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · the learning pipeline</div>
-    <h2 class="sh">How a model is made, and how it earns the right to drive</h2>
+    <h2 class="sh">Model training pipeline and offline validation</h2>
     <div class="spacer" style="flex:.2"></div>
     <div class="pipe" style="flex:none">
       <div class="pstep"><span class="pn">1 · record</span><span class="pt">auto_record.py</span><span class="pd">The robot drives itself on the color mask and records. No hand driving</span></div>
@@ -861,7 +861,7 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>iv</i>results · the models</div>
-    <h2 class="sh">What the three models get right, and where they are weak</h2>
+    <h2 class="sh">Perception model performance and known limitations</h2>
     <div class="spacer" style="flex:.3"></div>
     <div class="models" style="flex:none">
       <div class="model">
@@ -893,7 +893,7 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>iv</i>results · task 1</div>
-    <h2 class="sh">Our control layer drove 60 s in both directions</h2>
+    <h2 class="sh">Task 1 results: adaptive lane following, 60 s runs</h2>
     <div class="spacer" style="flex:.25"></div>
     <div class="bars" style="flex:none">
       <div class="bar lost"><span class="bl">stock, cw</span><span class="track"><i class="fill f-base" style="width:34.2%"></i></span><span class="bv">20.5 s</span></div>
@@ -913,7 +913,7 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
 <section>
   <div class="slide"><div class="inner" style="gap:1.1cqw">
     <div class="gl"><i>iv</i>results · task 2, the stop</div>
-    <h2 class="sh" style="max-width:38ch">Stopping in front of a cup <span class="tag t-run">3 runs, 35 to 40 cm</span></h2>
+    <h2 class="sh" style="max-width:38ch">Obstacle detection and distance-gated stop <span class="tag t-run">3 runs, 35 to 40 cm</span></h2>
     <div class="spacer" style="flex:.1"></div>
     <figure class="wide" style="flex:none">
       <div class="fl">What the robot sees · rows of the 224 pixel image</div>
@@ -955,7 +955,7 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>iv</i>results · task 2, the swerve</div>
-    <h2 class="sh">Around the cup <span class="tag t-test">5 of 9 on the track</span></h2>
+    <h2 class="sh">Obstacle circumvention and lane recovery <span class="tag t-test">5 of 9 on the track</span></h2>
     <div class="spacer" style="flex:.15"></div>
     <figure class="wide" style="flex:none">
       <div class="fl">The intended path · top view, inside of the oval</div>
@@ -997,7 +997,7 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>iv</i>results · failures and their causes</div>
-    <h2 class="sh">Four failures, and what each one taught us</h2>
+    <h2 class="sh">Root cause analysis and anomaly resolutions</h2>
     <div class="spacer" style="flex:.2"></div>
     <div class="chains" style="flex:none">
       <div class="chain">
@@ -1030,7 +1030,7 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>v</i>next plan, from the results and the bugs</div>
-    <h2 class="sh">What we do before the next demonstration</h2>
+    <h2 class="sh">Next plan and pass criteria</h2>
     <div class="spacer" style="flex:.25"></div>
     <div class="steps" style="flex:none">
       <div class="step"><span class="sq"></span><span class="st">Teach the distances: photograph a cup at 20, 30, 40, 50 and 60 cm</span><span class="sp">pass: a row to centimetre table, checked against the stop row in config.py</span></div>

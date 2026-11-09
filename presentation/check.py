@@ -82,14 +82,16 @@ def check_code_blocks(page):
     for match in re.finditer(r'<pre[^>]*>(.*?)</pre>', page, re.S):
         block = match.group(1)
         lines = block.split('\n')
-        # the file is named either in the caption above the block or in its first comment line
-        named = re.search(r'([\w.]+\.py)', page[max(0, match.start() - 200):match.start()] + ' ' + lines[0])
-        if not named:
+        # the file is named in the caption above the block or in its first comment line: take the
+        # nearest name, which is the last one before the code starts
+        names = re.findall(r'([\w.]+\.py)', page[max(0, match.start() - 200):match.start()] + ' ' + lines[0])
+        if not names:
             fail('code block without a file name above it: %s' % lines[0][:60])
             continue
-        path = os.path.join(SOURCE_DIR, named.group(1))
+        name = names[-1]
+        path = os.path.join(SOURCE_DIR, name)
         if not os.path.exists(path):
-            fail('code block names %s, which does not exist' % named.group(1))
+            fail('code block names %s, which does not exist' % name)
             continue
         source = [l.split('#')[0].strip() for l in open(path, encoding='utf-8')]
         for line in lines:  # the first line already holds code when <pre> opens the block
@@ -99,9 +101,9 @@ def check_code_blocks(page):
             if text.endswith('...'):
                 head = text[:-3]
                 if not any(s.startswith(head) for s in source):
-                    fail('%s has no line starting with: %s' % (named.group(1), head))
+                    fail('%s has no line starting with: %s' % (name, head))
             elif text not in source:
-                fail('%s no longer contains: %s' % (named.group(1), text))
+                fail('%s no longer contains: %s' % (name, text))
 
 
 def main():
