@@ -51,7 +51,7 @@ on the slides.
 | 4 | One camera frame | the five stages and the timing |
 | 5 | `drive.py` | the loop, the four exits, the guards |
 | 6 | `perception.py` | the three models, the masks, and `split_curve_probs` |
-| 7 | The state machine | the six states and the four swerve phases, drawn |
+| 7 | The state machine | the seven states and the four swerve phases, drawn |
 | 8 | `decision.py` transitions | `enter()` and how a phase advances or halts |
 | 9 | `decision.py` update | priority as the order of the branches |
 | 10 | `control.py` update | the eight pieces of the steering, each from a failure |
@@ -60,12 +60,12 @@ on the slides.
 | 13 | The learning pipeline | record, label, train, convert, judge, and the network |
 | 14 | The three models | accuracy and the weakness under each |
 | 15 | Task 1 | six runs against a 60 s cap |
-| 16 | The stop at a cup | the three rows, the trigger code, what the runs measured |
+| 16 | The stop at a cup | distance from the band size, the trigger code, what the runs measured |
 | 17 | The swerve | the intended path, and which starts worked |
 | 18 | Failures | symptom, cause, fix, one row each |
 | 19 | Next plan | steps with their pass conditions |
 
-Then, in document mode only, the appendix: the complete source of the six driving modules.
+Then, in document mode only, the appendix: the complete source of the seven driving modules.
 
 ## The weekly update, in order
 
@@ -83,8 +83,9 @@ Most weeks only the first four steps change anything.
    cause, `c-fix` the fix. Use `c-open` instead of `c-fix` while the cause is unknown, and say so out loud.
 5. **Next** (slide 19, `.steps`): one `.step` per step with its pass condition. Add `block` to the step that
    blocks other tasks.
-6. **Code slides** (5 to 13): only when that file changed. Re-copy the lines with their new numbers, run
-   `build_appendix.py`, then `check.py`, which is the whole point of having it.
+6. **Code slides** (5 to 13): whenever a quoted file changed, which `check.py` tells you line by line.
+   It prints the file's current line next to what the slide shows, so renumbering is mechanical: fix the
+   numbers, fix any line whose text changed, run `build_appendix.py`, then `check.py` again.
 7. **Numbers**: only if a new run happened. Sources are listed below.
 
 ## Where every number comes from
@@ -139,7 +140,7 @@ as code not shown, and nobody clicks it while presenting.
 
 ## The appendix: the full source
 
-The slides show excerpts; the appendix shows the six driving modules complete, with the same line numbers, so
+The slides show excerpts; the appendix shows the seven driving modules complete, with the same line numbers, so
 anything cited can be looked up. It is in the document view only, which is also the PDF for the Thursday
 upload, and it is **generated**:
 
@@ -147,8 +148,8 @@ upload, and it is **generated**:
 python presentation/build_appendix.py
 ```
 
-Run it after any change to `drive.py`, `perception.py`, `decision.py`, `control.py`, `config.py` or
-`safety.py`. `check.py` fails when a file has grown or changed since the appendix was built, so the deck
+Run it after any change to `drive.py`, `perception.py`, `decision.py`, `control.py`, `find_lane.py`,
+`config.py` or `safety.py`. `check.py` fails when a file has grown or changed since the appendix was built, so the deck
 cannot ship a stale listing. To add a file, put it in `FILES` in `build_appendix.py`.
 
 ## Checks before you present
