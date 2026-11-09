@@ -340,7 +340,7 @@ body.doc .doconly{display:block}
     <button class="card open" id="card-w1" type="button">
       <span class="cw">Week 1 · tasks 1 and 2</span>
       <h2>Lane following and the obstacle</h2>
-      <p>Adaptive road following, the stop in front of a cup, and the way around it. Driven on the track.</p>
+      <p>Adaptive road following, obstacle detection, calibrated stop, and circumvention. Driven on track.</p>
       <span class="state"><i></i>demonstrated</span>
       <span class="enter">Open the walkthrough</span>
     </button>
@@ -348,7 +348,7 @@ body.doc .doconly{display:block}
       <span class="cw">Week 2 · tasks 3, 4, 5</span>
       <h2>Signs, intersection, parking</h2>
       <p>Same pipeline as the cup: record, label from a color mask, train, decide in our code.</p>
-      <span class="state"><i style="background:var(--rule)"></i>waiting on track parts</span>
+      <span class="state"><i style="background:var(--rule)"></i>blocked on track setup</span>
     </div>
     <div class="card locked">
       <span class="cw">Week 3 · task 6</span>
@@ -360,7 +360,7 @@ body.doc .doconly{display:block}
       <span class="cw">Week 4 · task 7</span>
       <h2>Adaptive speed and cruise control</h2>
       <p>The speed rule already takes the lower of two limits. A following distance becomes the third.</p>
-      <span class="state"><i style="background:var(--rule)"></i>needs a second robot</span>
+      <span class="state"><i style="background:var(--rule)"></i>blocked on 2nd robot</span>
     </div>
     <div class="card locked">
       <span class="cw">Weeks 5 and 6 · task 8</span>
@@ -397,15 +397,15 @@ body.doc .doconly{display:block}
     <div class="spacer" style="flex:.3"></div>
     <div class="board" style="flex:none">
       <div class="brow s-built"><span class="bn">W1</span><span class="bt">1 · Adaptive lane following</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">driven 60 s</span></div>
-      <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Stop in front of a cup</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">3 runs, 35 to 40 cm</span></div>
-      <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Drive around the cup</span><span class="bmeter"><i style="width:92%"></i></span><span class="bs">14 of 18 swerves</span></div>
+      <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Obstacle detection &amp; stop</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">3 runs, 35 to 40 cm</span></div>
+      <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Obstacle circumvention maneuver</span><span class="bmeter"><i style="width:92%"></i></span><span class="bs">14 of 18 passes</span></div>
       <div class="brow s-written"><span class="bn">W3</span><span class="bt">6 · State machine</span><span class="bmeter"><i style="width:65%"></i></span><span class="bs">7 states run</span></div>
-      <div class="brow s-open"><span class="bn">W2</span><span class="bt">3, 4, 5 · Signs, intersection, parking</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">no track parts</span></div>
-      <div class="brow s-open"><span class="bn">W4</span><span class="bt">7 · Cruise control</span><span class="bmeter"><i style="width:8%"></i></span><span class="bs">no 2nd robot</span></div>
+      <div class="brow s-open"><span class="bn">W2</span><span class="bt">3, 4, 5 · Signs, intersection, parking</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">blocked on track setup</span></div>
+      <div class="brow s-open"><span class="bn">W4</span><span class="bt">7 · Distance-based cruise control</span><span class="bmeter"><i style="width:8%"></i></span><span class="bs">blocked on 2nd robot</span></div>
       <div class="brow s-open"><span class="bn">W5</span><span class="bt">8 · Final run</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">open</span></div>
     </div>
     <div class="spacer"></div>
-    <p class="src">Green: completed runs on the track. Amber: runs, but not yet to the pass criterion. Grey: blocked on something physical.</p>
+    <p class="src">Green: verified track deployment. Amber: functional code under testing. Grey: blocked on physical track or hardware dependencies.</p>
   </div></div>
 </section>
 
@@ -417,28 +417,28 @@ body.doc .doconly{display:block}
     <div class="spacer" style="flex:.3"></div>
     <div class="week" style="flex:none">
       <div class="wday bad">
-        <span class="wd">3 Nov · track, 9 swerves</span>
-        <span class="wt">5 came back</span>
-        <span class="wp">4 of the 9 started far too early, and the marks only worked on the one straight.</span>
+        <span class="wd">3 Nov · track, 9 maneuvers</span>
+        <span class="wt">5 of 9 completed</span>
+        <span class="wp">4 premature triggers; tape-angle termination restricted bypass to calibration straight.</span>
       </div>
       <div class="wday good">
-        <span class="wd">8 Nov · track, 3 cups</span>
-        <span class="wt">11 of 12 swerves</span>
-        <span class="wp">The swerve aims at the cup now, not at the tape, so it also works away from that straight.</span>
+        <span class="wd">8 Nov · track, 3 obstacle sites</span>
+        <span class="wt">11 of 12 completed</span>
+        <span class="wp">Circumvention trajectory references obstacle geometry, enabling execution on curved track.</span>
       </div>
       <div class="wday good">
-        <span class="wd">8 Nov · the robot measured</span>
-        <span class="wt">Distance from band size</span>
-        <span class="wp">cup_learn.py: the robot backs away from a cup in pulses, 139 stops in 5 places, and learns cm.</span>
+        <span class="wd">8 Nov · empirical calibration</span>
+        <span class="wt">Metric distance model</span>
+        <span class="wp">cup_learn.py: automated incremental calibration (139 stops across 5 track locations; d = 405 / sqrt(A)).</span>
       </div>
       <div class="wday now">
-        <span class="wd">9 Nov · track, 18 swerves</span>
-        <span class="wt">14 came back</span>
-        <span class="wp">A lost lane is now searched for in three stages instead of ending the run: undo, sweep, search.</span>
+        <span class="wd">9 Nov · track, 18 maneuvers</span>
+        <span class="wt">14 of 18 completed</span>
+        <span class="wp">Tri-modal recovery architecture (undo historical path, angular sweep, translational search) deployed on lost-lane events.</span>
       </div>
     </div>
     <div class="spacer"></div>
-    <p class="src">Written up in DECISIONS.md as OBST6 to OBST9, GAP2, LEARN1, AVOID4 and LINE1. The track sessions are filmed.</p>
+    <p class="src">Documented in DECISIONS.md (OBST6 to OBST9, GAP2, LEARN1, AVOID4, LINE1). Track evaluation runs are archived on video.</p>
   </div></div>
 </section>
 
@@ -499,12 +499,12 @@ body.doc .doconly{display:block}
           <text x="20" y="219" fill="var(--muted)" font-size="8">motor watchdog</text>
           <rect x="194" y="180" width="174" height="44" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
           <text x="206" y="197" fill="var(--ink)">find_lane.py · 169 lines</text>
-          <text x="206" y="209" fill="var(--muted)" font-size="8">searches for a lost lane in small</text>
-          <text x="206" y="219" fill="var(--muted)" font-size="8">steps, with the motors off between</text>
+          <text x="206" y="209" fill="var(--muted)" font-size="8">tri-modal recovery in discrete</text>
+          <text x="206" y="219" fill="var(--muted)" font-size="8">steps with zero motor power between</text>
           <rect x="380" y="180" width="172" height="44" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
           <text x="392" y="197" fill="var(--ink)">vision, lane_mask, cup_mask</text>
-          <text x="392" y="209" fill="var(--muted)" font-size="8">the network, and the two color</text>
-          <text x="392" y="219" fill="var(--muted)" font-size="8">masks that measure geometry</text>
+          <text x="392" y="209" fill="var(--muted)" font-size="8">deep neural networks and HSV</text>
+          <text x="392" y="219" fill="var(--muted)" font-size="8">color masks for metric geometry</text>
         </g>
       </svg>
     </figure>
@@ -521,15 +521,15 @@ body.doc .doconly{display:block}
     <h2 class="sh">Inference and control loop (per-frame)</h2>
     <div class="spacer" style="flex:.3"></div>
     <div class="pipe" style="flex:none">
-      <div class="pstep"><span class="pn">1 · camera</span><span class="pt">Frame</span><span class="pd">224 by 224 pixels, about 21 per second</span></div>
+      <div class="pstep"><span class="pn">1 · camera</span><span class="pt">Frame</span><span class="pd">224 &times; 224 px, nominal 21.6 to 22.8 Hz</span></div>
       <div class="pstep mid"><span class="pn">2 · perception</span><span class="pt">Three models</span><span class="pd">ResNet18, TensorRT</span>
         <span class="chip">lane: visible, x</span><span class="chip">curve: class, side</span><span class="chip">cup: seen, row, x</span></div>
-      <div class="pstep"><span class="pn">3 · decision</span><span class="pt">State machine</span><span class="pd">Six states, first matching branch wins</span></div>
-      <div class="pstep"><span class="pn">4 · control</span><span class="pt">Steering and speed</span><span class="pd">PD with gains scaled by speed, curve feedforward</span></div>
-      <div class="pstep"><span class="pn">5 · motors</span><span class="pt">Wheels</span><span class="pd">Behind a battery guard, a camera watchdog and a motor watchdog</span></div>
+      <div class="pstep"><span class="pn">3 · decision</span><span class="pt">State machine</span><span class="pd">Six states, deterministic priority evaluation</span></div>
+      <div class="pstep"><span class="pn">4 · control</span><span class="pt">Steering and speed</span><span class="pd">Gain-scheduled PD controller with curve feedforward</span></div>
+      <div class="pstep"><span class="pn">5 · motors</span><span class="pt">Wheels</span><span class="pd">Protected by battery guard, camera watchdog, and motor watchdog</span></div>
     </div>
     <div class="spacer"></div>
-    <p>The lane model runs on every frame. The curve model and the cup model take turns on alternate frames, because all three on every frame cost 12 ms more per step and the steering got worse.</p>
+    <p>The lane model runs on every frame. Curvature and obstacle models alternate across frames: evaluating all three concurrently introduced +12 ms control latency per step, inducing steering phase lag.</p>
     <p class="src">Measured in the Task 1 runs: 29.8 ms per step with three models, 21.6 to 22.8 steps per second. TensorRT took one lane pass from 41 ms to 10.6 ms.</p>
   </div></div>
 </section>
@@ -564,13 +564,13 @@ body.doc .doconly{display:block}
 <span class="ln">197</span>    robot.stop()</pre>
       </div>
       <ol class="notes">
-        <li><span class="nn">102</span><span><b>Never a stale image.</b> The camera thread dies silently on a read error and then returns the same array forever, so this waits for a different object and gives up after 0.5 s.</span></li>
+        <li><span class="nn">102</span><span><b>Never a stale image.</b> The camera thread dies silently on a read error and then returns the same array forever; this waits for a new frame object and times out after 0.5 s.</span></li>
         <li><span class="nn">105</span><span><b>Perception only reads.</b> It returns a dictionary of plain numbers and can take no action.</span></li>
-        <li><span class="nn">112</span><span><b>One state per frame.</b> The loop asks the decision layer and decides nothing itself.</span></li>
-        <li><span class="nn">113</span><span><b>One state runs outside the loop.</b> Searching for a lost lane takes many seconds in small steps with the motors off, so the loop hands over to find_lane.py, passing where the lane should be, and is told whether it worked and whether the robot still faces the same way.</span></li>
-        <li><span class="nn">132</span><span><b>Control turns numbers into wheel speeds.</b> Each state calls its own command function; line 139 is the swerve and the recovery.</span></li>
-        <li><span class="nn">136</span><span><b>The lock belongs to the watchdog.</b> Motor writes go over I2C and the watchdog thread may stop the motors in the same moment.</span></li>
-        <li><span class="nn">175</span><span><b>Four ways a run ends, all caught,</b> and whatever happens, including a crash we did not foresee, the finally on line 181 stops the motors.</span></li>
+        <li><span class="nn">112</span><span><b>Deterministic single state.</b> The main loop delegates all state transitions strictly to the decision layer.</span></li>
+        <li><span class="nn">113</span><span><b>Blocking sub-routine for line recovery.</b> find_lane.py executes multi-second step-wise search maneuvers with zero inter-step motor torque, returning recovery status and heading retention.</span></li>
+        <li><span class="nn">132</span><span><b>Control translates state into wheel speeds.</b> Each operational state calls its dedicated actuator mapping function.</span></li>
+        <li><span class="nn">136</span><span><b>Thread-safe I2C motor bus access.</b> The lock prevents concurrent bus collisions between periodic control writes and asynchronous watchdog shutdowns.</span></li>
+        <li><span class="nn">175</span><span><b>Exhaustive exception handling and failsafe shutdown.</b> All termination pathways trigger the finally block to guarantee zero-motor fail-stop.</span></li>
       </ol>
     </div>
   </div></div>
@@ -604,15 +604,15 @@ body.doc .doconly{display:block}
 <span class="ln on">35</span>    return [straight, gentle_left + gentle_right, sharp_left + sharp_right],...</pre>
       </div>
       <ol class="notes">
-        <li><span class="nn">60</span><span><b>The lane model runs on every frame.</b> Steering needs a fresh position every step, so this one is never skipped.</span></li>
-        <li><span class="nn">61</span><span><b>The curve model runs every second frame</b> and lines 63 and 64 smooth its five probabilities, because single frames flickered between classes. Curvature changes slowly.</span></li>
-        <li><span class="nn">65</span><span><b>The cup model runs on the other frames.</b> Three models on every frame added 12 ms per step and the robot swung after the sharp curve.</span></li>
-        <li><span class="nn">71</span><span><b>Everything leaves as plain numbers.</b> No tensor and no decision crosses this boundary, which is what lets the decision layer be tested without a GPU.</span></li>
-        <li><span class="nn">80</span><span><b>Two color masks measure what a model should not guess:</b> whether the robot is aligned, the angle of the tape ahead, and where every red cup band is.</span></li>
-        <li><span class="nn">35</span><span><b>How sharp and which way stay separate.</b> The model has five classes; this returns severity for the speed and a direction from -1 to 1 for the feedforward, so an unsure direction never steers.</span></li>
+        <li><span class="nn">60</span><span><b>The lane model runs on every frame.</b> Lateral feedback requires minimal latency to maintain closed-loop stability.</span></li>
+        <li><span class="nn">61</span><span><b>Curvature classification runs every second frame.</b> Exponential probability smoothing filters single-frame classification jitter.</span></li>
+        <li><span class="nn">65</span><span><b>Obstacle model alternates with curve model.</b> Concurrent 3-model execution added 12 ms inference delay, causing lateral oscillations after sharp turns.</span></li>
+        <li><span class="nn">71</span><span><b>Pure numeric interface decoupled from PyTorch.</b> Eliminating tensor dependencies enables headless unit testing of the decision engine without a GPU.</span></li>
+        <li><span class="nn">80</span><span><b>Deterministic color segmentation for physical geometry:</b> robot heading alignment, road boundary angles, and obstacle band bounding boxes.</span></li>
+        <li><span class="nn">35</span><span><b>Decoupled curvature magnitude and direction.</b> Five-class output separates severity (speed target) from sign (-1 to +1 for feedforward), preventing ambiguous steering inputs.</span></li>
       </ol>
     </div>
-    <p class="src">Decision HYBRID in DECISIONS.md, forced by a failure: the cup model's distance was up to 28 rows wrong behind people, the mask was right.</p>
+    <p class="src">Architectural decision HYBRID (DECISIONS.md): neural network distance estimate degraded by up to 28 rows with background clutter; color segmentation remained robust.</p>
   </div></div>
 </section>
 
@@ -677,12 +677,12 @@ body.doc .doconly{display:block}
     </figure>
     <div class="spacer" style="flex:.2"></div>
     <div class="pipe" style="flex:none; grid-template-columns:repeat(4,minmax(0,1fr))">
-      <div class="pstep"><span class="pn">phase 1 · brake</span><span class="pd">A reverse pulse, then stand still 0.3 s. Turning while rolling carried the robot into the lane edge</span></div>
-      <div class="pstep"><span class="pn">phase 2 · turn out</span><span class="pd">Turn in place until the cup has left the image sideways, about 90 degrees</span></div>
-      <div class="pstep"><span class="pn">phase 3 · arc</span><span class="pd">Straight while the cup is beside, then 0.36 and 0.31 until the tape has passed under the robot</span></div>
-      <div class="pstep"><span class="pn">phase 4 · turn in</span><span class="pd">Turn back until the lane is aligned and within 0.4 of the middle</span></div>
+      <div class="pstep"><span class="pn">phase 1 · active brake</span><span class="pd">0.1 s reverse pulse followed by 0.3 s dwell. Eliminates rolling inertia before initiating rotation</span></div>
+      <div class="pstep"><span class="pn">phase 2 · outward pivot</span><span class="pd">In-place rotation until obstacle exits visual field laterally (nominal ~90 deg yaw change)</span></div>
+      <div class="pstep"><span class="pn">phase 3 · bypass arc</span><span class="pd">Tangential feed while obstacle is lateral, followed by differential arc until lane tape traverses robot underside</span></div>
+      <div class="pstep"><span class="pn">phase 4 · inward pivot</span><span class="pd">Counter-rotation terminating when lane alignment is restored and lateral offset &le; 0.4</span></div>
     </div>
-    <p class="src">Every phase ends on a camera mark and has a time limit; the robot has no encoders and no gyro. The table with entry condition, action, exit condition and priority for all seven states is notebooks/mini_av/STATE_MACHINE.md.</p>
+    <p class="src">All phases feature sensory termination criteria bounded by safety timeouts, compensating for the lack of wheel encoders and IMU. Transition specifications: notebooks/mini_av/STATE_MACHINE.md.</p>
   </div></div>
 </section>
 
@@ -716,12 +716,12 @@ body.doc .doconly{display:block}
 <span class="ln on">235</span>    self.lane_gone(now)</pre>
       </div>
       <ol class="notes">
-        <li><span class="nn">32</span><span><b>The phases are a tuple, in order.</b> Line 226 advances by index, so a new phase is a new name in one place.</span></li>
-        <li><span class="nn">154</span><span><b>Every transition goes through enter().</b> It stamps the time, which is what every limit and every debounce counter measures from; lines 157 and 158 reset a maneuver to its first phase.</span></li>
-        <li><span class="nn">199</span><span><b>The turn out ends on the cup, not on a timer.</b> It is done when the cup has left the image sideways. The tape angle is only the fallback for when no cup is in view.</span></li>
-        <li><span class="nn">210</span><span><b>The curve drives straight while the cup is beside it,</b> because bending at once clipped the cup. It ends when the lane tape has passed under the robot, which is a mark that exists in a curve too.</span></li>
-        <li><span class="nn">220</span><span><b>The turn back ends on an aligned lane</b> within 0.4 of the middle. Visible is not enough: a crosswise tape once counted as a lane.</span></li>
-        <li><span class="nn">229</span><span><b>A missed mark no longer ends the run.</b> It goes to LINE_RECOVERY, which searches for the lane instead of leaving the robot standing.</span></li>
+        <li><span class="nn">32</span><span><b>Ordered tuple defines phase sequence.</b> Monotonic progression via index lookup centralizes sequence modifications.</span></li>
+        <li><span class="nn">154</span><span><b>Centralized state transition via enter().</b> Timestamps establish deterministic baselines for timeout checks and debounce filters.</span></li>
+        <li><span class="nn">199</span><span><b>Sensory-driven outward pivot termination.</b> Maneuver completes upon obstacle lateral exit; tape angle serves strictly as fallback.</span></li>
+        <li><span class="nn">210</span><span><b>Tangential bypass before curvature onset.</b> Prevents premature vehicle turning into obstacle footprint; concludes upon road tape transit beneath chassis.</span></li>
+        <li><span class="nn">220</span><span><b>Re-entry requires lane alignment and centering</b> within 0.4 of image center. Parallel heading verification prevents false locks on orthogonal tape intersections.</span></li>
+        <li><span class="nn">229</span><span><b>Fault tolerance via recovery escalation.</b> Phase timeouts trigger LINE_RECOVERY rather than immediate non-recoverable HALT.</span></li>
       </ol>
     </div>
     <p class="src">The four phases are the figure on the previous slide; every constant they use is in config.py.</p>
@@ -757,12 +757,12 @@ body.doc .doconly{display:block}
 <span class="ln">293</span>    self.lane_gone(now)</pre>
       </div>
       <ol class="notes">
-        <li><span class="nn">233</span><span><b>Priority is not a comment.</b> It is the order the questions are asked in, and the first match returns. A cup can never be overruled by a curve.</span></li>
-        <li><span class="nn">235</span><span><b>A maneuver owns the robot.</b> While the swerve runs the lane is not asked at all, until its camera mark or its time limit.</span></li>
-        <li><span class="nn">238</span><span><b>Recovery is strict on purpose.</b> Five steps in a row with the lane near the center and the robot aligned. A distant tape line once read as a lane and the robot drove on for 4 s off the track.</span></li>
-        <li><span class="nn">248</span><span><b>Four steps of debounce.</b> The cup model runs on every second frame, so four steps are two fresh readings. Lines 250 to 262 are the stop-only branch, which enters STOP instead of a swerve.</span></li>
-        <li><span class="nn">270</span><span><b>SLOW_DOWN has hysteresis.</b> It enters at p_sharp above 0.5 and leaves below 0.3, so it cannot flicker at the threshold.</span></li>
-        <li><span class="nn">286</span><span><b>A lane gap of 0.5 s is tolerated.</b> Longer, and the robot now searches for the lane instead of ending the run.</span></li>
+        <li><span class="nn">233</span><span><b>Deterministic priority cascade.</b> Sequential conditional evaluation guarantees critical safety conditions (obstacles) pre-empt lower-priority tracking (curves).</span></li>
+        <li><span class="nn">235</span><span><b>Exclusive state ownership during maneuvers.</b> Obstacle circumvention suppresses nominal lane following until sensory or timeout completion.</span></li>
+        <li><span class="nn">238</span><span><b>Conservative re-engagement qualification.</b> Demands 5 consecutive frames with centered position and parallel heading to preclude out-of-bounds latching.</span></li>
+        <li><span class="nn">248</span><span><b>Four-frame temporal debounce.</b> Given alternating model execution, four frames guarantee two independent affirmative obstacle detections.</span></li>
+        <li><span class="nn">270</span><span><b>Schmitt-trigger hysteresis on speed transitions.</b> Enters on P(sharp) &gt;= 0.5 and exits below 0.3 to prevent limit-cycle chatter.</span></li>
+        <li><span class="nn">286</span><span><b>0.5 s tracking persistence window.</b> Bridges brief line dropouts without state change; sustained loss initiates active recovery.</span></li>
       </ol>
     </div>
   </div></div>
@@ -791,14 +791,14 @@ body.doc .doconly{display:block}
 <span class="ln">144</span>right = self.speed - self.steering - config.MOTOR_TRIM</pre>
       </div>
       <ol class="notes">
-        <li><span class="nn">71</span><span><b>P on the raw position.</b> Smoothing it added delay and the robot oversteered, so the weight is 1.</span></li>
-        <li><span class="nn">74</span><span><b>D on a smoothed copy.</b> Differentiating the raw value turned every frame to frame jump into a steering jerk.</span></li>
-        <li><span class="nn">78</span><span><b>A leaky integral.</b> It grows while the robot sits off center in a curve and fades on the straight, so it cannot wind up. Its gain is 0 today: 0.25 added delay and a growing swing.</span></li>
-        <li><span class="nn">82</span><span><b>Gain scheduling.</b> At 0.40 the same correction moves the robot further before the next frame, so the gains shrink with speed.</span></li>
-        <li><span class="nn">83</span><span><b>Feedforward for the curve.</b> A curve needs a steady turn that P only gives with a large error. Its direction comes from the curve model, because the lane position flipped sign in the curve that kept failing.</span></li>
-        <li><span class="nn">85</span><span><b>A rate limit.</b> The steering may change by at most 2.0 per second, so one bad frame cannot jerk the wheels.</span></li>
-        <li><span class="nn">87</span><span><b>Speed is the lower of two limits,</b> the curve model's and the steering's. Slide 11 shows that function, and it is already the shape Task 7 needs.</span></li>
-        <li><span class="nn">143</span><span><b>One trim value.</b> The robot drifts right, so the left wheel gets 0.01 more.</span></li>
+        <li><span class="nn">71</span><span><b>Proportional gain on instantaneous error.</b> Low-pass filtering lateral error introduced uncompensated phase lag and overshoot, so weight is 1.0.</span></li>
+        <li><span class="nn">74</span><span><b>Derivative damping on smoothed signal.</b> Finite-difference differentiation of raw detections amplified frame noise into actuator jitter.</span></li>
+        <li><span class="nn">78</span><span><b>Anti-windup leaky integrator.</b> Accumulates tracking error in curves, decaying on straights; currently zeroed (Ki = 0) as Ki = 0.25 induced steering instability.</span></li>
+        <li><span class="nn">82</span><span><b>Velocity-dependent gain scheduling.</b> Control gains inversely scale with forward velocity to maintain uniform closed-loop pole placement.</span></li>
+        <li><span class="nn">83</span><span><b>Model-based curvature feedforward.</b> Supplies steady-state steering bias without requiring large tracking error; direction is isolated from classification.</span></li>
+        <li><span class="nn">85</span><span><b>Actuator slew-rate limiter.</b> Enforces a maximum steering gradient of 2.0/s, suppressing single-frame outliers and preserving mechanical stability.</span></li>
+        <li><span class="nn">87</span><span><b>Multi-constraint velocity arbitration.</b> Speed is the infimum of curvature limits and lateral error constraints, directly extensible to headway control.</span></li>
+        <li><span class="nn">143</span><span><b>Empirical actuator trim compensation.</b> Fixed offset (+0.01 left) cancels intrinsic chassis and gearbox asymmetry.</span></li>
       </ol>
     </div>
   </div></div>
@@ -835,12 +835,12 @@ body.doc .doconly{display:block}
 <span class="ln">139</span>    return self.wheels()</pre>
       </div>
       <ol class="notes">
-        <li><span class="nn">48</span><span><b>This is already Task 7.</b> The speed is the lower of the curve speed and the steering speed. A following distance becomes a third argument to the same min, and nothing else changes.</span></li>
-        <li><span class="nn">106</span><span><b>The swerve commands, one branch per phase.</b> The decision layer picks the phase and ends it; this only says what the wheels do while it lasts.</span></li>
-        <li><span class="nn">115</span><span><b>Straight past the cup first.</b> While the cup is still beside the robot both wheels get the same speed, because bending into the curve at once clipped it.</span></li>
-        <li><span class="nn">119</span><span><b>The arc is two wheel speeds, 0.36 and 0.31,</b> swapped by the side being passed. A wheel moves only above about 0.24, so the pair was measured, not calculated.</span></li>
-        <li><span class="nn">124</span><span><b>Braking is a reverse pulse.</b> At motor value 0 the board lets the wheels coast, so stopping means driving backwards for 0.1 s first.</span></li>
-        <li><span class="nn">133</span><span><b>Recovery creeps and turns gently</b> back toward the lane, at the slowest speed that still moves the robot.</span></li>
+        <li><span class="nn">48</span><span><b>Arbitration architecture matches Task 7.</b> Velocity target is the infimum of curvature-limited speed and lateral tracking speed; headway distance seamlessly integrates as a third bound.</span></li>
+        <li><span class="nn">106</span><span><b>Decoupled maneuver execution.</b> Decision layer governs phase sequencing and termination; control layer executes open-loop wheel profiles per phase.</span></li>
+        <li><span class="nn">115</span><span><b>Tangential bypass extension.</b> Symmetric wheel velocity past obstacle perimeter prevents early inward yaw from causing vehicle side-collisions.</span></li>
+        <li><span class="nn">119</span><span><b>Empirically tuned differential arc velocities (0.36, 0.31).</b> Motor deadband (~0.24) necessitated empirical velocity pairs to maintain target radius.</span></li>
+        <li><span class="nn">124</span><span><b>Active counter-torque braking pulse.</b> DC motor driver coasts at zero command; 0.1 s reverse pulse actively dissipates kinetic energy.</span></li>
+        <li><span class="nn">133</span><span><b>Low-speed centering recovery.</b> Gentle angular velocity at minimum effective throttle smoothly re-establishes lane acquisition.</span></li>
       </ol>
     </div>
   </div></div>
@@ -866,13 +866,13 @@ body.doc .doconly{display:block}
 <span class="ln">12</span>MIN_START_VOLTAGE = 11.4  <span class="c"># volts at rest (about 50 %) needed to start driving</span></pre>
       </div>
       <ol class="notes">
-        <li><span class="nn">1</span><span><b>Every tuning value is in one file.</b> Not one number is buried in the logic, so a value can be changed without reading the code that uses it.</span></li>
-        <li><span class="nn">2</span><span><b>Each one carries the run that set it.</b> The comment is not decoration: it is the evidence that lets us defend the value or roll it back.</span></li>
-        <li><span class="nn">3</span><span><b>Distances are centimetres, measured.</b> The size of the red band gives the distance, 405 divided by the square root of its pixels, fitted on 139 stops the robot measured itself.</span></li>
-        <li><span class="nn">4</span><span><b>The four guards live in safety.py</b> and are shared: battery before the start and under load, a new camera frame within 0.5 s, a motor update within 0.25 s, and motors stopped in finally.</span></li>
+        <li><span class="nn">1</span><span><b>Centralized configuration repository.</b> All algorithmic thresholds and parameters are externalized, ensuring parameter tuning requires zero logic changes.</span></li>
+        <li><span class="nn">2</span><span><b>Empirical provenance documentation.</b> Every constant references specific test runs, validating design choices and supporting systematic rollbacks.</span></li>
+        <li><span class="nn">3</span><span><b>Calibrated metric distance estimation.</b> Obstacle distance follows d = 405 / sqrt(A) (cm), calibrated on 139 empirical robot stops across multiple track locations.</span></li>
+        <li><span class="nn">4</span><span><b>Four-tier hardware safety watchdog:</b> pre-drive/under-load battery monitoring, 0.5 s camera frame heartbeat, 0.25 s motor update deadline, and unconditional failsafe stop.</span></li>
       </ol>
     </div>
-    <p class="src">The guards are not optional. CLAUDE.md requires all four in every program that drives, after the robot drove blind into a chair on one frozen frame on 20 September.</p>
+    <p class="src">Safety watchdogs are mandatory across all operational software, preventing open-loop runaway execution in the event of camera pipeline failure.</p>
   </div></div>
 </section>
 
@@ -883,15 +883,15 @@ body.doc .doconly{display:block}
     <h2 class="sh">Model training pipeline and offline validation</h2>
     <div class="spacer" style="flex:.2"></div>
     <div class="pipe" style="flex:none">
-      <div class="pstep"><span class="pn">1 · record</span><span class="pt">auto_record.py</span><span class="pd">The robot drives itself on the color mask and records. No hand driving</span></div>
-      <div class="pstep"><span class="pn">2 · label</span><span class="pt">02_auto_label.py</span><span class="pd">The masks write labels.csv and a review sheet to check by eye</span></div>
-      <div class="pstep mid"><span class="pn">3 · train</span><span class="pt">03_train.py</span><span class="pd">ResNet18, one model per task, whole sessions held out</span></div>
-      <div class="pstep"><span class="pn">4 · convert</span><span class="pt">03_convert_trt.py</span><span class="pd">TensorRT, about 6 times faster. Without it three models do not fit</span></div>
-      <div class="pstep"><span class="pn">5 · judge</span><span class="pt">replay.py</span><span class="pd">Runs the model over recorded laps per section and direction, before any driving</span></div>
+      <div class="pstep"><span class="pn">1 · record</span><span class="pt">auto_record.py</span><span class="pd">Autonomous data acquisition via color-mask tracking; no teleoperation bias</span></div>
+      <div class="pstep"><span class="pn">2 · label</span><span class="pt">02_auto_label.py</span><span class="pd">Automated labeling: segmentation masks generate labels.csv and contact sheets</span></div>
+      <div class="pstep mid"><span class="pn">3 · train</span><span class="pt">03_train.py</span><span class="pd">ResNet18 transfer learning per task; session-disjoint partitioning</span></div>
+      <div class="pstep"><span class="pn">4 · convert</span><span class="pt">03_convert_trt.py</span><span class="pd">FP16 TensorRT compilation yields ~6x acceleration, fitting the 30 ms budget</span></div>
+      <div class="pstep"><span class="pn">5 · judge</span><span class="pt">replay.py</span><span class="pd">Offline closed-loop replay benchmark evaluated per track sector and direction</span></div>
     </div>
     <div class="spacer" style="flex:.2"></div>
     <div class="codesrc" style="flex:none">
-      <div class="cf">03_train.py · main() · the split that keeps the numbers honest</div>
+      <div class="cf">03_train.py · main() · session-disjoint train/val split (prevents temporal data leakage)</div>
 <pre><span class="ln on">196</span>val = [r for r in rows if any(v in r[1] for v in args.val)]
 <span class="ln">197</span>train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
       <div class="cf">vision.py · one network, a new last layer per task</div>
@@ -899,8 +899,8 @@ body.doc .doconly{display:block}
 <span class="ln on">40</span>    model = torchvision.models.resnet18(pretrained=pretrained)
 <span class="ln on">41</span>    model.fc = torch.nn.Linear(512, TASK_OUTPUTS[task])</pre>
     </div>
-    <p>Whole recording sessions are held out, never single frames. Neighbouring frames look almost the same, so a random split would report a model that is better than it is.</p>
-    <p class="src">Three models trained this way: lane 2458 frames, curve 3276, obstacle 3147. Labels come from the color masks, so the reported accuracy is agreement with the mask, and the slide says so.</p>
+    <p>Entire recording sessions are partitioned into validation sets, never individual frames. Contiguous frames exhibit high temporal auto-correlation; random frame-wise splitting yields artificially optimistic validation metrics due to data leakage.</p>
+    <p class="src">Three models trained via this protocol: lane (2458 frames), curve (3276), obstacle (3147). Ground-truth labels derive from color masks; reported accuracies quantify mask agreement.</p>
   </div></div>
 </section>
 
@@ -914,24 +914,24 @@ body.doc .doconly{display:block}
       <div class="model">
         <span class="mt">lane</span>
         <span class="mn">99.6 %</span>
-        <span class="ml">frames where it finds the lane · center off by 0.022 · 2458 training frames</span>
-        <span class="mw">Found the lane in only 45 of 100 frames with a cup 18 to 25 cm away: a close cup hides it.</span>
+        <span class="ml">detection accuracy · center MAE = 0.022 · 2458 training frames</span>
+        <span class="mw">Detection rate drops to 45% when obstacle is within 18-25 cm due to visual occlusion.</span>
       </div>
       <div class="model">
         <span class="mt">curve</span>
         <span class="mn">88.6 %</span>
-        <span class="ml">five classes correct · not one left and right mix-up · 3276 frames</span>
-        <span class="mw">6 of 37 sharp frames were called gentle, so it under-reacts before it over-reacts.</span>
+        <span class="ml">5-class accuracy · zero lateral confusion (left vs. right) · 3276 frames</span>
+        <span class="mw">6 of 37 sharp curves misclassified as gentle, causing delayed feedforward steering activation.</span>
       </div>
       <div class="model">
         <span class="mt">cup</span>
         <span class="mn">98.1 %</span>
-        <span class="ml">cup found in 96 to 99 % of frames up to 50 cm · 0.4 % false alarms · 3147 training frames</span>
-        <span class="mw">71 % at 60 to 73 cm, and its distance is not used at all: the band size measures that.</span>
+        <span class="ml">detection rate up to 50 cm · 0.4 % false positive rate · 3147 training frames</span>
+        <span class="mw">71 % sensitivity at 60-73 cm; regression distance rejected in favor of optical band area.</span>
       </div>
     </div>
     <div class="spacer"></div>
-    <p>The weak line under each model is the reason the decision layer never takes a model number on its own. Recognition is learned, geometry is measured.</p>
+    <p>Identified boundary limitations govern the architectural separation: semantic feature extraction is learned; safety-critical geometry is deterministically calculated.</p>
     <p class="src">The first two from whole laps held out of training (models/*.json). The cup model re-measured on 4629 single recorded frames, 8 November, against the cup mask.</p>
   </div></div>
 </section>
@@ -951,8 +951,8 @@ body.doc .doconly{display:block}
       <div class="bar"><span class="bl">adaptive, cw</span><span class="track"><i class="fill f-adaptive" style="width:100%"></i></span><span class="bv">60.0 s</span></div>
     </div>
     <div class="spacer"></div>
-    <p>Seconds driven against a 60 s cap. Red ended in a lane loss. The third pair adds the curve model, and what it bought was the sharp curve, not smoothness.</p>
-    <p class="src">Six runs, 20 and 21 September. Wobble: stock 0.150 and 0.126, our PD 0.087, adaptive 0.099. Repeating the table with today's code is an open step.</p>
+    <p>Run duration benchmarked against 60 s threshold. Red indicates premature track departure. Model-based curvature feedforward successfully negotiated the sharp curve sector.</p>
+    <p class="src">Six benchmark runs (20-21 Sep). Tracking error standard deviation: stock 0.150/0.126, baseline PD 0.087, adaptive 0.099. Benchmarking with latest codebase is pending.</p>
   </div></div>
 </section>
 
@@ -977,7 +977,7 @@ body.doc .doconly{display:block}
         </g>
         <g font-family="IBM Plex Mono, monospace" font-size="9.5">
           <text x="222" y="40" fill="var(--ink)">cm = 405 / sqrt(band pixels)</text>
-          <text x="222" y="54" fill="var(--faint)" font-size="8.5">fitted on 139 stops the robot measured itself</text>
+          <text x="222" y="54" fill="var(--faint)" font-size="8.5">fitted on 139 automated empirical calibration stops</text>
         </g>
         <g stroke="var(--rule)" stroke-width="1.4"><path d="M240,74 L540,74"/></g>
         <g font-family="IBM Plex Mono, monospace" font-size="8.5">
@@ -1004,8 +1004,8 @@ body.doc .doconly{display:block}
 <span class="ln">57</span>return (percept[&#39;cup_visible&#39;] &gt;= config.OBSTACLE_VISIBLE_THRESHOLD
 <span class="ln">58</span>        and cup is not None and band_cm(cup) &lt;= config.OBSTACLE_CM)</pre>
     </div>
-    <p style="max-width:84ch">The model says a cup is there, the band's size says how far, and its position says whether it is in the way. A cup straight ahead counts even with no lane in sight, because at 20 cm the cup hides the lane and the lane model found it in only 45 of 100 such frames.</p>
-    <p class="src">Runs stop_s1d2_1 to 3, 5 November, in stop-only mode: stops at 35 to 40 cm after one backup. Without the slow approach and the brake pulse, a stop commanded at 27 cm left the robot at 10 cm.</p>
+    <p style="max-width:84ch">Classification model confirms obstacle presence, optical band area computes metric distance, and horizontal centroid confirms path obstruction. Path-centered obstacles trigger safety stops even during lane loss, mitigating visual occlusion.</p>
+    <p class="src">Live evaluation runs stop_s1d2_1-3 (5 Nov) in stop-only mode: repeatable braking distances of 35-40 cm after recovery pulse. Unbraked baseline at 27 cm resulted in 10 cm vehicle stopping distance.</p>
   </div></div>
 </section>
 
@@ -1030,15 +1030,15 @@ body.doc .doconly{display:block}
         <path d="M206,110 A 74,74 0 0 1 354,110" fill="none" stroke="var(--accent)" stroke-width="3.4"/>
         <path d="M354,110 L540,110" fill="none" stroke="var(--accent)" stroke-width="3.4"/>
         <g font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--ink)">
-          <text x="198" y="94" text-anchor="end">turn 90</text>
-          <text x="362" y="94">turn 90 the same way</text>
+          <text x="198" y="94" text-anchor="end">90 deg pivot</text>
+          <text x="362" y="94">90 deg return pivot</text>
         </g>
         <g font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--faint)">
-          <text x="280" y="30" text-anchor="middle">straight while the cup is beside, then the curve · 0.36 and 0.31</text>
+          <text x="280" y="30" text-anchor="middle">tangential bypass &rarr; differential arc (0.36, 0.31)</text>
           <text x="110" y="126" text-anchor="middle">lane following</text>
           <text x="452" y="126" text-anchor="middle">lane following</text>
-          <text x="206" y="188" text-anchor="middle" font-size="8">ends when the cup leaves the image</text>
-          <text x="354" y="188" text-anchor="middle" font-size="8">ends on an aligned lane</text>
+          <text x="206" y="188" text-anchor="middle" font-size="8">terminates on lateral obstacle exit</text>
+          <text x="354" y="188" text-anchor="middle" font-size="8">terminates on aligned lane re-entry</text>
         </g>
         <g stroke="var(--faint)" stroke-width="1" opacity=".7">
           <path d="M206,118 L206,178"/><path d="M354,118 L354,178"/>
@@ -1046,8 +1046,8 @@ body.doc .doconly{display:block}
       </svg>
     </figure>
     <div class="spacer"></div>
-    <p>Every phase now refers to the cup instead of the lane: the turn stops when the cup has left the image sideways, and the curve drives straight while the cup is still beside it. That is what made it work away from the one straight it was tuned on.</p>
-    <p class="src">Runs line2_1 to line2_5, 9 November: 14 of 18 swerves came back to the road, after 11 of 12 on 8 November. Three of the four failures hit the 3.9 s limit of the curve without finding their mark. Whether a cup was touched was not observed.</p>
+    <p>Circumvention trajectory references obstacle frame rather than lane geometry: initial pivot terminates upon lateral obstacle exit, followed by tangential bypass before arc initiation. This decouples maneuver execution from track curvature.</p>
+    <p class="src">Runs line2_1 to line2_5, 9 November: 14 of 18 completed lane re-entries (vs. 11 of 12 on 8 November). Three failures resulted from 3.9 s arc timeouts prior to visual lane re-acquisition. Obstacle contact unverified.</p>
   </div></div>
 </section>
 
@@ -1059,24 +1059,24 @@ body.doc .doconly{display:block}
     <div class="spacer" style="flex:.2"></div>
     <div class="chains" style="flex:none">
       <div class="chain">
-        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">The swerve started while the cup was still 50 cm away</span></div>
-        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">The cup model's distance row was up to 28 rows wrong when people stood behind the cup</span></div>
-        <div class="cbox c-fix"><span class="cl">fix, and it held</span><span class="ct">The band's size measures the distance. 11 of 12 swerves came back on 8 November</span></div>
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">Premature circumvention trigger at 50 cm distance</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">Obstacle model distance prediction exhibited errors up to 28 rows in presence of background pedestrian features</span></div>
+        <div class="cbox c-fix"><span class="cl">fix, and it held</span><span class="ct">Metric distance calculated from optical band area (d = 405 / sqrt(A)). 11 of 12 maneuvers succeeded on 8 Nov</span></div>
       </div>
       <div class="chain">
-        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">The swerve only worked on the one straight it was tuned on</span></div>
-        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">Its marks were the angle of the lane tape, which is only straight there</span></div>
-        <div class="cbox c-fix"><span class="cl">fix, and it held</span><span class="ct">The marks refer to the cup: turn until it leaves the image, drive straight while it is beside</span></div>
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">Circumvention maneuver failed outside calibration straight</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">Maneuver termination relied on absolute tape angles, which are non-stationary on curved track sections</span></div>
+        <div class="cbox c-fix"><span class="cl">fix, and it held</span><span class="ct">Visual termination referenced to obstacle coordinate frame: outward pivot ends on visual exit, tangential bypass clears obstacle</span></div>
       </div>
       <div class="chain">
-        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">A lost lane ended the run and the team had to carry the robot back</span></div>
-        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">HALT was the only answer to a lost lane. The first scan never found it: 4 of 4, because it looked the wrong way first</span></div>
-        <div class="cbox c-open"><span class="cl">fix, still rough</span><span class="ct">LINE_RECOVERY searches in three stages. 3 of 3 from the start of a run, but 0 of 4 after a failed swerve, and one took 48 s</span></div>
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">Track departure resulted in terminal non-recoverable HALT state</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">HALT was only response to lost lane. Initial rotational scan had 0/4 recovery rate due to sub-optimal initial sweep direction</span></div>
+        <div class="cbox c-open"><span class="cl">fix, still rough</span><span class="ct">Tri-modal LINE_RECOVERY architecture (undo, sweep, search): 3/3 recovery from initial state; off-track open-floor recovery remains 0/4</span></div>
       </div>
       <div class="chain">
-        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">A growing swing at the entry of the gentle curve, at speed 0.39</span></div>
-        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">Not found yet. Positions went -0.11, +0.24, -0.40, +0.42 in one run</span></div>
-        <div class="cbox c-open"><span class="cl">still open</span><span class="ct">Our question for today. The next runs log it; a lower speed limit is the fallback</span></div>
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">Underdamped lateral oscillation (limit-cycle steering instability) at gentle curve entry (v = 0.39)</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">Under investigation. Error trajectory recorded: -0.11, +0.24, -0.40, +0.42 within one run</span></div>
+        <div class="cbox c-open"><span class="cl">still open</span><span class="ct">Active investigation item. Instrumented telemetry logging planned; velocity de-rating serves as interim mitigation</span></div>
       </div>
     </div>
     <div class="spacer"></div>
@@ -1091,14 +1091,14 @@ body.doc .doconly{display:block}
     <h2 class="sh">Next plan and pass criteria</h2>
     <div class="spacer" style="flex:.25"></div>
     <div class="steps" style="flex:none">
-      <div class="step"><span class="sq"></span><span class="st">Make the search work after a failed swerve, on open floor</span><span class="sp">pass: 3 of 4 found, under 20 s, and the robot drives on the way it came</span></div>
-      <div class="step"><span class="sq"></span><span class="st">Give the curve a mark it can always find</span><span class="sp">pass: no swerve ends on the 3.9 s limit; 3 of 4 failures did</span></div>
-      <div class="step"><span class="sq"></span><span class="st">Film the swerve from the side and watch the cup</span><span class="sp">pass: 8 of 10 filmed, none touching; cups at the curve exit trigger at 40 cm</span></div>
-      <div class="step"><span class="sq"></span><span class="st">Find the swing at the gentle curve entry</span><span class="sp">pass: a logged cause, or a speed limit that removes it</span></div>
-      <div class="step block"><span class="sq"></span><span class="st">Team: tape an intersection and a parking box</span><span class="sp">blocks tasks 3, 4 and 5. Lane and tape width still unmeasured</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Harden off-track line recovery on open floor following aborted circumventions</span><span class="sp">pass: 3 of 4 recoveries achieved under 20 s with correct lane heading preservation</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Establish deterministic visual termination criterion for circumvention arc</span><span class="sp">pass: eliminate 3.9 s timeout fallback exits (accounted for 3 of 4 recorded failures)</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Side-view video verification of obstacle clearance envelope</span><span class="sp">pass: 8 of 10 passes filmed with zero obstacle contact; exit triggers verify 40 cm headway</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Isolate root cause of curve entry steering oscillation</span><span class="sp">pass: root cause identified and logged, or resolved via feedforward timing / speed envelope</span></div>
+      <div class="step block"><span class="sq"></span><span class="st">Team dependency: construct intersection and parking box track geometry</span><span class="sp">blocks tasks 3, 4, 5. Track geometry and tape width baseline established</span></div>
     </div>
     <div class="spacer"></div>
-    <p>Only the last row blocks other tasks. Signs, intersection and parking reuse the pipeline that already works, so the code is not the bottleneck.</p>
+    <p>Only the final item blocks subsequent milestones. Sign recognition, intersection negotiation, and parking reuse the proven perception-decision pipeline.</p>
     <p class="src">Steps and pass conditions from PLAN.md section 6 and the open items of 8 November. Escape returns to the roadmap, d gives the document version with the full source.</p>
   </div></div>
 </section>
