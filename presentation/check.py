@@ -1,6 +1,6 @@
 """Static checks on the presentation, without a browser.
 
-    python presentation/check.py [index_v3.html] [--fix]
+    python presentation/check.py [week2.html] [--fix]
 
 With --fix the line numbers of quoted lines that have merely moved are rewritten first, and only the
 lines whose code actually changed are reported.
@@ -19,7 +19,11 @@ import sys
 from html.parser import HTMLParser
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PAGE = os.path.join(HERE, next((a for a in sys.argv[1:] if not a.startswith('-')), 'index.html'))
+arg_page = next((a for a in sys.argv[1:] if not a.startswith('-')), 'week2.html')
+if os.path.exists(arg_page):
+    PAGE = os.path.abspath(arg_page)
+else:
+    PAGE = os.path.join(HERE, arg_page)
 SOURCE_DIR = os.path.join(os.path.dirname(HERE), 'notebooks', 'mini_av')
 
 # text that has to be readable from the back of a room: 7:1. Small print: 4.5:1.
@@ -200,7 +204,12 @@ def main():
         fail('%d eyebrows on %d slides: at most one per three' % (eyebrows, slides))
 
     # every class sized in cqw needs a body.doc rule in rem, or the document mode is unreadable
-    css = re.sub(r'/\*.*?\*/', '', page, flags=re.S)
+    css_parts = re.findall(r'<style[^>]*>(.*?)</style>', page, flags=re.S)
+    for link in re.findall(r'<link[^>]+rel=["\']stylesheet["\'][^>]+href=["\']([^"\']+)["\']', page):
+        link_path = os.path.normpath(os.path.join(os.path.dirname(PAGE), link))
+        if os.path.exists(link_path):
+            css_parts.append(open(link_path, encoding='utf-8').read())
+    css = re.sub(r'/\*.*?\*/', '', '\n'.join(css_parts) if css_parts else page, flags=re.S)
     deck_classes, doc_classes = set(), set()
     for selector, body in re.findall(r'([^{}]+)\{([^{}]*)\}', css):
         selector = selector.strip()

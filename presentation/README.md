@@ -5,14 +5,15 @@ Open it in a browser, present from it, print it to PDF. It is committed, so a `g
 
 | File | What it is |
 | :--- | :--- |
-| `index_v3.html` | **The current deck.** Follows the professor's presentation guideline: architecture, source code, explanation, results, next plan |
-| `index_v2.html`, `index.html` | The 2 November decks, kept for the record. Their code snippets are paraphrased and no longer match the source |
+| `week2.html` | **The current deck (Week 2, 9 Nov).** Follows the professor's presentation guideline: architecture, source code, explanation, results, next plan |
+| `week1.html`, `week1.pdf` | The 2 November deck (Week 1), presented last time and kept for the record |
+| `index_v3.html`, `index_v2.html`, `index.html` | Legacy filenames, kept for reference |
 
 Rhythm and course rules: [`WEEKLY.md`](../WEEKLY.md). Look: [`design/THEME.md`](../design/THEME.md), locked.
 
 ## The structure the professor asked for
 
-His guideline, point by point, and where each one lives in `index_v3.html`:
+His guideline, point by point, and where each one lives in `week2.html`:
 
 | Point | Slides |
 | :--- | :--- |
@@ -83,7 +84,7 @@ Most weeks only the first four steps change anything.
    cause, `c-fix` the fix. Use `c-open` instead of `c-fix` while the cause is unknown, and say so out loud.
 5. **Next** (slide 19, `.steps`): one `.step` per step with its pass condition. Add `block` to the step that
    blocks other tasks.
-6. **Code slides** (5 to 13): run `build_appendix.py`, then `check.py index_v3.html --fix`. Moved lines
+6. **Code slides** (5 to 13): run `build_appendix.py`, then `check.py week2.html --fix`. Moved lines
    are renumbered for you; the few whose code really changed are listed, and those are the only ones to
    read and rewrite by hand. This is a weekly job, not an occasional one: the code moves every week.
 7. **Numbers**: only if a new run happened. Sources are listed below.
@@ -155,7 +156,7 @@ cannot ship a stale listing. To add a file, put it in `FILES` in `build_appendix
 ## Checks before you present
 
 ```bash
-python presentation/check.py index_v3.html --fix
+python presentation/check.py week2.html --fix
 ```
 
 `--fix` first follows the code: any quoted line that has merely moved gets its new number, and only the
@@ -165,7 +166,7 @@ Tag balance, em dashes, unfilled placeholders, every `cqw` class having its docu
 recomputed from their own values, every quoted line of code still sitting at the line number the slide
 claims, the appendix being current, and the palette contrasts. It needs no browser and takes a second.
 
-**Then the layout check, which needs a browser.** Open `index_v3.html`, press `F12`, paste this in the
+**Then the layout check, which needs a browser.** Open `week2.html`, press `F12`, paste this in the
 console:
 
 ```js

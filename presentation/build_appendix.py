@@ -1,6 +1,6 @@
 """Writes the full source of the driving program into the appendix of the presentation.
 
-    python presentation/build_appendix.py [index_v3.html]
+    python presentation/build_appendix.py [week2.html]
 
 The slides show excerpts with line numbers; the appendix shows the whole files with the same numbers,
 so every excerpt can be looked up. It is generated, never pasted: a hand-copied listing is stale within
@@ -38,7 +38,8 @@ def listing(name):
 
 
 def main():
-    page_path = os.path.join(HERE, sys.argv[1] if len(sys.argv) > 1 else 'index_v3.html')
+    arg = sys.argv[1] if len(sys.argv) > 1 else 'week2.html'
+    page_path = os.path.abspath(arg) if os.path.exists(arg) else os.path.join(HERE, arg)
     page = io.open(page_path, encoding='utf-8').read()
     appendix = '\n'.join([
         START,

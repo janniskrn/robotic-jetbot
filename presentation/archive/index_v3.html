@@ -1,0 +1,2500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JetBot architecture and status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Tape, locked in design/THEME.md, with the 2026-11-02 contrast amendment. */
+:root{
+  color-scheme:light;
+  --ground:#DEDCD5; --raise:#EFEEE9; --ink:#1B1E23; --muted:#3C4047; --faint:#5A5F67;
+  --rule:#C6C4BC; --rule-soft:#D5D3CC;
+  --accent:#1E5FA8; --accent-ink:#184B84; --accent-soft:rgba(30,95,168,.12);
+  --alarm:#7A2418; --alarm-soft:rgba(122,36,24,.12); --amber:#8A5A16; --amber-soft:rgba(138,90,22,.14);
+  --cat1:#9C5120; --cat2:#4C7A8C; --ok:#2F6F5E; --ok-soft:rgba(47,111,94,.14);
+  --display:"Archivo Narrow","Arial Narrow",Helvetica,Arial,sans-serif;
+  --body:"Archivo Narrow","Arial Narrow",Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#171A1E; --raise:#1F2329; --ink:#EDEBE4; --muted:#A6ACB4; --faint:#8E959E;
+  --rule:#343A42; --rule-soft:#2A3037;
+  --accent:#7BB2E4; --accent-ink:#9CC6EC; --accent-soft:rgba(123,178,228,.16);
+  --alarm:#EE9D86; --alarm-soft:rgba(238,157,134,.16); --amber:#D7A75A; --amber-soft:rgba(215,167,90,.16);
+  --cat1:#D79355; --cat2:#86AFC4; --ok:#6FC3A8; --ok-soft:rgba(111,195,168,.16);
+}
+*{box-sizing:border-box}
+html,body{margin:0; padding:0; height:100%}
+body{background:var(--ground); color:var(--ink); font-family:var(--body); -webkit-font-smoothing:antialiased}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }
+
+.chrome{position:fixed; z-index:50; right:12px; top:10px; display:flex; gap:7px}
+.btn{font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--muted); background:var(--raise); border:1px solid var(--rule); border-radius:999px; padding:6px 12px; cursor:pointer}
+.btn:hover{color:var(--ink); border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.rail{position:fixed; z-index:50; left:0; right:0; bottom:0; height:3px; background:transparent}
+.rail i{display:block; height:100%; width:0; background:var(--accent); transition:width .25s ease}
+body.map .rail{display:none}
+
+/* ════════ ROADMAP ════════ */
+.roadmap{min-height:100%; display:flex; flex-direction:column; justify-content:center; gap:clamp(14px,2.1vh,24px);
+  padding:clamp(20px,4vh,46px) clamp(18px,4vw,60px)}
+body.slides .roadmap{display:none}
+body.doc .roadmap{display:flex; min-height:0; padding:0 0 1.6rem}
+.rm-head{display:flex; flex-direction:column; gap:7px}
+.rm-eyebrow{font-family:var(--mono); font-size:clamp(10px,.85vw,12px); font-weight:600; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--accent-ink)}
+.rm-head h1{font-family:var(--display); font-weight:700; font-size:clamp(26px,4vw,48px); line-height:1.04; margin:0; text-wrap:balance}
+.rm-head p{margin:0; color:var(--muted); font-size:clamp(13px,1.3vw,17px); max-width:58ch; line-height:1.45}
+.cards{display:grid; gap:clamp(9px,1vw,14px); grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.card{background:var(--raise); border:1px solid var(--rule); border-radius:11px; padding:clamp(11px,1.1vw,15px);
+  display:flex; flex-direction:column; gap:6px; min-width:0; text-align:left; font:inherit; color:inherit; position:relative}
+.card .cw{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--faint)}
+.card h2{font-family:var(--display); font-weight:700; font-size:clamp(15px,1.4vw,19px); line-height:1.12; margin:0}
+.card p{margin:0; color:var(--muted); font-size:clamp(12px,1vw,13.5px); line-height:1.38}
+.card .state{font-family:var(--mono); font-size:9.5px; letter-spacing:.07em; text-transform:uppercase;
+  display:inline-flex; align-items:center; gap:6px; margin-top:auto; padding-top:5px}
+.card .state i{width:8px; height:8px; border-radius:50%; display:block}
+.card.open{cursor:pointer; border-color:var(--accent)}
+.card.open:hover{background:var(--accent-soft)}
+.card.open:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.card.open .state{color:var(--ok)} .card.open .state i{background:var(--ok)}
+.card.locked{border-style:dashed; background:transparent}
+.card.locked h2{color:var(--faint)}
+.card.locked .state{color:var(--faint)}
+.card .enter{font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-ink)}
+.legendrow{display:flex; flex-wrap:wrap; gap:15px; font-family:var(--mono); font-size:10.5px; color:var(--faint)}
+.legendrow span{display:flex; align-items:center; gap:6px}
+.legendrow i{width:8px; height:8px; border-radius:50%; display:block}
+.i-built{background:var(--ok)} .i-written{background:var(--amber)} .i-open{background:var(--rule)}
+
+/* the five points of the presentation guideline, shown before entering */
+.glmap{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:clamp(8px,.9vw,13px);
+  border-top:1px solid var(--rule); padding-top:clamp(9px,1.1vh,14px)}
+.glstep{display:flex; flex-direction:column; gap:3px; min-width:0}
+.glstep .gi{font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.14em; color:var(--accent-ink)}
+.glstep .gt{font-size:clamp(11.5px,1vw,13.5px); color:var(--muted); line-height:1.3}
+.glstep .gc{font-family:var(--mono); font-size:9.5px; color:var(--faint)}
+
+/* ════════ SLIDES ════════ */
+#deck{display:none}
+body.slides #deck{display:block; height:100dvh; overflow-y:scroll; scroll-snap-type:y mandatory; scrollbar-width:none}
+body.slides #deck::-webkit-scrollbar{display:none}
+body.slides section{height:100dvh; scroll-snap-align:start; scroll-snap-stop:always; display:flex; align-items:center; justify-content:center}
+.slide{width:min(100vw,177.78vh); aspect-ratio:16/9; container-type:inline-size; position:relative; overflow:hidden;
+  background:var(--ground); color:var(--ink)}
+.slide::after{content:""; position:absolute; inset:auto 0 0; height:.9cqw; pointer-events:none;
+  background:linear-gradient(90deg,var(--accent) 0 38%,transparent 38% 62%,var(--accent) 62% 100%)}
+.inner{position:absolute; inset:0; padding:3.6cqw 5cqw 4.6cqw; display:flex; flex-direction:column; gap:1.3cqw}
+.spacer{flex:1}
+
+body.doc #deck{display:block; max-width:50rem; margin:0 auto; padding:0 max(1rem,env(safe-area-inset-left,0px)) 4rem}
+body.doc section{display:block}
+body.doc .slide{width:auto; aspect-ratio:auto; height:auto; container-type:normal; overflow:visible;
+  border-top:1px solid var(--rule-soft); padding-top:1.6rem}
+body.doc .slide::after{display:none}
+body.doc .inner{position:static; padding:0 0 1.2rem; gap:.85rem}
+body.doc .spacer{display:none}
+
+.eyebrow{font-family:var(--mono); font-size:1.05cqw; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--accent-ink)}
+h2.sh{font-family:var(--display); font-weight:700; font-size:3.2cqw; line-height:1.06; margin:0; max-width:28ch; text-wrap:balance}
+h1.sh{font-family:var(--display); font-weight:700; font-size:4.6cqw; line-height:1.03; margin:0; max-width:24ch; text-wrap:balance}
+.slide p{margin:0; color:var(--muted); font-size:1.3cqw; max-width:62ch; line-height:1.4}
+.src{font-family:var(--mono); font-size:.95cqw; color:var(--faint); margin:0; max-width:none}
+.slide b{color:var(--ink); font-weight:600}
+body.doc .eyebrow{font-size:.7rem}
+body.doc h1.sh, body.doc h2.sh{max-width:none}
+body.doc h1.sh{font-size:1.8rem}
+body.doc h2.sh{font-size:1.4rem}
+body.doc .slide p{font-size:.95rem; max-width:none}
+body.doc .src{font-size:.74rem}
+
+/* guideline tag: which of the professor's five points this slide answers */
+.gl{display:flex; align-items:center; gap:.7cqw; font-family:var(--mono); font-size:.9cqw; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--faint)}
+.gl i{font-style:normal; color:var(--accent-ink); background:var(--accent-soft); border-radius:.25cqw; padding:.12cqw .5cqw}
+body.doc .gl{font-size:.66rem; gap:.4rem}
+body.doc .gl i{border-radius:3px; padding:.05rem .3rem}
+
+/* facts */
+.facts{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1.4cqw}
+.fact{display:flex; flex-direction:column; gap:.3cqw; min-width:0}
+.fact .n{font-family:var(--display); font-weight:700; font-size:2.9cqw; line-height:1; font-variant-numeric:tabular-nums}
+.fact .l{font-family:var(--mono); font-size:.92cqw; color:var(--faint); letter-spacing:.05em; text-transform:uppercase; line-height:1.3}
+body.doc .facts{gap:.8rem; grid-template-columns:repeat(2,minmax(0,1fr))}
+body.doc .fact .n{font-size:1.5rem}
+body.doc .fact .l{font-size:.66rem}
+
+/* status board: one row per task */
+.board{display:flex; flex-direction:column; gap:.55cqw}
+.brow{display:grid; grid-template-columns:3cqw 1fr 26cqw 13cqw; align-items:center; gap:1.2cqw;
+  padding:.5cqw 0; border-bottom:1px solid var(--rule-soft)}
+.brow .bn{font-family:var(--mono); font-size:1cqw; color:var(--faint)}
+.brow .bt{font-family:var(--display); font-weight:700; font-size:1.5cqw; line-height:1.1}
+.brow .bmeter{height:1cqw; background:var(--rule); border-radius:.5cqw; overflow:hidden; position:relative}
+.brow .bmeter i{position:absolute; inset:0 auto 0 0; border-radius:.5cqw}
+.brow .bs{font-family:var(--mono); font-size:.95cqw; letter-spacing:.05em; text-transform:uppercase; text-align:right}
+.s-built i{background:var(--ok)} .s-built .bs{color:var(--ok)}
+.s-written i{background:var(--amber)} .s-written .bs{color:var(--amber)}
+.s-open i{background:var(--rule)} .s-open .bs{color:var(--faint)}
+body.doc .board{gap:.3rem}
+body.doc .brow{grid-template-columns:1.6rem 1fr 9rem 6rem; gap:.7rem; padding:.3rem 0}
+body.doc .brow .bn{font-size:.72rem}
+body.doc .brow .bt{font-size:.95rem}
+body.doc .brow .bmeter{height:.5rem; border-radius:.25rem}
+body.doc .brow .bmeter i{border-radius:.25rem}
+body.doc .brow .bs{font-size:.66rem}
+
+/* week strip */
+.week{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1.2cqw; position:relative}
+.wday{display:flex; flex-direction:column; gap:.5cqw; min-width:0; border-top:.3cqw solid var(--rule); padding-top:.9cqw}
+.wday.good{border-top-color:var(--ok)} .wday.bad{border-top-color:var(--alarm)} .wday.now{border-top-color:var(--accent)}
+.wday .wd{font-family:var(--mono); font-size:.92cqw; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+.wday .wt{font-family:var(--display); font-weight:700; font-size:1.4cqw; line-height:1.12}
+.wday .wp{font-size:1.05cqw; color:var(--muted); line-height:1.35}
+body.doc .week{grid-template-columns:1fr; gap:.8rem}
+body.doc .wday{border-top-width:2px; padding-top:.5rem; gap:.2rem}
+body.doc .wday .wd{font-size:.66rem}
+body.doc .wday .wt{font-size:.95rem}
+body.doc .wday .wp{font-size:.88rem}
+
+/* failure chains */
+.chains{display:flex; flex-direction:column; gap:.8cqw}
+.chain{display:grid; grid-template-columns:1fr 1fr 1fr; gap:.7cqw; align-items:stretch}
+.cbox{border-radius:.4cqw; padding:.7cqw .9cqw; display:flex; flex-direction:column; gap:.2cqw; min-width:0}
+.cbox .cl{font-family:var(--mono); font-size:.82cqw; letter-spacing:.1em; text-transform:uppercase}
+.cbox .ct{font-size:1.05cqw; line-height:1.3; color:var(--ink)}
+.c-sym{background:var(--alarm-soft)} .c-sym .cl{color:var(--alarm)}
+.c-why{background:var(--raise)} .c-why .cl{color:var(--faint)}
+.c-fix{background:var(--ok-soft)} .c-fix .cl{color:var(--ok)}
+.c-open{background:var(--amber-soft)} .c-open .cl{color:var(--amber)}
+body.doc .chains{gap:.6rem}
+body.doc .chain{grid-template-columns:1fr; gap:.25rem}
+body.doc .cbox{border-radius:6px; padding:.5rem .6rem}
+body.doc .cbox .cl{font-size:.62rem}
+body.doc .cbox .ct{font-size:.88rem}
+
+/* next steps */
+.steps{display:flex; flex-direction:column; gap:.6cqw}
+.step{display:grid; grid-template-columns:1.6cqw 1fr 30cqw; gap:1.1cqw; align-items:baseline;
+  padding-bottom:.55cqw; border-bottom:1px solid var(--rule-soft)}
+.step .sq{width:1.1cqw; height:1.1cqw; border:.18cqw solid var(--faint); border-radius:.2cqw; display:block}
+.step.block .sq{border-color:var(--alarm); background:var(--alarm-soft)}
+.step .st{font-size:1.25cqw; color:var(--ink); line-height:1.3}
+.step .sp{font-family:var(--mono); font-size:.95cqw; color:var(--faint); line-height:1.35}
+body.doc .steps{gap:.4rem}
+body.doc .step{grid-template-columns:1rem 1fr; gap:.5rem; padding-bottom:.4rem}
+body.doc .step .sq{width:.6rem; height:.6rem; border-width:1px; border-radius:2px}
+body.doc .step .st{font-size:.92rem}
+body.doc .step .sp{font-size:.72rem; grid-column:2}
+
+/* bars */
+.bars{display:flex; flex-direction:column; gap:.7cqw}
+.bar{display:grid; grid-template-columns:13cqw 1fr 10cqw; align-items:center; gap:1.2cqw}
+.bl{font-family:var(--mono); font-size:1cqw; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
+.track{height:1.7cqw; background:var(--rule); border-radius:.3cqw; position:relative; overflow:hidden}
+.fill{position:absolute; inset:0 auto 0 0; border-radius:.3cqw}
+.bv{font-family:var(--mono); font-size:1cqw; font-variant-numeric:tabular-nums; text-align:right}
+.bar.lost .bv{color:var(--alarm); font-weight:600}
+.f-base{background:var(--cat1)} .f-ours{background:var(--cat2)} .f-adaptive{background:var(--accent)}
+body.doc .bars{gap:.4rem}
+body.doc .bar{grid-template-columns:7rem 1fr 4rem; gap:.6rem}
+body.doc .bl{font-size:.72rem}
+body.doc .track{height:.8rem; border-radius:3px}
+body.doc .fill{border-radius:3px}
+body.doc .bv{font-size:.74rem}
+
+/* pipeline */
+.pipe{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:1cqw}
+.pstep{background:var(--raise); border:1px solid var(--rule); border-radius:.6cqw; padding:1cqw; display:flex; flex-direction:column; gap:.35cqw; min-width:0}
+.pstep .pn{font-family:var(--mono); font-size:.88cqw; letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
+.pstep .pt{font-family:var(--display); font-weight:700; font-size:1.35cqw; line-height:1.1}
+.pstep .pd{font-size:.95cqw; color:var(--muted); line-height:1.3}
+.pstep.mid{border-color:var(--accent)}
+.chip{font-family:var(--mono); font-size:.85cqw; background:var(--accent-soft); border-radius:.3cqw; padding:.18cqw .4cqw; margin-top:.2cqw}
+body.doc .pipe{grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem}
+body.doc .pstep{border-radius:8px; padding:.7rem; gap:.15rem}
+body.doc .pstep .pn{font-size:.62rem}
+body.doc .pstep .pt{font-size:.95rem}
+body.doc .pstep .pd{font-size:.78rem}
+body.doc .chip{font-size:.64rem; border-radius:3px; padding:.08rem .28rem}
+
+/* model cards */
+.models{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1.2cqw}
+.model{background:var(--raise); border:1px solid var(--rule); border-radius:.6cqw; padding:1.1cqw; display:flex; flex-direction:column; gap:.5cqw; min-width:0}
+.model .mt{font-family:var(--display); font-weight:700; font-size:1.5cqw}
+.model .mn{font-family:var(--display); font-weight:700; font-size:2.6cqw; line-height:1; font-variant-numeric:tabular-nums; color:var(--accent-ink)}
+.model .ml{font-family:var(--mono); font-size:.88cqw; color:var(--faint); letter-spacing:.04em; line-height:1.35}
+.model .mw{font-size:1cqw; color:var(--muted); line-height:1.3; border-top:1px solid var(--rule-soft); padding-top:.5cqw; margin-top:auto}
+body.doc .models{grid-template-columns:1fr; gap:.6rem}
+body.doc .model{border-radius:8px; padding:.7rem; gap:.25rem}
+body.doc .model .mt{font-size:.98rem}
+body.doc .model .mn{font-size:1.4rem}
+body.doc .model .ml{font-size:.68rem}
+body.doc .model .mw{font-size:.85rem; padding-top:.35rem}
+
+figure{margin:0; min-height:0; display:flex; flex-direction:column; gap:.5cqw; align-items:center}
+figure svg{display:block; width:100%; height:auto; max-height:23cqw; max-width:100%}
+figure.wide svg{max-height:18cqw}
+.fl{font-family:var(--mono); font-size:.92cqw; color:var(--faint); letter-spacing:.09em; text-transform:uppercase; align-self:flex-start}
+body.doc figure{gap:.3rem}
+body.doc figure svg, body.doc figure.wide svg{max-height:none}
+body.doc .fl{font-size:.64rem}
+
+.tag{font-family:var(--mono); font-size:.88cqw; letter-spacing:.06em; text-transform:uppercase; padding:.22cqw .55cqw; border-radius:.3cqw; display:inline-block}
+.t-run{background:var(--ok-soft); color:var(--ok)}
+.t-test{background:var(--amber-soft); color:var(--amber)}
+.t-open{background:var(--alarm-soft); color:var(--alarm)}
+body.doc .tag{font-size:.62rem; padding:.1rem .3rem; border-radius:3px}
+
+/* ════════ CODE SLIDE: real source on the left, numbered notes on the right ════════ */
+.codeslide{display:grid; grid-template-columns:1.7fr 1fr; gap:1.6cqw; min-height:0; flex:1}
+.codesrc{display:flex; flex-direction:column; gap:.25cqw; min-width:0}
+.codesrc pre{margin:0; font-family:var(--mono); font-size:.95cqw; line-height:1.48; color:var(--ink);
+  background:var(--raise); border:1px solid var(--rule-soft); border-radius:.35cqw; padding:.8cqw 1cqw; overflow:auto}
+.codesrc pre .c{color:var(--faint)}
+.codesrc pre.wrapcode{white-space:pre-wrap; padding-left:3.4cqw; text-indent:-2.4cqw}
+.cf{font-family:var(--mono); font-size:.85cqw; letter-spacing:.09em; text-transform:uppercase; color:var(--faint)}
+.ln{display:inline-block; width:2.4cqw; margin-right:.8cqw; text-align:right; font-size:.82cqw;
+  color:var(--faint); user-select:none}
+.ln.on{color:var(--accent-ink); font-weight:600}
+.notes{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.8cqw; min-width:0}
+.notes li{display:grid; grid-template-columns:2.8cqw 1fr; gap:.7cqw; align-items:start;
+  font-size:1.1cqw; line-height:1.36; color:var(--muted)}
+.notes b{color:var(--ink); font-weight:600}
+.nn{font-family:var(--mono); font-size:.82cqw; font-weight:600; color:var(--accent-ink); background:var(--accent-soft);
+  border-radius:.3cqw; height:1.6cqw; display:flex; align-items:center; justify-content:center}
+body.doc .codeslide{display:block}
+body.doc .codesrc{gap:.3rem; margin-bottom:.7rem}
+body.doc .codesrc pre{font-size:.72rem; line-height:1.5; border-radius:4px; padding:.55rem .7rem}
+body.doc .codesrc pre.wrapcode{padding-left:1.8rem; text-indent:-1.2rem}
+body.doc .cf{font-size:.64rem}
+body.doc .ln{width:1.6rem; margin-right:.5rem; font-size:.62rem}
+body.doc .notes{gap:.4rem}
+body.doc .notes li{grid-template-columns:1.8rem 1fr; gap:.45rem; font-size:.9rem}
+body.doc .nn{font-size:.62rem; height:.95rem}
+
+/* ════════ APPENDIX: the full source, document view only ════════ */
+.doconly{display:none}
+body.doc .doconly{display:block}
+.appendix{max-width:50rem; margin:0 auto; padding:2.5rem max(1rem,env(safe-area-inset-left,0px)) 4rem;
+  border-top:2px solid var(--rule)}
+.appendix h2{font-family:var(--display); font-weight:700; font-size:1.8rem; margin:0 0 .5rem}
+.appendix p{color:var(--muted); font-size:.95rem; line-height:1.5; margin:0 0 1.6rem}
+.appendix .path{font-family:var(--mono); font-size:.86rem; color:var(--ink)}
+.srcfile{margin-bottom:1.8rem}
+.srcfile h3{font-family:var(--mono); font-size:.92rem; font-weight:600; margin:0 0 .4rem;
+  display:flex; align-items:baseline; gap:.6rem}
+.srcfile .fn{font-weight:400; color:var(--faint); font-size:.74rem}
+.srcfile pre{margin:0; font-family:var(--mono); font-size:.66rem; line-height:1.5; color:var(--ink);
+  background:var(--raise); border:1px solid var(--rule-soft); border-radius:4px; padding:.7rem .4rem;
+  overflow-x:auto; white-space:pre}
+.srcfile .ln{width:2rem; margin-right:.6rem; font-size:.6rem}
+
+@page{ size:297mm 167mm; margin:0 }
+@media print{
+  :root, :root[data-theme="dark"]{ color-scheme:light;
+    --ground:#DEDCD5; --raise:#EFEEE9; --ink:#1B1E23; --muted:#3C4047; --faint:#5A5F67;
+    --rule:#C6C4BC; --rule-soft:#D5D3CC; --accent:#1E5FA8; --accent-ink:#184B84;
+    --accent-soft:rgba(30,95,168,.12); --alarm:#7A2418; --alarm-soft:rgba(122,36,24,.12);
+    --amber:#8A5A16; --amber-soft:rgba(138,90,22,.14); --cat1:#9C5120; --cat2:#4C7A8C;
+    --ok:#2F6F5E; --ok-soft:rgba(47,111,94,.14);
+  }
+  html,body{height:auto; overflow:visible}
+  .chrome,.rail{display:none !important}
+  body.map .roadmap{display:flex}
+  body.slides #deck, body.map #deck{display:block; height:auto; overflow:visible}
+  body.slides section, body.map section{height:167mm; width:297mm; page-break-after:always; break-after:page; display:flex; overflow:hidden}
+  body.slides .slide, body.map .slide{width:297mm; height:167mm; aspect-ratio:auto}
+  body.doc section{break-inside:avoid-page}
+  body.slides .appendix, body.map .appendix{display:none !important}
+  .srcfile{break-inside:auto}
+  *{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+}
+</style>
+</head>
+<body class="map">
+
+<div class="chrome">
+  <button class="btn" id="mapbtn" type="button">Roadmap</button>
+  <button class="btn" id="modebtn" type="button">Document</button>
+  <button class="btn" id="themebtn" type="button">Dark</button>
+</div>
+<div class="rail"><i id="railfill"></i></div>
+
+<!-- ════════ ROADMAP ════════ -->
+<div class="roadmap" id="roadmap">
+  <div class="rm-head">
+    <div class="rm-eyebrow">Mini autonomous vehicle · team A · 9 November</div>
+    <h1>Week 1 runs. This update walks through the code that makes it run.</h1>
+    <p>Six weeks, eight tasks. Open week 1 for the architecture, the source code of every main part, the results it produced, and the next plan.</p>
+  </div>
+
+  <div class="cards">
+    <button class="card open" id="card-w1" type="button">
+      <span class="cw">Week 1 · tasks 1 and 2</span>
+      <h2>Lane following and the obstacle</h2>
+      <p>Adaptive road following, the stop in front of a cup, and the way around it. Driven on the track.</p>
+      <span class="state"><i></i>demonstrated</span>
+      <span class="enter">Open the walkthrough</span>
+    </button>
+    <div class="card locked">
+      <span class="cw">Week 2 · tasks 3, 4, 5</span>
+      <h2>Signs, intersection, parking</h2>
+      <p>Same pipeline as the cup: record, label from a color mask, train, decide in our code.</p>
+      <span class="state"><i style="background:var(--rule)"></i>waiting on track parts</span>
+    </div>
+    <div class="card locked">
+      <span class="cw">Week 3 · task 6</span>
+      <h2>One integrated program</h2>
+      <p>Six states already run in one program. Integration adds the states of week 2 to the same table.</p>
+      <span class="state"><i style="background:var(--rule)"></i>after week 2</span>
+    </div>
+    <div class="card locked">
+      <span class="cw">Week 4 · task 7</span>
+      <h2>Adaptive speed and cruise control</h2>
+      <p>The speed rule already takes the lower of two limits. A following distance becomes the third.</p>
+      <span class="state"><i style="background:var(--rule)"></i>needs a second robot</span>
+    </div>
+    <div class="card locked">
+      <span class="cw">Weeks 5 and 6 · task 8</span>
+      <h2>The unknown course</h2>
+      <p>Parking to parking on a course nobody has seen, filmed, with the archive and the slides.</p>
+      <span class="state"><i style="background:var(--rule)"></i>open</span>
+    </div>
+  </div>
+
+  <div class="glmap">
+    <div class="glstep"><span class="gi">i</span><span class="gt">Total architecture of the code</span><span class="gc">slides 3 and 4</span></div>
+    <div class="glstep"><span class="gi">ii</span><span class="gt">The source code itself</span><span class="gc">slides 5 to 13</span></div>
+    <div class="glstep"><span class="gi">iii</span><span class="gt">Detailed explanation of it</span><span class="gc">beside every listing</span></div>
+    <div class="glstep"><span class="gi">iv</span><span class="gt">Results from the executed code</span><span class="gc">slides 14 to 18</span></div>
+    <div class="glstep"><span class="gi">v</span><span class="gt">Next plan from results and bugs</span><span class="gc">slide 19</span></div>
+  </div>
+
+  <div class="legendrow">
+    <span><i class="i-built"></i>built and tested on the track</span>
+    <span><i class="i-written"></i>written, never completed a run</span>
+    <span><i class="i-open"></i>waiting on something physical</span>
+    <span>enter opens · escape returns · d document · t dark</span>
+  </div>
+</div>
+
+<!-- ════════ SLIDES ════════ -->
+<div id="deck">
+
+<!-- 1 status board -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>status</i>where the project stands</div>
+    <h1 class="sh">Where the project stands</h1>
+    <div class="spacer" style="flex:.3"></div>
+    <div class="board" style="flex:none">
+      <div class="brow s-built"><span class="bn">W1</span><span class="bt">1 · Adaptive lane following</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">driven 60 s</span></div>
+      <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Stop in front of a cup</span><span class="bmeter"><i style="width:100%"></i></span><span class="bs">3 runs, 35 to 40 cm</span></div>
+      <div class="brow s-built"><span class="bn">W1</span><span class="bt">2 · Drive around the cup</span><span class="bmeter"><i style="width:92%"></i></span><span class="bs">14 of 18 swerves</span></div>
+      <div class="brow s-written"><span class="bn">W3</span><span class="bt">6 · State machine</span><span class="bmeter"><i style="width:65%"></i></span><span class="bs">7 states run</span></div>
+      <div class="brow s-open"><span class="bn">W2</span><span class="bt">3, 4, 5 · Signs, intersection, parking</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">no track parts</span></div>
+      <div class="brow s-open"><span class="bn">W4</span><span class="bt">7 · Cruise control</span><span class="bmeter"><i style="width:8%"></i></span><span class="bs">no 2nd robot</span></div>
+      <div class="brow s-open"><span class="bn">W5</span><span class="bt">8 · Final run</span><span class="bmeter"><i style="width:0%"></i></span><span class="bs">open</span></div>
+    </div>
+    <div class="spacer"></div>
+    <p class="src">Green: completed runs on the track. Amber: runs, but not yet to the pass criterion. Grey: blocked on something physical.</p>
+  </div></div>
+</section>
+
+<!-- 2 last week -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>status</i>what we did since the last demonstration</div>
+    <h2 class="sh">Work completed since the last demonstration</h2>
+    <div class="spacer" style="flex:.3"></div>
+    <div class="week" style="flex:none">
+      <div class="wday bad">
+        <span class="wd">3 Nov · track, 9 swerves</span>
+        <span class="wt">5 came back</span>
+        <span class="wp">4 of the 9 started far too early, and the marks only worked on the one straight.</span>
+      </div>
+      <div class="wday good">
+        <span class="wd">8 Nov · track, 3 cups</span>
+        <span class="wt">11 of 12 swerves</span>
+        <span class="wp">The swerve aims at the cup now, not at the tape, so it also works away from that straight.</span>
+      </div>
+      <div class="wday good">
+        <span class="wd">8 Nov · the robot measured</span>
+        <span class="wt">Distance from band size</span>
+        <span class="wp">cup_learn.py: the robot backs away from a cup in pulses, 139 stops in 5 places, and learns cm.</span>
+      </div>
+      <div class="wday now">
+        <span class="wd">9 Nov · track, 18 swerves</span>
+        <span class="wt">14 came back</span>
+        <span class="wp">A lost lane is now searched for in three stages instead of ending the run: undo, sweep, search.</span>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <p class="src">Written up in DECISIONS.md as OBST6 to OBST9, GAP2, LEARN1, AVOID4 and LINE1. The track sessions are filmed.</p>
+  </div></div>
+</section>
+
+<!-- 3 architecture: the module map -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>i</i>total architecture of the code</div>
+    <h2 class="sh">Code architecture: three layers and the driving loop</h2>
+    <div class="spacer" style="flex:.15"></div>
+    <figure style="flex:none">
+      <svg viewBox="0 0 560 236" style="max-height:24cqw" role="img" aria-label="Perception, decision and control inside the driving loop, config underneath, motors outside">
+        <defs>
+          <marker id="aF" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--faint)" stroke-width="1.7"/></marker>
+          <marker id="aA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--accent)" stroke-width="1.7"/></marker>
+        </defs>
+        <g font-family="IBM Plex Mono, monospace" font-size="9">
+          <rect x="8" y="16" width="414" height="150" rx="7" fill="none" stroke="var(--accent)" stroke-dasharray="5 4"/>
+          <text x="20" y="31" fill="var(--accent-ink)">drive.py · 207 lines · the loop, and the only file that calls set_motors</text>
+
+          <rect x="24" y="62" width="106" height="48" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
+          <text x="77" y="81" text-anchor="middle" fill="var(--ink)">perception.py</text>
+          <text x="77" y="94" text-anchor="middle" fill="var(--faint)" font-size="8">85 lines</text>
+          <text x="77" y="104" text-anchor="middle" fill="var(--muted)" font-size="8">3 models, 2 masks</text>
+
+          <rect x="160" y="62" width="106" height="48" rx="5" fill="var(--raise)" stroke="var(--accent)"/>
+          <text x="213" y="81" text-anchor="middle" fill="var(--ink)">decision.py</text>
+          <text x="213" y="94" text-anchor="middle" fill="var(--faint)" font-size="8">288 lines</text>
+          <text x="213" y="104" text-anchor="middle" fill="var(--muted)" font-size="8">state machine</text>
+
+          <rect x="296" y="62" width="106" height="48" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
+          <text x="349" y="81" text-anchor="middle" fill="var(--ink)">control.py</text>
+          <text x="349" y="94" text-anchor="middle" fill="var(--faint)" font-size="8">145 lines</text>
+          <text x="349" y="104" text-anchor="middle" fill="var(--muted)" font-size="8">steering and speed</text>
+
+          <rect x="446" y="62" width="100" height="48" rx="5" fill="var(--ground)" stroke="var(--muted)"/>
+          <text x="496" y="88" text-anchor="middle" fill="var(--ink)">motors</text>
+          <text x="496" y="100" text-anchor="middle" fill="var(--faint)" font-size="8">left, right</text>
+
+          <g stroke="var(--faint)" stroke-width="1.7" fill="none" marker-end="url(#aF)">
+            <path d="M130,86 L156,86"/><path d="M266,86 L292,86"/>
+          </g>
+          <path d="M402,86 L442,86" stroke="var(--accent)" stroke-width="1.7" fill="none" marker-end="url(#aA)"/>
+          <text x="143" y="56" text-anchor="middle" fill="var(--faint)" font-size="7.5">percept dict</text>
+          <text x="279" y="56" text-anchor="middle" fill="var(--faint)" font-size="7.5">one state</text>
+          <text x="422" y="56" text-anchor="middle" fill="var(--faint)" font-size="7.5">two speeds</text>
+          <path d="M24,46 L24,58" stroke="var(--faint)" stroke-width="1.4" fill="none" marker-end="url(#aF)"/>
+          <text x="32" y="50" fill="var(--faint)" font-size="7.5">camera frame</text>
+
+          <rect x="24" y="126" width="378" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--rule-soft)"/>
+          <text x="34" y="143" fill="var(--accent-ink)">config.py · 128 tuning values, each with the run that set it. No number lives in the logic</text>
+          <g stroke="var(--rule)" stroke-width="1" stroke-dasharray="2 3">
+            <path d="M77,110 L77,126"/><path d="M213,110 L213,126"/><path d="M349,110 L349,126"/>
+          </g>
+
+          <rect x="8" y="180" width="174" height="44" rx="5" fill="var(--raise)" stroke="var(--alarm)"/>
+          <text x="20" y="197" fill="var(--alarm)">safety.py · 91 lines</text>
+          <text x="20" y="209" fill="var(--muted)" font-size="8">camera watchdog, battery guard,</text>
+          <text x="20" y="219" fill="var(--muted)" font-size="8">motor watchdog</text>
+          <rect x="194" y="180" width="174" height="44" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
+          <text x="206" y="197" fill="var(--ink)">find_lane.py · 169 lines</text>
+          <text x="206" y="209" fill="var(--muted)" font-size="8">searches for a lost lane in small</text>
+          <text x="206" y="219" fill="var(--muted)" font-size="8">steps, with the motors off between</text>
+          <rect x="380" y="180" width="172" height="44" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
+          <text x="392" y="197" fill="var(--ink)">vision, lane_mask, cup_mask</text>
+          <text x="392" y="209" fill="var(--muted)" font-size="8">the network, and the two color</text>
+          <text x="392" y="219" fill="var(--muted)" font-size="8">masks that measure geometry</text>
+        </g>
+      </svg>
+    </figure>
+    <div class="spacer"></div>
+    <p><b>3136 lines in 26 Python files, all written by us.</b> The stock NVIDIA notebooks are untouched and used as building blocks only. Data flows one way, and the layers are separated by their imports, not by a comment.</p>
+    <p class="src">Provable in one command: grep "^import|^from" perception.py decision.py control.py. Neither decision.py nor control.py imports jetbot, so neither can reach a motor.</p>
+  </div></div>
+</section>
+
+<!-- 4 architecture: one frame -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>i</i>total architecture of the code</div>
+    <h2 class="sh">Inference and control loop (per-frame)</h2>
+    <div class="spacer" style="flex:.3"></div>
+    <div class="pipe" style="flex:none">
+      <div class="pstep"><span class="pn">1 · camera</span><span class="pt">Frame</span><span class="pd">224 by 224 pixels, about 21 per second</span></div>
+      <div class="pstep mid"><span class="pn">2 · perception</span><span class="pt">Three models</span><span class="pd">ResNet18, TensorRT</span>
+        <span class="chip">lane: visible, x</span><span class="chip">curve: class, side</span><span class="chip">cup: seen, row, x</span></div>
+      <div class="pstep"><span class="pn">3 · decision</span><span class="pt">State machine</span><span class="pd">Six states, first matching branch wins</span></div>
+      <div class="pstep"><span class="pn">4 · control</span><span class="pt">Steering and speed</span><span class="pd">PD with gains scaled by speed, curve feedforward</span></div>
+      <div class="pstep"><span class="pn">5 · motors</span><span class="pt">Wheels</span><span class="pd">Behind a battery guard, a camera watchdog and a motor watchdog</span></div>
+    </div>
+    <div class="spacer"></div>
+    <p>The lane model runs on every frame. The curve model and the cup model take turns on alternate frames, because all three on every frame cost 12 ms more per step and the steering got worse.</p>
+    <p class="src">Measured in the Task 1 runs: 29.8 ms per step with three models, 21.6 to 22.8 steps per second. TensorRT took one lane pass from 41 ms to 10.6 ms.</p>
+  </div></div>
+</section>
+
+<!-- 5 drive.py -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>ii + iii</i>source code · drive.py</div>
+    <h2 class="sh">Main control loop: drive.py</h2>
+    <div class="codeslide">
+      <div class="codesrc">
+        <div class="cf">drive.py · run() · lines 98 to 183, shortened</div>
+<pre><span class="ln">102</span>while time.time() - start &lt; seconds:
+<span class="ln on">106</span>    frame = wait_for_new_frame(camera, frame)
+<span class="ln on">109</span>    percept = perception.observe(frame)
+<span class="ln on">116</span>    previous_state, state = decision.state, decision.update(percept, now)
+<span class="ln on">117</span>    if state == LINE_RECOVERY:
+<span class="ln">123</span>        result = finder.run(history if followed else (), (-1 if turn &lt; 0 else 1)...
+<span class="ln">128</span>        decision.line_recovery_done(result in FOUND, last, result in KEPT_DIRECTION)
+<span class="ln">137</span>    lane_seen = percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD
+<span class="ln">140</span>    if state in FOLLOWING or (state == ROAD_RECOVERY and lane_seen):
+<span class="ln on">143</span>        left, right = controller.update(percept['lane_x'], percept['curve_probs'],...
+<span class="ln on">147</span>        with watchdog.lock:
+<span class="ln">148</span>            robot.set_motors(left, right)
+<span class="ln">149</span>        watchdog.feed()
+<span class="ln">150</span>    elif state in (OBSTACLE_AVOIDANCE, ROAD_RECOVERY):
+<span class="ln on">189</span>except CameraFrozen:
+<span class="ln">191</span>except BatteryLow as low:
+<span class="ln">193</span>except KeyboardInterrupt:
+<span class="ln">195</span>finally:
+<span class="ln">196</span>    watchdog.running = False
+<span class="ln">197</span>    robot.stop()</pre>
+      </div>
+      <ol class="notes">
+        <li><span class="nn">102</span><span><b>Never a stale image.</b> The camera thread dies silently on a read error and then returns the same array forever, so this waits for a different object and gives up after 0.5 s.</span></li>
+        <li><span class="nn">105</span><span><b>Perception only reads.</b> It returns a dictionary of plain numbers and can take no action.</span></li>
+        <li><span class="nn">112</span><span><b>One state per frame.</b> The loop asks the decision layer and decides nothing itself.</span></li>
+        <li><span class="nn">113</span><span><b>One state runs outside the loop.</b> Searching for a lost lane takes many seconds in small steps with the motors off, so the loop hands over to find_lane.py, passing where the lane should be, and is told whether it worked and whether the robot still faces the same way.</span></li>
+        <li><span class="nn">132</span><span><b>Control turns numbers into wheel speeds.</b> Each state calls its own command function; line 139 is the swerve and the recovery.</span></li>
+        <li><span class="nn">136</span><span><b>The lock belongs to the watchdog.</b> Motor writes go over I2C and the watchdog thread may stop the motors in the same moment.</span></li>
+        <li><span class="nn">175</span><span><b>Four ways a run ends, all caught,</b> and whatever happens, including a crash we did not foresee, the finally on line 181 stops the motors.</span></li>
+      </ol>
+    </div>
+  </div></div>
+</section>
+
+<!-- 6 perception.py -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>ii + iii</i>source code · perception.py</div>
+    <h2 class="sh">Perception layer: three models, two color masks</h2>
+    <div class="codeslide">
+      <div class="codesrc">
+        <div class="cf">perception.py · observe() · lines 59 to 83, shortened</div>
+<pre><span class="ln">59</span>image = preprocess(frame).unsqueeze(0).cuda().half()
+<span class="ln on">60</span>lane = self.lane_model(image)[0].float()
+<span class="ln on">61</span>if self.curve_model is not None and self.frame_count % config.CURVE_EVERY == 0:
+<span class="ln">62</span>    new = torch.softmax(self.curve_model(image)[0].float(), 0).tolist()
+<span class="ln on">65</span>if self.obstacle_model is not None and self.frame_count % config.OBSTACLE_EVERY == 1:
+<span class="ln">66</span>    self.cup = self.obstacle_model(image)[0].float().tolist()
+<span class="ln on">71</span>return {
+<span class="ln">72</span>    'lane_visible': torch.sigmoid(lane[0]).item(),
+<span class="ln">73</span>    'lane_x': max(-1.0, min(1.0, lane[1].item())),
+<span class="ln">74</span>    'curve_probs': curve_probs,
+<span class="ln">75</span>    'curve_dir': curve_dir,
+<span class="ln on">80</span>    'lane_aligned': lane_mask.lane_aligned(frame),
+<span class="ln">81</span>    'tape_angle': lane_mask.tape_angle(frame),
+<span class="ln">83</span>    'cup_bands': [(x / (width / 2.0) - 1.0, row / float(height), pixels)</pre>
+        <div class="cf">vision.py · the five model classes become two separate signals</div>
+<pre><span class="ln">29</span>def split_curve_probs(probs):
+<span class="ln">34</span>    straight, gentle_left, sharp_left, gentle_right, sharp_right = probs
+<span class="ln on">35</span>    return [straight, gentle_left + gentle_right, sharp_left + sharp_right],...</pre>
+      </div>
+      <ol class="notes">
+        <li><span class="nn">60</span><span><b>The lane model runs on every frame.</b> Steering needs a fresh position every step, so this one is never skipped.</span></li>
+        <li><span class="nn">61</span><span><b>The curve model runs every second frame</b> and lines 63 and 64 smooth its five probabilities, because single frames flickered between classes. Curvature changes slowly.</span></li>
+        <li><span class="nn">65</span><span><b>The cup model runs on the other frames.</b> Three models on every frame added 12 ms per step and the robot swung after the sharp curve.</span></li>
+        <li><span class="nn">71</span><span><b>Everything leaves as plain numbers.</b> No tensor and no decision crosses this boundary, which is what lets the decision layer be tested without a GPU.</span></li>
+        <li><span class="nn">80</span><span><b>Two color masks measure what a model should not guess:</b> whether the robot is aligned, the angle of the tape ahead, and where every red cup band is.</span></li>
+        <li><span class="nn">35</span><span><b>How sharp and which way stay separate.</b> The model has five classes; this returns severity for the speed and a direction from -1 to 1 for the feedforward, so an unsure direction never steers.</span></li>
+      </ol>
+    </div>
+    <p class="src">Decision HYBRID in DECISIONS.md, forced by a failure: the cup model's distance was up to 28 rows wrong behind people, the mask was right.</p>
+  </div></div>
+</section>
+
+<!-- 7 state machine diagram -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>ii + iii</i>source code · the state machine</div>
+    <h2 class="sh">State machine: seven states and the avoidance phases</h2>
+    <div class="spacer" style="flex:.15"></div>
+    <figure class="wide" style="flex:none">
+      <div class="fl">Driving across the top, the ways out of trouble below</div>
+      <svg viewBox="0 0 560 160" role="img" aria-label="Following, avoidance and recovery across the top; stop, line recovery and halt below">
+        <defs>
+          <marker id="arG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--faint)" stroke-width="1.7"/></marker>
+          <marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--alarm)" stroke-width="1.7"/></marker>
+        </defs>
+        <g font-family="IBM Plex Mono, monospace" font-size="9.5">
+          <rect x="6" y="24" width="118" height="36" rx="5" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="65" y="40" text-anchor="middle" fill="var(--ink)">FOLLOWING</text>
+          <text x="65" y="53" text-anchor="middle" fill="var(--muted)" font-size="8">and SLOW_DOWN</text>
+          <rect x="196" y="24" width="118" height="36" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
+          <text x="255" y="40" text-anchor="middle" fill="var(--ink)">AVOIDANCE</text>
+          <text x="255" y="53" text-anchor="middle" fill="var(--muted)" font-size="8">four phases, lane ignored</text>
+          <rect x="386" y="24" width="118" height="36" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
+          <text x="445" y="40" text-anchor="middle" fill="var(--ink)">RECOVERY</text>
+          <text x="445" y="53" text-anchor="middle" fill="var(--muted)" font-size="8">back to the center</text>
+          <g stroke="var(--faint)" stroke-width="1.7" fill="none" marker-end="url(#arG)">
+            <path d="M126,42 L192,42"/><path d="M316,42 L382,42"/><path d="M445,20 L445,8 L65,8 L65,20"/>
+          </g>
+          <text x="159" y="35" text-anchor="middle" fill="var(--faint)" font-size="8">cup in the way</text>
+          <text x="349" y="35" text-anchor="middle" fill="var(--faint)" font-size="8">done</text>
+          <text x="255" y="5" text-anchor="middle" fill="var(--faint)" font-size="8">lane found, aligned, 5 steps</text>
+
+          <rect x="6" y="104" width="118" height="34" rx="5" fill="var(--raise)" stroke="var(--rule)" stroke-dasharray="4 3"/>
+          <text x="65" y="120" text-anchor="middle" fill="var(--ink)">STOP</text>
+          <text x="65" y="132" text-anchor="middle" fill="var(--muted)" font-size="8">stop-only run mode</text>
+          <g stroke="var(--faint)" stroke-width="1.5" fill="none" marker-end="url(#arG)">
+            <path d="M34,64 L34,100"/><path d="M78,100 L78,64"/>
+          </g>
+          <text x="92" y="84" fill="var(--faint)" font-size="7.5">wait, then on</text>
+
+          <rect x="196" y="104" width="150" height="34" rx="5" fill="var(--raise)" stroke="var(--accent)"/>
+          <text x="271" y="120" text-anchor="middle" fill="var(--accent-ink)">LINE_RECOVERY</text>
+          <text x="271" y="132" text-anchor="middle" fill="var(--muted)" font-size="8">undo, sweep, search · motors off</text>
+          <g stroke="var(--faint)" stroke-width="1.7" fill="none" marker-end="url(#arG)">
+            <path d="M118,60 L160,60 L160,112 L192,112"/>
+            <path d="M192,126 L172,126 L172,74 L104,74 L104,64"/>
+          </g>
+          <text x="166" y="96" fill="var(--faint)" font-size="7.5">lost</text>
+          <text x="124" y="71" fill="var(--faint)" font-size="7.5">found</text>
+          <path d="M255,64 L255,100" stroke="var(--faint)" stroke-width="1.7" fill="none" marker-end="url(#arG)"/>
+          <text x="262" y="84" fill="var(--faint)" font-size="7.5">a phase misses its mark</text>
+          <path d="M445,64 L445,88 L352,88 L352,112 L348,112" stroke="var(--faint)" stroke-width="1.5" fill="none" marker-end="url(#arG)"/>
+          <text x="368" y="84" fill="var(--faint)" font-size="7.5">4 s without the lane</text>
+
+          <rect x="418" y="104" width="86" height="34" rx="5" fill="var(--raise)" stroke="var(--alarm)"/>
+          <text x="461" y="125" text-anchor="middle" fill="var(--alarm)">HALT</text>
+          <path d="M348,121 L414,121" stroke="var(--alarm)" stroke-width="1.7" fill="none" marker-end="url(#arR)"/>
+          <text x="381" y="116" text-anchor="middle" fill="var(--alarm)" font-size="7.5">not found</text>
+        </g>
+      </svg>
+    </figure>
+    <div class="spacer" style="flex:.2"></div>
+    <div class="pipe" style="flex:none; grid-template-columns:repeat(4,minmax(0,1fr))">
+      <div class="pstep"><span class="pn">phase 1 · brake</span><span class="pd">A reverse pulse, then stand still 0.3 s. Turning while rolling carried the robot into the lane edge</span></div>
+      <div class="pstep"><span class="pn">phase 2 · turn out</span><span class="pd">Turn in place until the cup has left the image sideways, about 90 degrees</span></div>
+      <div class="pstep"><span class="pn">phase 3 · arc</span><span class="pd">Straight while the cup is beside, then 0.36 and 0.31 until the tape has passed under the robot</span></div>
+      <div class="pstep"><span class="pn">phase 4 · turn in</span><span class="pd">Turn back until the lane is aligned and within 0.4 of the middle</span></div>
+    </div>
+    <p class="src">Every phase ends on a camera mark and has a time limit; the robot has no encoders and no gyro. The table with entry condition, action, exit condition and priority for all seven states is notebooks/mini_av/STATE_MACHINE.md.</p>
+  </div></div>
+</section>
+
+<!-- 8 state transitions in code -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>ii + iii</i>source code · decision.py</div>
+    <h2 class="sh">State transitions and the swerve phases</h2>
+    <div class="codeslide">
+      <div class="codesrc">
+        <div class="cf">decision.py · enter(), lane_gone() and update_avoidance() · lines 32 to 229</div>
+<pre><span class="ln on">32</span>AVOID_PHASES = ('brake', 'turn_out', 'arc', 'turn_in')
+<span class="ln on">155</span>def enter(self, state, now):
+<span class="ln">156</span>    self.state, self.state_since = state, now
+<span class="ln on">163</span>def lane_gone(self, now):
+<span class="ln">165</span>    self.enter(LINE_RECOVERY if self.line_recovery else HALT, now)
+<span class="ln">199</span>band = near_band(percept)
+<span class="ln on">202</span>elif self.avoid_phase == 'turn_out':
+<span class="ln">203</span>    done = cup_left_view(self.turn_cup_x, band, toward) or (band is None and (
+<span class="ln">209</span>elif self.avoid_phase == 'arc':
+<span class="ln">210</span>    if cup_in_the_way(band):
+<span class="ln">211</span>        self.enter(HALT, now)
+<span class="ln on">213</span>    self.go_straight = cup_beside_curve(band, toward) or elapsed &gt;=...
+<span class="ln">216</span>    crossed = self.tape_under and percept['tape_row'] &lt; config.TAPE_PAST_ROW
+<span class="ln">219</span>    done = (crossed
+<span class="ln">225</span>else:
+<span class="ln on">226</span>    done = elapsed &gt;= config.TURN_IN_MIN and lane_found(percept,...
+<span class="ln">228</span>if done and self.avoid_phase == AVOID_PHASES[-1]:
+<span class="ln">232</span>    self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(self.avoid_phase) + 1]
+<span class="ln">234</span>elif elapsed &gt;= limit:
+<span class="ln on">235</span>    self.lane_gone(now)</pre>
+      </div>
+      <ol class="notes">
+        <li><span class="nn">32</span><span><b>The phases are a tuple, in order.</b> Line 226 advances by index, so a new phase is a new name in one place.</span></li>
+        <li><span class="nn">154</span><span><b>Every transition goes through enter().</b> It stamps the time, which is what every limit and every debounce counter measures from; lines 157 and 158 reset a maneuver to its first phase.</span></li>
+        <li><span class="nn">199</span><span><b>The turn out ends on the cup, not on a timer.</b> It is done when the cup has left the image sideways. The tape angle is only the fallback for when no cup is in view.</span></li>
+        <li><span class="nn">210</span><span><b>The curve drives straight while the cup is beside it,</b> because bending at once clipped the cup. It ends when the lane tape has passed under the robot, which is a mark that exists in a curve too.</span></li>
+        <li><span class="nn">220</span><span><b>The turn back ends on an aligned lane</b> within 0.4 of the middle. Visible is not enough: a crosswise tape once counted as a lane.</span></li>
+        <li><span class="nn">229</span><span><b>A missed mark no longer ends the run.</b> It goes to LINE_RECOVERY, which searches for the lane instead of leaving the robot standing.</span></li>
+      </ol>
+    </div>
+    <p class="src">The four phases are the figure on the previous slide; every constant they use is in config.py.</p>
+  </div></div>
+</section>
+
+<!-- 9 decision.py -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>ii + iii</i>source code · decision.py</div>
+    <h2 class="sh">Decision layer: priority order in decision.py</h2>
+    <div class="codeslide">
+      <div class="codesrc">
+        <div class="cf">decision.py · update() · lines 233 to 287, shortened</div>
+<pre><span class="ln on">239</span>if self.state in (HALT, LINE_RECOVERY):
+<span class="ln">240</span>    return self.state
+<span class="ln on">241</span>if self.state == OBSTACLE_AVOIDANCE:
+<span class="ln">242</span>    self.update_avoidance(percept, now)
+<span class="ln">240</span>    return self.state
+<span class="ln on">244</span>if self.state == ROAD_RECOVERY:
+<span class="ln">245</span>    self.centered_frames = self.centered_frames + 1 if lane_found(percept) else 0
+<span class="ln">246</span>    if self.centered_frames &gt;= config.RECOVER_FRAMES:
+<span class="ln">249</span>        self.enter(ROAD_FOLLOWING, now)
+<span class="ln">250</span>    elif now - self.state_since &gt; config.RECOVER_TIMEOUT:
+<span class="ln">251</span>        self.lane_gone(now)
+<span class="ln on">254</span>close = cup_close(percept)
+<span class="ln">255</span>self.close_frames = self.close_frames + 1 if close else 0
+<span class="ln">269</span>elif self.close_frames &gt;= config.OBSTACLE_FRAMES:
+<span class="ln">270</span>    self.enter(OBSTACLE_AVOIDANCE, now)
+<span class="ln on">276</span>if self.state == ROAD_FOLLOWING and (p_sharp &gt; config.SLOW_DOWN_ENTER or near):
+<span class="ln">277</span>    self.enter(SLOW_DOWN, now)
+<span class="ln on">292</span>if now - self.lost_since &gt;= config.LANE_LOST_TIMEOUT:
+<span class="ln">293</span>    self.lane_gone(now)</pre>
+      </div>
+      <ol class="notes">
+        <li><span class="nn">233</span><span><b>Priority is not a comment.</b> It is the order the questions are asked in, and the first match returns. A cup can never be overruled by a curve.</span></li>
+        <li><span class="nn">235</span><span><b>A maneuver owns the robot.</b> While the swerve runs the lane is not asked at all, until its camera mark or its time limit.</span></li>
+        <li><span class="nn">238</span><span><b>Recovery is strict on purpose.</b> Five steps in a row with the lane near the center and the robot aligned. A distant tape line once read as a lane and the robot drove on for 4 s off the track.</span></li>
+        <li><span class="nn">248</span><span><b>Four steps of debounce.</b> The cup model runs on every second frame, so four steps are two fresh readings. Lines 250 to 262 are the stop-only branch, which enters STOP instead of a swerve.</span></li>
+        <li><span class="nn">270</span><span><b>SLOW_DOWN has hysteresis.</b> It enters at p_sharp above 0.5 and leaves below 0.3, so it cannot flicker at the threshold.</span></li>
+        <li><span class="nn">286</span><span><b>A lane gap of 0.5 s is tolerated.</b> Longer, and the robot now searches for the lane instead of ending the run.</span></li>
+      </ol>
+    </div>
+  </div></div>
+</section>
+
+<!-- 10 control.py -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>ii + iii</i>source code · control.py</div>
+    <h2 class="sh">Control layer: PD steering and adaptive speed</h2>
+    <div class="codeslide">
+      <div class="codesrc">
+        <div class="cf">control.py · update() and wheels() · lines 71 to 144, shortened</div>
+<pre><span class="ln on">71</span>self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
+<span class="ln on">74</span>self.d_lane_x += config.D_SMOOTHING * (self.lane_x - self.d_lane_x)
+<span class="ln">75</span>change = 0.0 if self.last_error is None else (self.d_lane_x - self.last_error) / dt
+<span class="ln on">78</span>self.integral += self.lane_x * dt - self.integral * dt / config.STEERING_I_LEAK
+<span class="ln">79</span>integral_part = max(-config.STEERING_I_MAX, min(config.STEERING_I_MAX,...
+<span class="ln on">82</span>schedule = config.STEERING_REF_SPEED / max(self.speed, config.STEERING_REF_SPEED)
+<span class="ln on">83</span>wanted = (schedule * (config.STEERING_KP * self.lane_x + config.STEERING_KD * change)...
+<span class="ln">84</span>          + self.feedforward(curve_probs, curve_dir))
+<span class="ln on">85</span>self.steering = limit_change(wanted, self.steering, config.STEERING_RATE,...
+<span class="ln on">87</span>target = self.target_speed(curve_probs, self.lane_x)
+<span class="ln">90</span>self.speed = limit_change(target, self.speed, config.SPEED_UP_RATE,...
+<span class="ln on">143</span>left = self.speed + self.steering + config.MOTOR_TRIM
+<span class="ln">144</span>right = self.speed - self.steering - config.MOTOR_TRIM</pre>
+      </div>
+      <ol class="notes">
+        <li><span class="nn">71</span><span><b>P on the raw position.</b> Smoothing it added delay and the robot oversteered, so the weight is 1.</span></li>
+        <li><span class="nn">74</span><span><b>D on a smoothed copy.</b> Differentiating the raw value turned every frame to frame jump into a steering jerk.</span></li>
+        <li><span class="nn">78</span><span><b>A leaky integral.</b> It grows while the robot sits off center in a curve and fades on the straight, so it cannot wind up. Its gain is 0 today: 0.25 added delay and a growing swing.</span></li>
+        <li><span class="nn">82</span><span><b>Gain scheduling.</b> At 0.40 the same correction moves the robot further before the next frame, so the gains shrink with speed.</span></li>
+        <li><span class="nn">83</span><span><b>Feedforward for the curve.</b> A curve needs a steady turn that P only gives with a large error. Its direction comes from the curve model, because the lane position flipped sign in the curve that kept failing.</span></li>
+        <li><span class="nn">85</span><span><b>A rate limit.</b> The steering may change by at most 2.0 per second, so one bad frame cannot jerk the wheels.</span></li>
+        <li><span class="nn">87</span><span><b>Speed is the lower of two limits,</b> the curve model's and the steering's. Slide 11 shows that function, and it is already the shape Task 7 needs.</span></li>
+        <li><span class="nn">143</span><span><b>One trim value.</b> The robot drifts right, so the left wheel gets 0.01 more.</span></li>
+      </ol>
+    </div>
+  </div></div>
+</section>
+
+<!-- 11 what each state commands -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>ii + iii</i>source code · control.py</div>
+    <h2 class="sh">Control layer: what each state commands</h2>
+    <div class="codeslide">
+      <div class="codesrc">
+        <div class="cf">control.py · one command function per state · lines 38 to 139, shortened</div>
+<pre><span class="ln on">38</span>def target_speed(self, curve_probs, lane_x):
+<span class="ln">44</span>    model_speed = sum(p * v for p, v in zip(curve_probs, SPEEDS))
+<span class="ln on">48</span>    return min(model_speed, steering_speed)
+<span class="ln on">106</span>def avoid(self, phase, side, elapsed):
+<span class="ln">113</span>    if phase == 'brake':
+<span class="ln">114</span>        return self.stop(phase, elapsed)
+<span class="ln on">115</span>    if phase == 'pass':
+<span class="ln">116</span>        return config.ARC_STRAIGHT, config.ARC_STRAIGHT
+<span class="ln">117</span>    toward = -1.0 if side == 'left' else 1.0
+<span class="ln">118</span>    if phase == 'arc':
+<span class="ln on">119</span>        outer, inner = config.ARC_WHEELS
+<span class="ln">120</span>        return (inner, outer) if toward &gt; 0 else (outer, inner)
+<span class="ln">121</span>    spin = toward * turn_speed(elapsed)
+<span class="ln">122</span>    return spin, -spin
+<span class="ln on">124</span>def stop(self, phase, elapsed):
+<span class="ln">127</span>    if phase == 'back':
+<span class="ln">128</span>        return -config.BACKUP_SPEED, -config.BACKUP_SPEED
+<span class="ln">129</span>    if phase == 'brake' and elapsed &lt; config.BRAKE[1]:
+<span class="ln">130</span>        return -config.BRAKE[0], -config.BRAKE[0]
+<span class="ln on">133</span>def recover(self, side):
+<span class="ln">139</span>    return self.wheels()</pre>
+      </div>
+      <ol class="notes">
+        <li><span class="nn">48</span><span><b>This is already Task 7.</b> The speed is the lower of the curve speed and the steering speed. A following distance becomes a third argument to the same min, and nothing else changes.</span></li>
+        <li><span class="nn">106</span><span><b>The swerve commands, one branch per phase.</b> The decision layer picks the phase and ends it; this only says what the wheels do while it lasts.</span></li>
+        <li><span class="nn">115</span><span><b>Straight past the cup first.</b> While the cup is still beside the robot both wheels get the same speed, because bending into the curve at once clipped it.</span></li>
+        <li><span class="nn">119</span><span><b>The arc is two wheel speeds, 0.36 and 0.31,</b> swapped by the side being passed. A wheel moves only above about 0.24, so the pair was measured, not calculated.</span></li>
+        <li><span class="nn">124</span><span><b>Braking is a reverse pulse.</b> At motor value 0 the board lets the wheels coast, so stopping means driving backwards for 0.1 s first.</span></li>
+        <li><span class="nn">133</span><span><b>Recovery creeps and turns gently</b> back toward the lane, at the slowest speed that still moves the robot.</span></li>
+      </ol>
+    </div>
+  </div></div>
+</section>
+
+<!-- 12 config.py and safety.py -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>ii + iii</i>source code · config.py and safety.py</div>
+    <h2 class="sh">Configuration constants and safety guards</h2>
+    <div class="codeslide">
+      <div class="codesrc">
+        <div class="cf">config.py · 6 of 128 values</div>
+<pre class="wrapcode"><span class="ln">18</span>STEERING_KP = 0.15      <span class="c"># wheel speed difference per unit of lane_x (0.35 and a cubic term made the robot swing)</span>
+<span class="ln">22</span>STEERING_KD = 0.06      <span class="c"># wheel speed difference per unit of lane_x change per second (damping; 0.03 let the swing grow at 0.39)</span>
+<span class="ln">37</span>MOTOR_TRIM = -0.01      <span class="c"># added to the left wheel, subtracted from the right; positive corrects a drift to the left.</span>
+<span class="ln">63</span>CUP_SIZE_CM = 405.0
+<span class="ln">67</span>OBSTACLE_CM = 40.0         <span class="c"># a cup in the lane this close is the trigger. At 0.31 and braked the robot still rolls on</span>
+<span class="ln">109</span>ARC_WHEELS = (0.36, 0.31)  <span class="c"># outer and inner wheel in the curve around the cup. A wheel moves only above about 0.24 and</span></pre>
+        <div class="cf">safety.py · the numbers every driving program shares</div>
+<pre class="wrapcode"><span class="ln">8</span>MOTOR_TIMEOUT = 0.25  <span class="c"># seconds without a motor update before the watchdog stops the motors (the loop stalled up to 1.1 s)</span>
+<span class="ln">9</span>STALE_TIMEOUT = 0.5  <span class="c"># seconds without a new camera frame before the robot stops (the camera froze on 2026-09-20)</span>
+<span class="ln">12</span>MIN_START_VOLTAGE = 11.4  <span class="c"># volts at rest (about 50 %) needed to start driving</span></pre>
+      </div>
+      <ol class="notes">
+        <li><span class="nn">1</span><span><b>Every tuning value is in one file.</b> Not one number is buried in the logic, so a value can be changed without reading the code that uses it.</span></li>
+        <li><span class="nn">2</span><span><b>Each one carries the run that set it.</b> The comment is not decoration: it is the evidence that lets us defend the value or roll it back.</span></li>
+        <li><span class="nn">3</span><span><b>Distances are centimetres, measured.</b> The size of the red band gives the distance, 405 divided by the square root of its pixels, fitted on 139 stops the robot measured itself.</span></li>
+        <li><span class="nn">4</span><span><b>The four guards live in safety.py</b> and are shared: battery before the start and under load, a new camera frame within 0.5 s, a motor update within 0.25 s, and motors stopped in finally.</span></li>
+      </ol>
+    </div>
+    <p class="src">The guards are not optional. CLAUDE.md requires all four in every program that drives, after the robot drove blind into a chair on one frozen frame on 20 September.</p>
+  </div></div>
+</section>
+
+<!-- 13 the learning pipeline -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>ii + iii</i>source code · the learning pipeline</div>
+    <h2 class="sh">Model training pipeline and offline validation</h2>
+    <div class="spacer" style="flex:.2"></div>
+    <div class="pipe" style="flex:none">
+      <div class="pstep"><span class="pn">1 · record</span><span class="pt">auto_record.py</span><span class="pd">The robot drives itself on the color mask and records. No hand driving</span></div>
+      <div class="pstep"><span class="pn">2 · label</span><span class="pt">02_auto_label.py</span><span class="pd">The masks write labels.csv and a review sheet to check by eye</span></div>
+      <div class="pstep mid"><span class="pn">3 · train</span><span class="pt">03_train.py</span><span class="pd">ResNet18, one model per task, whole sessions held out</span></div>
+      <div class="pstep"><span class="pn">4 · convert</span><span class="pt">03_convert_trt.py</span><span class="pd">TensorRT, about 6 times faster. Without it three models do not fit</span></div>
+      <div class="pstep"><span class="pn">5 · judge</span><span class="pt">replay.py</span><span class="pd">Runs the model over recorded laps per section and direction, before any driving</span></div>
+    </div>
+    <div class="spacer" style="flex:.2"></div>
+    <div class="codesrc" style="flex:none">
+      <div class="cf">03_train.py · main() · the split that keeps the numbers honest</div>
+<pre><span class="ln on">196</span>val = [r for r in rows if any(v in r[1] for v in args.val)]
+<span class="ln">197</span>train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
+      <div class="cf">vision.py · one network, a new last layer per task</div>
+<pre><span class="ln">38</span>def build_model(task, pretrained=False):
+<span class="ln on">40</span>    model = torchvision.models.resnet18(pretrained=pretrained)
+<span class="ln on">41</span>    model.fc = torch.nn.Linear(512, TASK_OUTPUTS[task])</pre>
+    </div>
+    <p>Whole recording sessions are held out, never single frames. Neighbouring frames look almost the same, so a random split would report a model that is better than it is.</p>
+    <p class="src">Three models trained this way: lane 2458 frames, curve 3276, obstacle 3147. Labels come from the color masks, so the reported accuracy is agreement with the mask, and the slide says so.</p>
+  </div></div>
+</section>
+
+<!-- 14 model results -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>iv</i>results · the models</div>
+    <h2 class="sh">Perception model performance and known limitations</h2>
+    <div class="spacer" style="flex:.3"></div>
+    <div class="models" style="flex:none">
+      <div class="model">
+        <span class="mt">lane</span>
+        <span class="mn">99.6 %</span>
+        <span class="ml">frames where it finds the lane · center off by 0.022 · 2458 training frames</span>
+        <span class="mw">Found the lane in only 45 of 100 frames with a cup 18 to 25 cm away: a close cup hides it.</span>
+      </div>
+      <div class="model">
+        <span class="mt">curve</span>
+        <span class="mn">88.6 %</span>
+        <span class="ml">five classes correct · not one left and right mix-up · 3276 frames</span>
+        <span class="mw">6 of 37 sharp frames were called gentle, so it under-reacts before it over-reacts.</span>
+      </div>
+      <div class="model">
+        <span class="mt">cup</span>
+        <span class="mn">98.1 %</span>
+        <span class="ml">cup found in 96 to 99 % of frames up to 50 cm · 0.4 % false alarms · 3147 training frames</span>
+        <span class="mw">71 % at 60 to 73 cm, and its distance is not used at all: the band size measures that.</span>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <p>The weak line under each model is the reason the decision layer never takes a model number on its own. Recognition is learned, geometry is measured.</p>
+    <p class="src">The first two from whole laps held out of training (models/*.json). The cup model re-measured on 4629 single recorded frames, 8 November, against the cup mask.</p>
+  </div></div>
+</section>
+
+<!-- 15 task 1 result -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>iv</i>results · task 1</div>
+    <h2 class="sh">Task 1 results: adaptive lane following, 60 s runs</h2>
+    <div class="spacer" style="flex:.25"></div>
+    <div class="bars" style="flex:none">
+      <div class="bar lost"><span class="bl">stock, cw</span><span class="track"><i class="fill f-base" style="width:34.2%"></i></span><span class="bv">20.5 s</span></div>
+      <div class="bar lost"><span class="bl">stock, cw</span><span class="track"><i class="fill f-base" style="width:34.0%"></i></span><span class="bv">20.4 s</span></div>
+      <div class="bar lost"><span class="bl">ours, ccw</span><span class="track"><i class="fill f-ours" style="width:18.2%"></i></span><span class="bv">10.9 s</span></div>
+      <div class="bar"><span class="bl">ours, cw</span><span class="track"><i class="fill f-ours" style="width:100%"></i></span><span class="bv">60.0 s</span></div>
+      <div class="bar"><span class="bl">adaptive, ccw</span><span class="track"><i class="fill f-adaptive" style="width:100%"></i></span><span class="bv">60.0 s</span></div>
+      <div class="bar"><span class="bl">adaptive, cw</span><span class="track"><i class="fill f-adaptive" style="width:100%"></i></span><span class="bv">60.0 s</span></div>
+    </div>
+    <div class="spacer"></div>
+    <p>Seconds driven against a 60 s cap. Red ended in a lane loss. The third pair adds the curve model, and what it bought was the sharp curve, not smoothness.</p>
+    <p class="src">Six runs, 20 and 21 September. Wobble: stock 0.150 and 0.126, our PD 0.087, adaptive 0.099. Repeating the table with today's code is an open step.</p>
+  </div></div>
+</section>
+
+<!-- 16 cup stop -->
+<section>
+  <div class="slide"><div class="inner" style="gap:1.1cqw">
+    <div class="gl"><i>iv</i>results · task 2, the stop</div>
+    <h2 class="sh" style="max-width:38ch">Obstacle detection and distance-gated stop <span class="tag t-run">3 runs, 35 to 40 cm</span></h2>
+    <div class="spacer" style="flex:.1"></div>
+    <figure class="wide" style="flex:none">
+      <div class="fl">Distance from the size of the red band, not from its position</div>
+      <svg viewBox="0 0 560 128" role="img" aria-label="A near and a far cup, the band width in pixels, and the three distance thresholds" style="max-height:11cqw">
+        <rect x="14" y="10" width="190" height="104" fill="var(--raise)" stroke="var(--rule)"/>
+        <text x="22" y="24" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--faint)">camera image</text>
+        <rect x="52" y="54" width="54" height="40" rx="3" fill="var(--raise)" stroke="var(--muted)"/>
+        <rect x="52" y="68" width="54" height="15" fill="var(--alarm)"/>
+        <rect x="146" y="46" width="22" height="17" rx="2" fill="var(--raise)" stroke="var(--muted)"/>
+        <rect x="146" y="52" width="22" height="6" fill="var(--alarm)"/>
+        <g font-family="IBM Plex Mono, monospace" font-size="8" fill="var(--muted)">
+          <text x="79" y="106" text-anchor="middle">near: many pixels</text>
+          <text x="157" y="40" text-anchor="middle">far: few</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="9.5">
+          <text x="222" y="40" fill="var(--ink)">cm = 405 / sqrt(band pixels)</text>
+          <text x="222" y="54" fill="var(--faint)" font-size="8.5">fitted on 139 stops the robot measured itself</text>
+        </g>
+        <g stroke="var(--rule)" stroke-width="1.4"><path d="M240,74 L540,74"/></g>
+        <g font-family="IBM Plex Mono, monospace" font-size="8.5">
+          <g stroke="var(--amber)" stroke-width="2.4"><path d="M470,68 L470,80"/></g>
+          <text x="470" y="94" text-anchor="middle" fill="var(--amber)">65 cm</text>
+          <text x="470" y="105" text-anchor="middle" fill="var(--faint)">slow</text>
+          <g stroke="var(--ok)" stroke-width="2.4"><path d="M430,68 L430,80"/></g>
+          <text x="430" y="94" text-anchor="middle" fill="var(--ok)">60 cm</text>
+          <text x="430" y="105" text-anchor="middle" fill="var(--faint)">clear</text>
+          <g stroke="var(--alarm)" stroke-width="2.4"><path d="M330,68 L330,80"/></g>
+          <text x="330" y="94" text-anchor="middle" fill="var(--alarm)">40 cm</text>
+          <text x="330" y="105" text-anchor="middle" fill="var(--faint)">stop</text>
+          <g stroke="var(--alarm)" stroke-width="2.4"><path d="M262,68 L262,80"/></g>
+          <text x="262" y="94" text-anchor="middle" fill="var(--alarm)">20 cm</text>
+          <text x="262" y="105" text-anchor="middle" fill="var(--faint)">back up</text>
+          <text x="246" y="68" fill="var(--faint)">closer</text>
+        </g>
+      </svg>
+    </figure>
+    <div class="codesrc" style="flex:none">
+      <div class="cf">decision.py · band_cm() measures, cup_ahead() places it, cup_close() decides</div>
+<pre><span class="ln">39</span>return 0.0 if band[1] &gt;= config.BAND_CUT_ROW else config.CUP_SIZE_CM / math.sqrt(band[2])
+<span class="ln">48</span>    if abs(band[0]) &lt; config.CUP_DEAD_AHEAD or (lane_seen and abs(band[0] -...
+<span class="ln">57</span>return (percept[&#39;cup_visible&#39;] &gt;= config.OBSTACLE_VISIBLE_THRESHOLD
+<span class="ln">58</span>        and cup is not None and band_cm(cup) &lt;= config.OBSTACLE_CM)</pre>
+    </div>
+    <p style="max-width:84ch">The model says a cup is there, the band's size says how far, and its position says whether it is in the way. A cup straight ahead counts even with no lane in sight, because at 20 cm the cup hides the lane and the lane model found it in only 45 of 100 such frames.</p>
+    <p class="src">Runs stop_s1d2_1 to 3, 5 November, in stop-only mode: stops at 35 to 40 cm after one backup. Without the slow approach and the brake pulse, a stop commanded at 27 cm left the robot at 10 cm.</p>
+  </div></div>
+</section>
+
+<!-- 17 around the cup -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>iv</i>results · task 2, the swerve</div>
+    <h2 class="sh">Obstacle circumvention and lane recovery <span class="tag t-run">14 of 18 on 9 November</span></h2>
+    <div class="spacer" style="flex:.15"></div>
+    <figure class="wide" style="flex:none">
+      <div class="fl">The intended path · top view, inside of the oval</div>
+      <svg viewBox="0 0 560 196" role="img" aria-label="Quarter turn off the lane, one curve around the cup, quarter turn back">
+        <rect x="0" y="54" width="560" height="112" fill="var(--raise)"/>
+        <g stroke="var(--cat2)" stroke-width="5" stroke-linecap="round">
+          <path d="M8,60 L552,60"/><path d="M8,160 L552,160"/>
+        </g>
+        <text x="14" y="50" fill="var(--faint)" font-family="IBM Plex Mono, monospace" font-size="8.5">inside of the oval</text>
+        <circle cx="280" cy="110" r="12" fill="var(--alarm)"/>
+        <circle cx="280" cy="110" r="74" fill="none" stroke="var(--alarm)" stroke-width="1" stroke-dasharray="3 5" opacity=".45"/>
+        <text x="280" y="131" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--muted)">cup</text>
+        <path d="M20,110 L206,110" fill="none" stroke="var(--accent)" stroke-width="3.4"/>
+        <path d="M206,110 A 74,74 0 0 1 354,110" fill="none" stroke="var(--accent)" stroke-width="3.4"/>
+        <path d="M354,110 L540,110" fill="none" stroke="var(--accent)" stroke-width="3.4"/>
+        <g font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--ink)">
+          <text x="198" y="94" text-anchor="end">turn 90</text>
+          <text x="362" y="94">turn 90 the same way</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--faint)">
+          <text x="280" y="30" text-anchor="middle">straight while the cup is beside, then the curve · 0.36 and 0.31</text>
+          <text x="110" y="126" text-anchor="middle">lane following</text>
+          <text x="452" y="126" text-anchor="middle">lane following</text>
+          <text x="206" y="188" text-anchor="middle" font-size="8">ends when the cup leaves the image</text>
+          <text x="354" y="188" text-anchor="middle" font-size="8">ends on an aligned lane</text>
+        </g>
+        <g stroke="var(--faint)" stroke-width="1" opacity=".7">
+          <path d="M206,118 L206,178"/><path d="M354,118 L354,178"/>
+        </g>
+      </svg>
+    </figure>
+    <div class="spacer"></div>
+    <p>Every phase now refers to the cup instead of the lane: the turn stops when the cup has left the image sideways, and the curve drives straight while the cup is still beside it. That is what made it work away from the one straight it was tuned on.</p>
+    <p class="src">Runs line2_1 to line2_5, 9 November: 14 of 18 swerves came back to the road, after 11 of 12 on 8 November. Three of the four failures hit the 3.9 s limit of the curve without finding their mark. Whether a cup was touched was not observed.</p>
+  </div></div>
+</section>
+
+<!-- 18 failures -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>iv</i>results · failures and their causes</div>
+    <h2 class="sh">Root cause analysis and anomaly resolutions</h2>
+    <div class="spacer" style="flex:.2"></div>
+    <div class="chains" style="flex:none">
+      <div class="chain">
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">The swerve started while the cup was still 50 cm away</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">The cup model's distance row was up to 28 rows wrong when people stood behind the cup</span></div>
+        <div class="cbox c-fix"><span class="cl">fix, and it held</span><span class="ct">The band's size measures the distance. 11 of 12 swerves came back on 8 November</span></div>
+      </div>
+      <div class="chain">
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">The swerve only worked on the one straight it was tuned on</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">Its marks were the angle of the lane tape, which is only straight there</span></div>
+        <div class="cbox c-fix"><span class="cl">fix, and it held</span><span class="ct">The marks refer to the cup: turn until it leaves the image, drive straight while it is beside</span></div>
+      </div>
+      <div class="chain">
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">A lost lane ended the run and the team had to carry the robot back</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">HALT was the only answer to a lost lane. The first scan never found it: 4 of 4, because it looked the wrong way first</span></div>
+        <div class="cbox c-open"><span class="cl">fix, still rough</span><span class="ct">LINE_RECOVERY searches in three stages. 3 of 3 from the start of a run, but 0 of 4 after a failed swerve, and one took 48 s</span></div>
+      </div>
+      <div class="chain">
+        <div class="cbox c-sym"><span class="cl">what we saw</span><span class="ct">A growing swing at the entry of the gentle curve, at speed 0.39</span></div>
+        <div class="cbox c-why"><span class="cl">cause</span><span class="ct">Not found yet. Positions went -0.11, +0.24, -0.40, +0.42 in one run</span></div>
+        <div class="cbox c-open"><span class="cl">still open</span><span class="ct">Our question for today. The next runs log it; a lower speed limit is the fallback</span></div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <p class="src">Each written as problem, hypothesis, change, test, result: DECISIONS.md entries OBST6, OBST9, AVOID4, LINE1 and the open item in PLAN.md S1d0.</p>
+  </div></div>
+</section>
+
+<!-- 19 next -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>v</i>next plan, from the results and the bugs</div>
+    <h2 class="sh">Next plan and pass criteria</h2>
+    <div class="spacer" style="flex:.25"></div>
+    <div class="steps" style="flex:none">
+      <div class="step"><span class="sq"></span><span class="st">Make the search work after a failed swerve, on open floor</span><span class="sp">pass: 3 of 4 found, under 20 s, and the robot drives on the way it came</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Give the curve a mark it can always find</span><span class="sp">pass: no swerve ends on the 3.9 s limit; 3 of 4 failures did</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Film the swerve from the side and watch the cup</span><span class="sp">pass: 8 of 10 filmed, none touching; cups at the curve exit trigger at 40 cm</span></div>
+      <div class="step"><span class="sq"></span><span class="st">Find the swing at the gentle curve entry</span><span class="sp">pass: a logged cause, or a speed limit that removes it</span></div>
+      <div class="step block"><span class="sq"></span><span class="st">Team: tape an intersection and a parking box</span><span class="sp">blocks tasks 3, 4 and 5. Lane and tape width still unmeasured</span></div>
+    </div>
+    <div class="spacer"></div>
+    <p>Only the last row blocks other tasks. Signs, intersection and parking reuse the pipeline that already works, so the code is not the bottleneck.</p>
+    <p class="src">Steps and pass conditions from PLAN.md section 6 and the open items of 8 November. Escape returns to the roadmap, d gives the document version with the full source.</p>
+  </div></div>
+</section>
+
+</div>
+
+<!-- APPENDIX START, generated by build_appendix.py: do not edit by hand -->
+<div class="appendix doconly">
+  <h2>Appendix: the full driving program</h2>
+  <p>Every file that runs while the robot drives, complete, with the line numbers the slides cite.
+  1271 lines of the 2703 we wrote. The rest (recording, labeling, training, the test scripts) is in the repository under <span class="path">notebooks/mini_av/</span>.</p>
+<div class="srcfile">
+  <h3>drive.py <span class="fn">221 lines</span></h3>
+<pre><span class="ln">1</span>"""Driving program: camera -&gt; perception -&gt; decision -&gt; control -&gt; motors, with logging.
+<span class="ln">2</span>
+<span class="ln">3</span>    python3 drive.py --name adaptive --seconds 60            # our controller (Task 1)
+<span class="ln">4</span>    python3 drive.py --name baseline --seconds 60 --baseline # stock-style comparison run
+<span class="ln">5</span>    python3 drive.py --name nocurve --seconds 60 --no-curve  # our steering, baseline speed
+<span class="ln">6</span>    add --stop-only to wait in front of a cup instead of avoiding it, --pass-side left/right to fix the side
+<span class="ln">7</span>
+<span class="ln">8</span>Or from 04_drive.ipynb with start and stop buttons. Stop from a terminal: scripts/stop_robot.sh.
+<span class="ln">9</span>"""
+<span class="ln">10</span>
+<span class="ln">11</span>import argparse
+<span class="ln">12</span>import collections
+<span class="ln">13</span>import queue
+<span class="ln">14</span>import threading
+<span class="ln">15</span>import time
+<span class="ln">16</span>
+<span class="ln">17</span>import cv2
+<span class="ln">18</span>
+<span class="ln">19</span>from jetbot import Camera, Robot
+<span class="ln">20</span>
+<span class="ln">21</span>import config
+<span class="ln">22</span>from control import Controller
+<span class="ln">23</span>from find_lane import FOUND, KEPT_DIRECTION, FindLane, StopRecovery
+<span class="ln">24</span>from decision import FOLLOWING, HALT, LINE_RECOVERY, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision, band_cm, cup_ahead
+<span class="ln">25</span>from logger import RunLogger
+<span class="ln">26</span>from perception import Perception
+<span class="ln">27</span>from recorder import Recorder
+<span class="ln">28</span>from safety import BatteryGuard, BatteryLow, CameraFrozen, MotorWatchdog, wait_for_new_frame
+<span class="ln">29</span>
+<span class="ln">30</span>
+<span class="ln">31</span>UNDO_STEPS = 60    # recent wheel commands kept for the undo in LINE_RECOVERY: more than its 1 s at any loop time
+<span class="ln">32</span>RECORD_HZ = 4.0  # camera frames saved per second as a dataset session, to see what went wrong and to retrain
+<span class="ln">33</span>WARMUP_FRAMES = 5  # model calls with the motors off before driving (the first call took up to 1.1 s)
+<span class="ln">34</span>STARTUP_TIMEOUT = 3.0  # seconds to wait (motors off) for the first sight of the lane: the camera's
+<span class="ln">35</span>                       # exposure needs a moment after start, and the first frames can be too dark
+<span class="ln">36</span>
+<span class="ln">37</span>
+<span class="ln">38</span>def start_frame_saver(recorder):
+<span class="ln">39</span>    """Saves frames in a background thread, so a slow USB write never blocks the control loop.
+<span class="ln">40</span>
+<span class="ln">41</span>    Put camera frames into the returned queue (full queue: the frame is skipped); put None to finish.
+<span class="ln">42</span>    """
+<span class="ln">43</span>    frames = queue.Queue(maxsize=8)
+<span class="ln">44</span>
+<span class="ln">45</span>    def save():
+<span class="ln">46</span>        while True:
+<span class="ln">47</span>            frame = frames.get()
+<span class="ln">48</span>            if frame is None:
+<span class="ln">49</span>                return
+<span class="ln">50</span>            recorder.offer(bytes(cv2.imencode('.jpg', frame)[1]))
+<span class="ln">51</span>
+<span class="ln">52</span>    thread = threading.Thread(target=save, daemon=True)
+<span class="ln">53</span>    thread.start()
+<span class="ln">54</span>    return frames, thread
+<span class="ln">55</span>
+<span class="ln">56</span>
+<span class="ln">57</span>class NoLaneAtStart(Exception):
+<span class="ln">58</span>    """The lane was not visible when the run started: put the robot on the lane"""
+<span class="ln">59</span>
+<span class="ln">60</span>
+<span class="ln">61</span>def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_only=False, pass_side=None):
+<span class="ln">62</span>    """Drives until the time is up, the lane is lost, a safety check fails or stop_event is set.
+<span class="ln">63</span>
+<span class="ln">64</span>    stop_only: wait in front of a cup instead of avoiding it; pass_side: 'left'/'right' or None (measured).
+<span class="ln">65</span>
+<span class="ln">66</span>    Returns the stop reason and the log folder. The camera frames go to a dataset session drive_&lt;name&gt;.
+<span class="ln">67</span>    """
+<span class="ln">68</span>    battery = BatteryGuard()
+<span class="ln">69</span>    if not battery.start_ok():
+<span class="ln">70</span>        return 'battery %.2f V is too low: charge first' % battery.volts, None
+<span class="ln">71</span>    perception = Perception(use_curve=use_curve and not baseline)
+<span class="ln">72</span>    controller = Controller(baseline=baseline, use_curve=use_curve)
+<span class="ln">73</span>    decision = Decision(stop_only=stop_only, pass_side=pass_side, line_recovery=not baseline)
+<span class="ln">74</span>    robot = Robot()
+<span class="ln">75</span>    camera = Camera.instance()
+<span class="ln">76</span>    log = RunLogger(name, {'baseline': baseline, 'use_curve': use_curve, 'seconds': seconds,
+<span class="ln">77</span>                           'stop_only': stop_only, 'pass_side': pass_side,
+<span class="ln">78</span>                           'battery_start_v': round(battery.volts, 2)})
+<span class="ln">79</span>    recorder = Recorder(period=1.0 / RECORD_HZ)
+<span class="ln">80</span>    recorder.start('drive_' + name, {'mode': 'drive', 'curves_trusted': False, 'log': log.dir, 'baseline': baseline, 'use_curve': use_curve,
+<span class="ln">81</span>                                     'frame_width': camera.width, 'frame_height': camera.height})
+<span class="ln">82</span>    frames, saver = start_frame_saver(recorder)
+<span class="ln">83</span>    watchdog = MotorWatchdog(robot)
+<span class="ln">84</span>    finder = FindLane(perception, robot, camera, watchdog, battery)
+<span class="ln">85</span>    reason = 'time up'
+<span class="ln">86</span>    try:
+<span class="ln">87</span>        frame = wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
+<span class="ln">88</span>        for _ in range(WARMUP_FRAMES):
+<span class="ln">89</span>            frame = wait_for_new_frame(camera, frame)
+<span class="ln">90</span>            perception.observe(frame)
+<span class="ln">91</span>        # wait for the lane with the motors off instead of judging one unsettled frame
+<span class="ln">92</span>        waited = time.time()
+<span class="ln">93</span>        while perception.observe(frame)['lane_visible'] &lt; config.LANE_VISIBLE_THRESHOLD:
+<span class="ln">94</span>            if time.time() - waited &gt; STARTUP_TIMEOUT:
+<span class="ln">95</span>                raise NoLaneAtStart()
+<span class="ln">96</span>            frame = wait_for_new_frame(camera, frame)
+<span class="ln">97</span>        watchdog.start()
+<span class="ln">98</span>        left = right = 0.0
+<span class="ln">99</span>        last_lane_x = 0.0
+<span class="ln">100</span>        history = collections.deque(maxlen=UNDO_STEPS)  # (dt, left, right) of the recent control steps
+<span class="ln">101</span>        start = last = last_saved = time.time()
+<span class="ln">102</span>        while time.time() - start &lt; seconds:
+<span class="ln">103</span>            if stop_event is not None and stop_event.is_set():
+<span class="ln">104</span>                reason = 'stopped by hand'
+<span class="ln">105</span>                break
+<span class="ln">106</span>            frame = wait_for_new_frame(camera, frame)
+<span class="ln">107</span>            now = time.time()
+<span class="ln">108</span>            dt, last = max(now - last, 1e-3), now
+<span class="ln">109</span>            percept = perception.observe(frame)
+<span class="ln">110</span>            if now - last_saved &gt;= 1.0 / RECORD_HZ:
+<span class="ln">111</span>                last_saved = now
+<span class="ln">112</span>                try:
+<span class="ln">113</span>                    frames.put_nowait(frame)
+<span class="ln">114</span>                except queue.Full:
+<span class="ln">115</span>                    pass
+<span class="ln">116</span>            previous_state, state = decision.state, decision.update(percept, now)
+<span class="ln">117</span>            if state == LINE_RECOVERY:  # takes many seconds, in small steps with their own safety checks
+<span class="ln">118</span>                with watchdog.lock:
+<span class="ln">119</span>                    robot.stop()
+<span class="ln">120</span>                # where the lane should be: the way the curve bends, else where it was last seen
+<span class="ln">121</span>                turn = percept['curve_dir'] if abs(percept['curve_dir']) &gt;= config.FEEDFORWARD_MIN_DIR else last_lane_x
+<span class="ln">122</span>                followed = previous_state in FOLLOWING  # the lane is near: undo and sweep make sense
+<span class="ln">123</span>                result = finder.run(history if followed else (), (-1 if turn &lt; 0 else 1) if followed else 0,
+<span class="ln">124</span>                                    start + seconds, stop_event)
+<span class="ln">125</span>                log.step(time=now - start, dt=dt, mode=LINE_RECOVERY, phase=result)
+<span class="ln">126</span>                last = time.time()
+<span class="ln">127</span>                frame = finder.frame
+<span class="ln">128</span>                decision.line_recovery_done(result in FOUND, last, result in KEPT_DIRECTION)
+<span class="ln">129</span>                controller.reset()
+<span class="ln">130</span>                history.clear()
+<span class="ln">131</span>                if result in FOUND:
+<span class="ln">132</span>                    continue
+<span class="ln">133</span>                reason = 'lane not found by line recovery (%s)' % result
+<span class="ln">134</span>                break
+<span class="ln">135</span>            if state != previous_state and state in (OBSTACLE_AVOIDANCE, STOP):
+<span class="ln">136</span>                controller.reset()  # restart slowly afterwards, without old steering or damping memory
+<span class="ln">137</span>            lane_seen = percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD
+<span class="ln">138</span>            if lane_seen:
+<span class="ln">139</span>                last_lane_x = percept['lane_x']
+<span class="ln">140</span>            if state in FOLLOWING or (state == ROAD_RECOVERY and lane_seen):
+<span class="ln">141</span>                if lane_seen:
+<span class="ln">142</span>                    limit = config.SPEED_SHARP if state == SLOW_DOWN else None
+<span class="ln">143</span>                    left, right = controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'],
+<span class="ln">144</span>                                                    dt, speed_limit=limit)
+<span class="ln">145</span>                else:  # short gap: steer without lane_x, which is not trained on frames without a lane
+<span class="ln">146</span>                    left, right = controller.hold(percept['curve_probs'], percept['curve_dir'], dt)
+<span class="ln">147</span>                with watchdog.lock:
+<span class="ln">148</span>                    robot.set_motors(left, right)
+<span class="ln">149</span>                watchdog.feed()
+<span class="ln">150</span>            elif state in (OBSTACLE_AVOIDANCE, ROAD_RECOVERY):
+<span class="ln">151</span>                if state == OBSTACLE_AVOIDANCE:
+<span class="ln">152</span>                    left, right = controller.avoid(decision.avoid_action(), decision.pass_side(),
+<span class="ln">153</span>                                                   now - decision.phase_since)
+<span class="ln">154</span>                else:
+<span class="ln">155</span>                    left, right = controller.recover(decision.pass_side())
+<span class="ln">156</span>                with watchdog.lock:
+<span class="ln">157</span>                    robot.set_motors(left, right)
+<span class="ln">158</span>                watchdog.feed()
+<span class="ln">159</span>            elif state == STOP:  # brake, back up if too close, wait; drive on (from slow) once the cup is gone
+<span class="ln">160</span>                left, right = controller.stop(decision.stop_phase, now - decision.phase_since)
+<span class="ln">161</span>                with watchdog.lock:
+<span class="ln">162</span>                    robot.set_motors(left, right)
+<span class="ln">163</span>                watchdog.feed()
+<span class="ln">164</span>            else:
+<span class="ln">165</span>                robot.stop()
+<span class="ln">166</span>                reason = {ROAD_RECOVERY: 'lane not found after avoiding',
+<span class="ln">167</span>                          OBSTACLE_AVOIDANCE: 'swerve %s did not reach its camera mark' % decision.avoid_phase
+<span class="ln">168</span>                          }.get(previous_state, 'lane lost')
+<span class="ln">169</span>                left = right = 0.0
+<span class="ln">170</span>            probs = percept['curve_probs']
+<span class="ln">171</span>            ahead = cup_ahead(percept)  # the cup the decision looks at, for the log
+<span class="ln">172</span>            log.step(time=now - start, dt=dt, mode=state, lane_visible=percept['lane_visible'],
+<span class="ln">173</span>                     lane_x=percept['lane_x'], p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2],
+<span class="ln">174</span>                     curve_dir=percept['curve_dir'],
+<span class="ln">175</span>                     curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
+<span class="ln">176</span>                     left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
+<span class="ln">177</span>                     cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'],
+<span class="ln">178</span>                     lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
+<span class="ln">179</span>                     band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None, band_cm=band_cm(ahead) if ahead else None,
+<span class="ln">180</span>                     bands=len(percept['cup_bands']),
+<span class="ln">181</span>                     phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''))
+<span class="ln">182</span>            history.append((dt, left, right))
+<span class="ln">183</span>            if state == HALT:
+<span class="ln">184</span>                break
+<span class="ln">185</span>    except StopRecovery as over:
+<span class="ln">186</span>        reason = str(over)
+<span class="ln">187</span>    except NoLaneAtStart:
+<span class="ln">188</span>        reason = 'no lane at start: put the robot on the lane'
+<span class="ln">189</span>    except CameraFrozen:
+<span class="ln">190</span>        reason = 'camera frozen'
+<span class="ln">191</span>    except BatteryLow as low:
+<span class="ln">192</span>        reason = str(low)
+<span class="ln">193</span>    except KeyboardInterrupt:
+<span class="ln">194</span>        reason = 'stopped by hand'  # scripts/stop_robot.sh sends Ctrl-C (SIGINT)
+<span class="ln">195</span>    finally:
+<span class="ln">196</span>        watchdog.running = False
+<span class="ln">197</span>        robot.stop()
+<span class="ln">198</span>        camera.stop()
+<span class="ln">199</span>        frames.put(None)
+<span class="ln">200</span>        saver.join(timeout=2.0)
+<span class="ln">201</span>        recorder.stop()
+<span class="ln">202</span>        log.close(reason)
+<span class="ln">203</span>    return reason, log.dir
+<span class="ln">204</span>
+<span class="ln">205</span>
+<span class="ln">206</span>def main():
+<span class="ln">207</span>    parser = argparse.ArgumentParser()
+<span class="ln">208</span>    parser.add_argument('--name', default='drive')
+<span class="ln">209</span>    parser.add_argument('--seconds', type=float, default=30.0)
+<span class="ln">210</span>    parser.add_argument('--baseline', action='store_true', help='constant speed, plain P steering')
+<span class="ln">211</span>    parser.add_argument('--no-curve', action='store_true', help='our steering at the baseline speed')
+<span class="ln">212</span>    parser.add_argument('--stop-only', action='store_true', help='wait in front of a cup instead of avoiding it')
+<span class="ln">213</span>    parser.add_argument('--pass-side', choices=['left', 'right'], help='side to pass cups on (default: inside of the oval)')
+<span class="ln">214</span>    args = parser.parse_args()
+<span class="ln">215</span>    reason, log_dir = run(args.name, args.seconds, args.baseline, not args.no_curve,
+<span class="ln">216</span>                          stop_only=args.stop_only, pass_side=args.pass_side)
+<span class="ln">217</span>    print('%s, log in %s' % (reason, log_dir))
+<span class="ln">218</span>
+<span class="ln">219</span>
+<span class="ln">220</span>if __name__ == '__main__':
+<span class="ln">221</span>    main()</pre>
+</div>
+<div class="srcfile">
+  <h3>perception.py <span class="fn">86 lines</span></h3>
+<pre><span class="ln">1</span>"""Perception: camera frame -&gt; what the models see (lane visible, lane position, curve class, cup) plus script
+<span class="ln">2</span>measurements from the color masks (HYBRID): lane aligned, the angle of the lane edge ahead, and where the cup bands are.
+<span class="ln">3</span>
+<span class="ln">4</span>No decisions and no motor commands here.
+<span class="ln">5</span>"""
+<span class="ln">6</span>
+<span class="ln">7</span>import math
+<span class="ln">8</span>import os
+<span class="ln">9</span>import time
+<span class="ln">10</span>
+<span class="ln">11</span>import torch
+<span class="ln">12</span>
+<span class="ln">13</span>import config
+<span class="ln">14</span>import cup_mask
+<span class="ln">15</span>import lane_mask
+<span class="ln">16</span>from vision import CURVE_CLASSES, build_model, preprocess, split_curve_probs
+<span class="ln">17</span>
+<span class="ln">18</span>
+<span class="ln">19</span>def load(task, allow_trt=True):
+<span class="ln">20</span>    """Trained model for the task on the GPU in half precision, or None if it was not trained yet.
+<span class="ln">21</span>
+<span class="ln">22</span>    Uses the TensorRT version (03_convert_trt.py, about 6x faster) when it is newer than the trained
+<span class="ln">23</span>    weights; an older one belongs to a previous training and is ignored.
+<span class="ln">24</span>    """
+<span class="ln">25</span>    path = os.path.join(config.MODEL_DIR, task + '.pth')
+<span class="ln">26</span>    if not os.path.exists(path):
+<span class="ln">27</span>        return None
+<span class="ln">28</span>    trt_path = os.path.join(config.MODEL_DIR, task + '_trt.pth')
+<span class="ln">29</span>    if allow_trt and os.path.exists(trt_path) and os.path.getmtime(trt_path) &gt; os.path.getmtime(path):
+<span class="ln">30</span>        from torch2trt import TRTModule
+<span class="ln">31</span>        engine = TRTModule()
+<span class="ln">32</span>        engine.load_state_dict(torch.load(trt_path))
+<span class="ln">33</span>        return engine
+<span class="ln">34</span>    torch.backends.cudnn.benchmark = True  # PyTorch fallback: lets cuDNN pick the fastest kernels (66 -&gt; 41 ms)
+<span class="ln">35</span>    model = build_model(task)
+<span class="ln">36</span>    model.load_state_dict(torch.load(path, map_location='cpu'))
+<span class="ln">37</span>    return model.cuda().eval().half()
+<span class="ln">38</span>
+<span class="ln">39</span>
+<span class="ln">40</span>class Perception(object):
+<span class="ln">41</span>    def __init__(self, use_curve=True):
+<span class="ln">42</span>        self.lane_model = load('lane')
+<span class="ln">43</span>        if self.lane_model is None:
+<span class="ln">44</span>            raise RuntimeError('no lane model: train it first with 03_train.py --task lane')
+<span class="ln">45</span>        self.curve_model = load('curve') if use_curve else None
+<span class="ln">46</span>        self.obstacle_model = load('obstacle')  # None until trained: then no cup is ever seen
+<span class="ln">47</span>        self.frame_count = 0
+<span class="ln">48</span>        self.curve_model_probs = [1.0, 0.0, 0.0, 0.0, 0.0]  # straight until the curve model says otherwise
+<span class="ln">49</span>        self.cup = [-10.0, 0.0, 0.0]  # obstacle model output (visible logit, row, x): no cup until it says otherwise
+<span class="ln">50</span>
+<span class="ln">51</span>    @torch.no_grad()
+<span class="ln">52</span>    def observe(self, frame):
+<span class="ln">53</span>        """Returns a dict: lane_visible (probability), lane_x (-1..1), curve_probs (straight, gentle, sharp),
+<span class="ln">54</span>        curve_dir (-1 left .. 1 right), curve_class, cup_visible (probability), cup_row (lower edge of the cup's
+<span class="ln">55</span>        band, 0 top .. 1 bottom), cup_x (-1..1), inference_ms;
+<span class="ln">56</span>        from the color masks: lane_aligned (True/False), tape_angle (degrees, 0 = horizontal, None without a large
+<span class="ln">57</span>        tape piece), tape_row (lowest row with tape 0..1, 0 without tape), cup_bands (every red band as (x -1..1, lower edge row 0..1, pixels), nearest first)"""
+<span class="ln">58</span>        start = time.time()
+<span class="ln">59</span>        image = preprocess(frame).unsqueeze(0).cuda().half()
+<span class="ln">60</span>        lane = self.lane_model(image)[0].float()
+<span class="ln">61</span>        if self.curve_model is not None and self.frame_count % config.CURVE_EVERY == 0:
+<span class="ln">62</span>            new = torch.softmax(self.curve_model(image)[0].float(), 0).tolist()
+<span class="ln">63</span>            self.curve_model_probs = [old + config.CURVE_SMOOTHING * (n - old)
+<span class="ln">64</span>                                      for old, n in zip(self.curve_model_probs, new)]
+<span class="ln">65</span>        if self.obstacle_model is not None and self.frame_count % config.OBSTACLE_EVERY == 1:  # between curve frames
+<span class="ln">66</span>            self.cup = self.obstacle_model(image)[0].float().tolist()
+<span class="ln">67</span>        self.frame_count += 1
+<span class="ln">68</span>        curve_probs, curve_dir = split_curve_probs(self.curve_model_probs)
+<span class="ln">69</span>        cup = self.cup
+<span class="ln">70</span>        height, width = frame.shape[:2]
+<span class="ln">71</span>        return {
+<span class="ln">72</span>            'lane_visible': torch.sigmoid(lane[0]).item(),
+<span class="ln">73</span>            'lane_x': max(-1.0, min(1.0, lane[1].item())),
+<span class="ln">74</span>            'curve_probs': curve_probs,
+<span class="ln">75</span>            'curve_dir': curve_dir,
+<span class="ln">76</span>            'curve_class': CURVE_CLASSES[max(range(3), key=lambda i: curve_probs[i])],
+<span class="ln">77</span>            'cup_visible': 1.0 / (1.0 + math.exp(-cup[0])),
+<span class="ln">78</span>            'cup_row': cup[1],
+<span class="ln">79</span>            'cup_x': cup[2],
+<span class="ln">80</span>            'lane_aligned': lane_mask.lane_aligned(frame),
+<span class="ln">81</span>            'tape_angle': lane_mask.tape_angle(frame),
+<span class="ln">82</span>            'tape_row': lane_mask.tape_row(frame) / float(height),
+<span class="ln">83</span>            'cup_bands': [(x / (width / 2.0) - 1.0, row / float(height), pixels)
+<span class="ln">84</span>                          for x, row, pixels in cup_mask.find_cups(frame)],
+<span class="ln">85</span>            'inference_ms': (time.time() - start) * 1000.0,
+<span class="ln">86</span>        }</pre>
+</div>
+<div class="srcfile">
+  <h3>decision.py <span class="fn">294 lines</span></h3>
+<pre><span class="ln">1</span>"""Decision: the state machine (Task 6). Which state the robot is in, from what perception sees.
+<span class="ln">2</span>
+<span class="ln">3</span>States (names from PROJECT_GUIDE_1.md), highest priority first; the full table with entry condition, action,
+<span class="ln">4</span>exit condition and priority, plus the diagram, is in STATE_MACHINE.md and must stay in step with this file.
+<span class="ln">5</span>    HALT                lane lost, recovery timeout, a turn of the swerve that does not reach its camera mark in time
+<span class="ln">6</span>                        (battery and camera stops are in drive.py): the run ends
+<span class="ln">7</span>    OBSTACLE_AVOIDANCE  a cup is close ahead in the lane: swerve to the inside of the oval in AVOID_PHASES (stop, turn
+<span class="ln">8</span>                        90 degrees, curve around the cup, turn back onto the lane; control.avoid), the turns and the
+<span class="ln">9</span>                        curve each ended by a camera mark
+<span class="ln">10</span>    LINE_RECOVERY       the lane is lost: the robot finds it again in small steps (find_lane.py), then follows it
+<span class="ln">11</span>    ROAD_RECOVERY       after the swerve: steer on the lane until it is seen near the center and aligned for a few steps
+<span class="ln">12</span>    STOP                required stop: with stop_only, brake, back up if the cup is too close, wait until it is gone
+<span class="ln">13</span>    SLOW_DOWN           sharp curve ahead, or a cup in the lane within about 60 cm: lane following with the speed
+<span class="ln">14</span>                        capped
+<span class="ln">15</span>    ROAD_FOLLOWING      normal lane following
+<span class="ln">16</span>Planned, not coded until their perception exists: TURN_LEFT / TURN_RIGHT (intersection + sign), PARKING,
+<span class="ln">17</span>STOP for a STOP sign.
+<span class="ln">18</span>"""
+<span class="ln">19</span>
+<span class="ln">20</span>import math
+<span class="ln">21</span>
+<span class="ln">22</span>import config
+<span class="ln">23</span>
+<span class="ln">24</span>ROAD_FOLLOWING = 'ROAD_FOLLOWING'
+<span class="ln">25</span>SLOW_DOWN = 'SLOW_DOWN'
+<span class="ln">26</span>OBSTACLE_AVOIDANCE = 'OBSTACLE_AVOIDANCE'
+<span class="ln">27</span>ROAD_RECOVERY = 'ROAD_RECOVERY'
+<span class="ln">28</span>LINE_RECOVERY = 'LINE_RECOVERY'
+<span class="ln">29</span>STOP = 'STOP'
+<span class="ln">30</span>HALT = 'HALT'
+<span class="ln">31</span>FOLLOWING = (ROAD_FOLLOWING, SLOW_DOWN)  # the states that follow the lane with the normal controller
+<span class="ln">32</span>AVOID_PHASES = ('brake', 'turn_out', 'arc', 'turn_in')  # the swerve (AVOID3), in this order
+<span class="ln">33</span>STOP_PHASES = ('brake', 'back', 'wait')  # standing in front of a cup: back only when it is too close, once
+<span class="ln">34</span>
+<span class="ln">35</span>
+<span class="ln">36</span>def band_cm(band):
+<span class="ln">37</span>    """Distance in cm to a red band (x, row, pixels), from its size in the image (OBST9). A band cut off by the lower
+<span class="ln">38</span>    image edge counts as 0: it looks small, but the cup is right in front of the robot"""
+<span class="ln">39</span>    return 0.0 if band[1] &gt;= config.BAND_CUT_ROW else config.CUP_SIZE_CM / math.sqrt(band[2])
+<span class="ln">40</span>
+<span class="ln">41</span>
+<span class="ln">42</span>def cup_ahead(percept):
+<span class="ln">43</span>    """The nearest red band (x, row, pixels) in the robot's way, or None: about where the lane is, or straight in front of
+<span class="ln">44</span>    the robot (a close cup hides the lane). A band beside the lane, or a second cup behind the first, does not count
+<span class="ln">45</span>    (HYBRID: the cup mask measures, the lane model says where the lane is)"""
+<span class="ln">46</span>    lane_seen = percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD
+<span class="ln">47</span>    for band in percept['cup_bands']:  # nearest first
+<span class="ln">48</span>        if abs(band[0]) &lt; config.CUP_DEAD_AHEAD or (lane_seen and abs(band[0] - percept['lane_x']) &lt; config.CUP_IN_LANE):
+<span class="ln">49</span>            return band
+<span class="ln">50</span>    return None
+<span class="ln">51</span>
+<span class="ln">52</span>
+<span class="ln">53</span>def cup_close(percept):
+<span class="ln">54</span>    """True if the obstacle model sees a cup and the cup mask measures the nearest one in the way at or closer than
+<span class="ln">55</span>    the trigger distance. The model's own row was up to 28 rows off with people behind the cup (S1d1)"""
+<span class="ln">56</span>    cup = cup_ahead(percept)
+<span class="ln">57</span>    return (percept['cup_visible'] &gt;= config.OBSTACLE_VISIBLE_THRESHOLD
+<span class="ln">58</span>            and cup is not None and band_cm(cup) &lt;= config.OBSTACLE_CM)
+<span class="ln">59</span>
+<span class="ln">60</span>
+<span class="ln">61</span>def cup_near(percept):
+<span class="ln">62</span>    """True if the nearest cup in the way is within the approach distance. The cup mask alone: at 50-70 cm the obstacle
+<span class="ln">63</span>    model finds only 71-88 % of the cups (OBST8), and slowing down for nothing is harmless"""
+<span class="ln">64</span>    cup = cup_ahead(percept)
+<span class="ln">65</span>    return cup is not None and band_cm(cup) &lt;= config.APPROACH_CM
+<span class="ln">66</span>
+<span class="ln">67</span>
+<span class="ln">68</span>def near_band(percept):
+<span class="ln">69</span>    """The nearest red band close enough to be the cup being passed, or None"""
+<span class="ln">70</span>    bands = percept['cup_bands']
+<span class="ln">71</span>    return bands[0] if bands and band_cm(bands[0]) &lt;= config.CUP_NEAR_CM else None
+<span class="ln">72</span>
+<span class="ln">73</span>
+<span class="ln">74</span>def cup_left_view(last_x, band, toward):
+<span class="ln">75</span>    """True if the cup was last seen near the image edge away from the turn and is gone now: the robot has turned
+<span class="ln">76</span>    about 70-85 degrees (it turns on a little after). Refers to the cup, so it works in curves too (AVOID4)"""
+<span class="ln">77</span>    return band is None and last_x is not None and -toward * last_x &gt;= config.CUP_EDGE
+<span class="ln">78</span>
+<span class="ln">79</span>
+<span class="ln">80</span>def cup_beside_curve(band, toward):
+<span class="ln">81</span>    """True if the cup is in view on the side the curve bends to (or in front): the curve would close in front of the
+<span class="ln">82</span>    cup, so the robot drives straight past it first (AVOID4; the runs that hit the cup saw it come back into view)"""
+<span class="ln">83</span>    return band is not None and -toward * band[0] &gt; -0.1
+<span class="ln">84</span>
+<span class="ln">85</span>
+<span class="ln">86</span>def cup_in_the_way(band):
+<span class="ln">87</span>    """True if a band is very close in the middle of the image during the curve: stop rather than hit it (a second cup,
+<span class="ln">88</span>    or the curve went wrong)"""
+<span class="ln">89</span>    return band is not None and band_cm(band) &lt;= config.ARC_STOP_CM and abs(band[0]) &lt; config.ARC_STOP_X
+<span class="ln">90</span>
+<span class="ln">91</span>
+<span class="ln">92</span>def cup_gone(percept):
+<span class="ln">93</span>    """True if no red band is within the clear distance anywhere: standing in front of the cup, it can hide the lane,
+<span class="ln">94</span>    so this must not need the lane"""
+<span class="ln">95</span>    return all(band_cm(band) &gt; config.OBSTACLE_CLEAR_CM for band in percept['cup_bands'])
+<span class="ln">96</span>
+<span class="ln">97</span>
+<span class="ln">98</span>def reached_horizontal(angle, direction, early):
+<span class="ln">99</span>    """True if a turn (direction -1 left, +1 right) has brought the lane edge ahead to within `early` degrees before
+<span class="ln">100</span>    horizontal (lane_mask.tape_angle): turning left its angle rises toward 0, turning right it falls. A window, not
+<span class="ln">101</span>    a limit: a lane line leaning the other way (+39 degrees at one start) must not end a left turn"""
+<span class="ln">102</span>    return angle is not None and 0 &lt;= direction * angle &lt;= early
+<span class="ln">103</span>
+<span class="ln">104</span>
+<span class="ln">105</span>def edge_left_view(last, angle, direction):
+<span class="ln">106</span>    """True if the lane edge, last seen within TURN_LOST degrees of horizontal, has left the image: it is gone, or the
+<span class="ln">107</span>    largest piece is now another, steeper one. The robot then stands close to the edge, which is horizontal below the
+<span class="ln">108</span>    camera's view (run avoid3_ccw_1)"""
+<span class="ln">109</span>    return (reached_horizontal(last, direction, config.TURN_LOST)
+<span class="ln">110</span>            and (angle is None or direction * angle &gt; direction * last + config.TURN_JUMP))
+<span class="ln">111</span>
+<span class="ln">112</span>
+<span class="ln">113</span>def lane_found(percept, centered=config.RECOVER_CENTERED):
+<span class="ln">114</span>    """True if the lane is seen within `centered` of the middle and the robot points along it. lane_x alone was near 0
+<span class="ln">115</span>    when the robot stood crosswise to the lane (run avoid_ccw_1); the lane mask's two-line check rejects that"""
+<span class="ln">116</span>    return (percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD and percept['lane_aligned']
+<span class="ln">117</span>            and abs(percept['lane_x']) &lt; centered)
+<span class="ln">118</span>
+<span class="ln">119</span>
+<span class="ln">120</span>class Decision(object):
+<span class="ln">121</span>    def __init__(self, stop_only=False, pass_side=None, line_recovery=False):
+<span class="ln">122</span>        """stop_only: wait in front of a cup (STOP) instead of avoiding it.
+<span class="ln">123</span>        pass_side: 'left' or 'right' to fix the side; None measures the inside of the oval while driving.
+<span class="ln">124</span>        line_recovery: find a lost lane again (LINE_RECOVERY) instead of ending the run (HALT)."""
+<span class="ln">125</span>        self.line_recovery = line_recovery
+<span class="ln">126</span>        self.stop_only = stop_only
+<span class="ln">127</span>        self.fixed_side = pass_side
+<span class="ln">128</span>        self.state = ROAD_FOLLOWING
+<span class="ln">129</span>        self.state_since = 0.0
+<span class="ln">130</span>        self.lost_since = None
+<span class="ln">131</span>        self.lane_seen = False
+<span class="ln">132</span>        self.close_frames = 0     # control steps in a row with a close cup (in the lane, unless stop_only)
+<span class="ln">133</span>        self.clear_frames = 0     # control steps in a row with the cup gone (STOP)
+<span class="ln">134</span>        self.centered_frames = 0  # control steps in a row with the lane found (ROAD_RECOVERY)
+<span class="ln">135</span>        self.avoid_phase = AVOID_PHASES[0]
+<span class="ln">136</span>        self.phase_since = 0.0
+<span class="ln">137</span>        self.edge_angle = None    # last tape angle seen in the turn out
+<span class="ln">138</span>        self.turn_cup_x = None    # last x of the cup in the turn out
+<span class="ln">139</span>        self.go_straight = False  # the curve is paused: the cup is in view on the side it bends to, or it took long
+<span class="ln">140</span>        self.tape_under = False   # the lane's border has been under the robot's nose during the curve
+<span class="ln">141</span>        self.stop_phase = STOP_PHASES[0]
+<span class="ln">142</span>        self.backed = False       # backed up once in this stop
+<span class="ln">143</span>        self.curve_sum = 0.0      # sum of curve_dir in curves: negative = curves turn left = counterclockwise
+<span class="ln">144</span>
+<span class="ln">145</span>    def pass_side(self):
+<span class="ln">146</span>        """Side to pass a cup on: the inside of the oval (PASS), left until the direction is known"""
+<span class="ln">147</span>        if self.fixed_side:
+<span class="ln">148</span>            return self.fixed_side
+<span class="ln">149</span>        return 'right' if self.curve_sum &gt; 0 else 'left'
+<span class="ln">150</span>
+<span class="ln">151</span>    def avoid_action(self):
+<span class="ln">152</span>        """What the wheels do in this swerve phase: the phase, or 'pass' while the curve is paused for the cup"""
+<span class="ln">153</span>        return 'pass' if self.avoid_phase == 'arc' and self.go_straight else self.avoid_phase
+<span class="ln">154</span>
+<span class="ln">155</span>    def enter(self, state, now):
+<span class="ln">156</span>        self.state, self.state_since = state, now
+<span class="ln">157</span>        if state == OBSTACLE_AVOIDANCE:
+<span class="ln">158</span>            self.avoid_phase, self.phase_since, self.edge_angle = AVOID_PHASES[0], now, None
+<span class="ln">159</span>            self.turn_cup_x, self.go_straight, self.tape_under = None, False, False
+<span class="ln">160</span>        if state == STOP:
+<span class="ln">161</span>            self.stop_phase, self.phase_since, self.backed = STOP_PHASES[0], now, False
+<span class="ln">162</span>
+<span class="ln">163</span>    def lane_gone(self, now):
+<span class="ln">164</span>        """The lane is lost: find it again, or end the run"""
+<span class="ln">165</span>        self.enter(LINE_RECOVERY if self.line_recovery else HALT, now)
+<span class="ln">166</span>
+<span class="ln">167</span>    def line_recovery_done(self, found, now, kept_direction=False):
+<span class="ln">168</span>        """Called by drive.py when the search has ended. Unless the robot kept its driving direction, it may now face
+<span class="ln">169</span>        either way along the lane, so the direction is measured anew"""
+<span class="ln">170</span>        self.enter(ROAD_FOLLOWING if found else HALT, now)
+<span class="ln">171</span>        self.lost_since, self.close_frames = None, 0
+<span class="ln">172</span>        if not kept_direction:
+<span class="ln">173</span>            self.curve_sum = 0.0
+<span class="ln">174</span>
+<span class="ln">175</span>    def update_stop(self, percept, now):
+<span class="ln">176</span>        """Standing in front of the cup: a short reverse pulse against coasting, then wait; if the cup turns out to
+<span class="ln">177</span>        be closer than BACKUP_CM (the camera shows the robot's position late), back up once until it is further than
+<span class="ln">178</span>        BACKUP_TARGET_CM. The nearest band anywhere: close in front, the cup can hide the lane"""
+<span class="ln">179</span>        bands = percept['cup_bands']
+<span class="ln">180</span>        cm = band_cm(bands[0]) if bands else float('inf')
+<span class="ln">181</span>        elapsed = now - self.phase_since
+<span class="ln">182</span>        if self.stop_phase == 'brake' and elapsed &gt;= config.BRAKE[1]:
+<span class="ln">183</span>            self.stop_phase, self.phase_since = 'wait', now
+<span class="ln">184</span>        elif self.stop_phase == 'wait' and not self.backed and cm &lt;= config.BACKUP_CM:
+<span class="ln">185</span>            self.stop_phase, self.phase_since, self.backed = 'back', now, True
+<span class="ln">186</span>        elif self.stop_phase == 'back' and (cm &gt; config.BACKUP_TARGET_CM or elapsed &gt;= config.BACKUP_MAX):
+<span class="ln">187</span>            self.stop_phase, self.phase_since = 'wait', now
+<span class="ln">188</span>
+<span class="ln">189</span>    def update_avoidance(self, percept, now):
+<span class="ln">190</span>        """Moves through the swerve phases. Passing on the left: stand still briefly; turn left until the cup has left
+<span class="ln">191</span>        the image on the right (without a cup in view: until the lane edge looks horizontal or leaves the image near
+<span class="ln">192</span>        horizontal), about 90 degrees; curve right, straight on while the cup is in view on that side, until the edge
+<span class="ln">193</span>        ahead looks horizontal again or leaves the image, or the lane is found (inside the lane, crossing it); turn left
+<span class="ln">194</span>        until the lane is found again, now along it. Passing on the right
+<span class="ln">195</span>        mirrored. The marks come from the color masks (HYBRID). A phase that takes too long: HALT"""
+<span class="ln">196</span>        elapsed = now - self.phase_since
+<span class="ln">197</span>        toward = -1 if self.pass_side() == 'left' else 1  # turn direction toward the pass side (-1 left)
+<span class="ln">198</span>        angle = percept['tape_angle']
+<span class="ln">199</span>        band = near_band(percept)
+<span class="ln">200</span>        if self.avoid_phase == 'brake':
+<span class="ln">201</span>            done, limit = elapsed &gt;= config.AVOID_BRAKE, config.AVOID_BRAKE
+<span class="ln">202</span>        elif self.avoid_phase == 'turn_out':
+<span class="ln">203</span>            done = cup_left_view(self.turn_cup_x, band, toward) or (band is None and (
+<span class="ln">204</span>                reached_horizontal(angle, toward, config.TURN_EARLY) or edge_left_view(self.edge_angle, angle, toward)))
+<span class="ln">205</span>            limit = config.TURN_OUT_MAX
+<span class="ln">206</span>            self.edge_angle = angle
+<span class="ln">207</span>            if band is not None:
+<span class="ln">208</span>                self.turn_cup_x = band[0]
+<span class="ln">209</span>        elif self.avoid_phase == 'arc':  # the lane edge is horizontal ahead at its start: ARC_MIN
+<span class="ln">210</span>            if cup_in_the_way(band):
+<span class="ln">211</span>                self.enter(HALT, now)
+<span class="ln">212</span>                return
+<span class="ln">213</span>            self.go_straight = cup_beside_curve(band, toward) or elapsed &gt;= config.ARC_STRAIGHT_AFTER
+<span class="ln">214</span>            under = percept['tape_row'] &gt;= config.TAPE_UNDER_ROW
+<span class="ln">215</span>            self.tape_under = self.tape_under or (under and elapsed &gt;= config.ARC_MIN)  # at the start it is the old lane
+<span class="ln">216</span>            crossed = self.tape_under and percept['tape_row'] &lt; config.TAPE_PAST_ROW
+<span class="ln">217</span>            # the lane found means inside the lane; without it, the edge ahead looks horizontal or leaves the image close
+<span class="ln">218</span>            # to the lane (run avoid4_1: last seen at +17, then the far border was reached, avoid4_2)
+<span class="ln">219</span>            done = (crossed
+<span class="ln">220</span>                    or (elapsed &gt;= config.ARC_LANE_MIN and lane_found(percept, config.TURN_IN_CENTERED))
+<span class="ln">221</span>                    or (elapsed &gt;= config.ARC_MIN and (reached_horizontal(angle, -toward, config.ARC_EARLY)
+<span class="ln">222</span>                                                       or edge_left_view(self.edge_angle, angle, -toward))))
+<span class="ln">223</span>            limit = config.ARC_MAX
+<span class="ln">224</span>            self.edge_angle = angle
+<span class="ln">225</span>        else:  # the curve ends at the lane's edge: ROAD_RECOVERY brings the robot to the center
+<span class="ln">226</span>            done = elapsed &gt;= config.TURN_IN_MIN and lane_found(percept, config.TURN_IN_CENTERED)
+<span class="ln">227</span>            limit = config.TURN_IN_MAX
+<span class="ln">228</span>        if done and self.avoid_phase == AVOID_PHASES[-1]:
+<span class="ln">229</span>            self.centered_frames = 0
+<span class="ln">230</span>            self.enter(ROAD_RECOVERY, now)
+<span class="ln">231</span>        elif done:
+<span class="ln">232</span>            self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(self.avoid_phase) + 1]
+<span class="ln">233</span>            self.phase_since = now
+<span class="ln">234</span>        elif elapsed &gt;= limit:
+<span class="ln">235</span>            self.lane_gone(now)  # a stall, or the mark was not seen: do not drive on blind
+<span class="ln">236</span>
+<span class="ln">237</span>    def update(self, percept, now):
+<span class="ln">238</span>        """Returns the state for this frame"""
+<span class="ln">239</span>        if self.state in (HALT, LINE_RECOVERY):  # drive.py runs the search and reports back
+<span class="ln">240</span>            return self.state
+<span class="ln">241</span>        if self.state == OBSTACLE_AVOIDANCE:  # the lane is not asked until the swerve is done
+<span class="ln">242</span>            self.update_avoidance(percept, now)
+<span class="ln">243</span>            return self.state
+<span class="ln">244</span>        if self.state == ROAD_RECOVERY:
+<span class="ln">245</span>            self.centered_frames = self.centered_frames + 1 if lane_found(percept) else 0
+<span class="ln">246</span>            if self.centered_frames &gt;= config.RECOVER_FRAMES:  # a distant or crosswise lane does not count
+<span class="ln">247</span>                self.lost_since = None
+<span class="ln">248</span>                self.close_frames = 0
+<span class="ln">249</span>                self.enter(ROAD_FOLLOWING, now)
+<span class="ln">250</span>            elif now - self.state_since &gt; config.RECOVER_TIMEOUT:
+<span class="ln">251</span>                self.lane_gone(now)
+<span class="ln">252</span>            return self.state
+<span class="ln">253</span>
+<span class="ln">254</span>        close = cup_close(percept)
+<span class="ln">255</span>        self.close_frames = self.close_frames + 1 if close else 0
+<span class="ln">256</span>        if self.stop_only:
+<span class="ln">257</span>            # drive on only with the lane in sight: a hand measuring in front of the camera hid the cup and the lane,
+<span class="ln">258</span>            # and the robot drove on blind (run stop_s1d2_2)
+<span class="ln">259</span>            clear = cup_gone(percept) and percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD
+<span class="ln">260</span>            self.clear_frames = self.clear_frames + 1 if clear else 0
+<span class="ln">261</span>            if self.state == STOP and self.clear_frames &gt;= config.OBSTACLE_CLEAR_FRAMES:
+<span class="ln">262</span>                self.enter(ROAD_FOLLOWING, now)
+<span class="ln">263</span>            elif self.state != STOP and self.close_frames &gt;= config.OBSTACLE_FRAMES:
+<span class="ln">264</span>                self.enter(STOP, now)
+<span class="ln">265</span>            if self.state == STOP:
+<span class="ln">266</span>                self.update_stop(percept, now)
+<span class="ln">267</span>                self.lost_since = None  # standing still is not losing the lane
+<span class="ln">268</span>                return STOP
+<span class="ln">269</span>        elif self.close_frames &gt;= config.OBSTACLE_FRAMES:
+<span class="ln">270</span>            self.enter(OBSTACLE_AVOIDANCE, now)
+<span class="ln">271</span>            return self.state
+<span class="ln">272</span>
+<span class="ln">273</span>        # following the lane: ROAD_FOLLOWING or SLOW_DOWN (sharp curve, or a cup ahead: less rolling on after a stop)
+<span class="ln">274</span>        p_sharp = percept['curve_probs'][2]
+<span class="ln">275</span>        near = cup_near(percept)
+<span class="ln">276</span>        if self.state == ROAD_FOLLOWING and (p_sharp &gt; config.SLOW_DOWN_ENTER or near):
+<span class="ln">277</span>            self.enter(SLOW_DOWN, now)
+<span class="ln">278</span>        elif self.state == SLOW_DOWN and p_sharp &lt; config.SLOW_DOWN_EXIT and not near:
+<span class="ln">279</span>            self.enter(ROAD_FOLLOWING, now)
+<span class="ln">280</span>        if percept['curve_probs'][1] + p_sharp &gt; 0.5:
+<span class="ln">281</span>            self.curve_sum += percept['curve_dir']
+<span class="ln">282</span>        if percept['lane_visible'] &gt;= config.LANE_VISIBLE_THRESHOLD:
+<span class="ln">283</span>            self.lost_since = None
+<span class="ln">284</span>            self.lane_seen = True
+<span class="ln">285</span>            return self.state
+<span class="ln">286</span>        if not self.lane_seen:
+<span class="ln">287</span>            self.enter(HALT, now)  # never start without seeing the lane (the grace time is only for short gaps)
+<span class="ln">288</span>            return HALT
+<span class="ln">289</span>        if self.lost_since is None:
+<span class="ln">290</span>            self.lost_since = now
+<span class="ln">291</span>        # a short gap (one or two bad frames) keeps following on the last steering
+<span class="ln">292</span>        if now - self.lost_since &gt;= config.LANE_LOST_TIMEOUT:
+<span class="ln">293</span>            self.lane_gone(now)
+<span class="ln">294</span>        return self.state</pre>
+</div>
+<div class="srcfile">
+  <h3>control.py <span class="fn">145 lines</span></h3>
+<pre><span class="ln">1</span>"""Control: lane position and curve class -&gt; wheel speeds (D4 steering, D5 speed).
+<span class="ln">2</span>
+<span class="ln">3</span>Our own control layer between the model output and the motors (Task 1).
+<span class="ln">4</span>"""
+<span class="ln">5</span>
+<span class="ln">6</span>import config
+<span class="ln">7</span>
+<span class="ln">8</span>SPEEDS = [config.SPEED_STRAIGHT, config.SPEED_GENTLE, config.SPEED_SHARP]  # same order as CURVE_CLASSES
+<span class="ln">9</span>
+<span class="ln">10</span>
+<span class="ln">11</span>def turn_speed(elapsed):
+<span class="ln">12</span>    """Wheel speed of a turn in place: a short kick to break the robot free, then the slow speed (MOVE2)"""
+<span class="ln">13</span>    return config.TURN_KICK[0] if elapsed &lt; config.TURN_KICK[1] else config.TURN_SPEED
+<span class="ln">14</span>
+<span class="ln">15</span>
+<span class="ln">16</span>def limit_change(target, current, up_rate, down_rate, dt):
+<span class="ln">17</span>    """Moves current toward target by at most up_rate (rising) or down_rate (falling) per second"""
+<span class="ln">18</span>    if target &gt; current:
+<span class="ln">19</span>        return min(target, current + up_rate * dt)
+<span class="ln">20</span>    return max(target, current - down_rate * dt)
+<span class="ln">21</span>
+<span class="ln">22</span>
+<span class="ln">23</span>class Controller(object):
+<span class="ln">24</span>    def __init__(self, baseline=False, use_curve=True):
+<span class="ln">25</span>        self.baseline = baseline
+<span class="ln">26</span>        self.use_curve = use_curve
+<span class="ln">27</span>        self.lane_x = 0.0      # smoothed lane position
+<span class="ln">28</span>        self.d_lane_x = 0.0    # more strongly smoothed lane position, only for the D term
+<span class="ln">29</span>        self.integral = 0.0    # leaky sum of lane_x over time
+<span class="ln">30</span>        self.last_error = None
+<span class="ln">31</span>        self.steering = 0.0
+<span class="ln">32</span>        self.speed = config.SPEED_SHARP  # start at the slowest speed that moves the robot, then ramp up
+<span class="ln">33</span>
+<span class="ln">34</span>    def reset(self):
+<span class="ln">35</span>        """Forget the past, for example after the robot stopped"""
+<span class="ln">36</span>        self.__init__(self.baseline, self.use_curve)
+<span class="ln">37</span>
+<span class="ln">38</span>    def target_speed(self, curve_probs, lane_x):
+<span class="ln">39</span>        """Slower of two speeds: the curve model's (blended by its probabilities) and the steering's.
+<span class="ln">40</span>
+<span class="ln">41</span>        The steering part keeps the robot slow while it is still turning, also when the curve model
+<span class="ln">42</span>        already sees the straight ahead.
+<span class="ln">43</span>        """
+<span class="ln">44</span>        model_speed = sum(p * v for p, v in zip(curve_probs, SPEEDS))
+<span class="ln">45</span>        turning = (abs(lane_x) - config.TURN_SLOW_START) / (config.TURN_SLOW_FULL - config.TURN_SLOW_START)
+<span class="ln">46</span>        turning = max(0.0, min(1.0, turning))
+<span class="ln">47</span>        steering_speed = config.SPEED_STRAIGHT - turning * (config.SPEED_STRAIGHT - config.SPEED_SHARP)
+<span class="ln">48</span>        return min(model_speed, steering_speed)
+<span class="ln">49</span>
+<span class="ln">50</span>    def curve_turn(self, curve_probs, curve_dir):
+<span class="ln">51</span>        """Base turn for the curve the curve model sees: a curve needs a sustained turn that P alone only gives
+<span class="ln">52</span>        with a large error. Size from how sharp the curve is, direction from which way it bends (both curve model)"""
+<span class="ln">53</span>        if abs(curve_dir) &lt; config.FEEDFORWARD_MIN_DIR:
+<span class="ln">54</span>            return 0.0
+<span class="ln">55</span>        size = curve_probs[1] * config.FEEDFORWARD_GENTLE + curve_probs[2] * config.FEEDFORWARD_SHARP
+<span class="ln">56</span>        return size if curve_dir &gt; 0 else -size
+<span class="ln">57</span>
+<span class="ln">58</span>    def feedforward(self, curve_probs, curve_dir):
+<span class="ln">59</span>        """The curve turn, or none when the robot is already inside the curve: then P steers it back to the center"""
+<span class="ln">60</span>        if self.lane_x * curve_dir &lt; 0 and abs(self.lane_x) &gt; config.FEEDFORWARD_MAX_INSIDE:
+<span class="ln">61</span>            return 0.0
+<span class="ln">62</span>        return self.curve_turn(curve_probs, curve_dir)
+<span class="ln">63</span>
+<span class="ln">64</span>    def update(self, lane_x, curve_probs, curve_dir, dt, speed_limit=None):
+<span class="ln">65</span>        """Returns (left, right) wheel speeds; speed_limit caps the target speed (state SLOW_DOWN)"""
+<span class="ln">66</span>        if self.baseline:
+<span class="ln">67</span>            # stock JetBot style: raw model output, plain P steering, constant speed
+<span class="ln">68</span>            self.steering = config.STEERING_KP * lane_x
+<span class="ln">69</span>            self.speed = config.BASELINE_SPEED
+<span class="ln">70</span>        else:
+<span class="ln">71</span>            self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
+<span class="ln">72</span>            if self.last_error is None:
+<span class="ln">73</span>                self.d_lane_x = self.lane_x
+<span class="ln">74</span>            self.d_lane_x += config.D_SMOOTHING * (self.lane_x - self.d_lane_x)
+<span class="ln">75</span>            change = 0.0 if self.last_error is None else (self.d_lane_x - self.last_error) / dt
+<span class="ln">76</span>            self.last_error = self.d_lane_x
+<span class="ln">77</span>            # leaky integral: grows while the robot stays off-center in a curve, fades on the straight
+<span class="ln">78</span>            self.integral += self.lane_x * dt - self.integral * dt / config.STEERING_I_LEAK
+<span class="ln">79</span>            integral_part = max(-config.STEERING_I_MAX, min(config.STEERING_I_MAX, config.STEERING_KI * self.integral))
+<span class="ln">80</span>            # gain scheduling: the faster the robot, the more a correction moves it before the next frame,
+<span class="ln">81</span>            # so the gains shrink with speed and the steering has the same effect at every speed
+<span class="ln">82</span>            schedule = config.STEERING_REF_SPEED / max(self.speed, config.STEERING_REF_SPEED)
+<span class="ln">83</span>            wanted = (schedule * (config.STEERING_KP * self.lane_x + config.STEERING_KD * change) + integral_part
+<span class="ln">84</span>                      + self.feedforward(curve_probs, curve_dir))
+<span class="ln">85</span>            self.steering = limit_change(wanted, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
+<span class="ln">86</span>            if self.use_curve:
+<span class="ln">87</span>                target = self.target_speed(curve_probs, self.lane_x)
+<span class="ln">88</span>                if speed_limit is not None:
+<span class="ln">89</span>                    target = min(target, speed_limit)
+<span class="ln">90</span>                self.speed = limit_change(target, self.speed, config.SPEED_UP_RATE, config.SPEED_DOWN_RATE, dt)
+<span class="ln">91</span>            else:
+<span class="ln">92</span>                self.speed = config.BASELINE_SPEED  # same speed as the baseline: the runs differ only in steering
+<span class="ln">93</span>        return self.wheels()
+<span class="ln">94</span>
+<span class="ln">95</span>    def hold(self, curve_probs, curve_dir, dt):
+<span class="ln">96</span>        """Returns (left, right) for a short gap in which the lane is not visible (lane_x is not trained on
+<span class="ln">97</span>        such frames). In a curve the robot keeps turning into it, at least as hard as the curve turn: holding
+<span class="ln">98</span>        the last raw command held a turn out of the sharp ccw curve in both failed runs (DATA2). Without the
+<span class="ln">99</span>        inside rule: lane_x reached +0.10 just before the gap and the rule then held a turn out of the curve
+<span class="ln">100</span>        (S1d0, 2 runs on 2026-11-03). On a straight the last command is kept."""
+<span class="ln">101</span>        turn = self.curve_turn(curve_probs, curve_dir)
+<span class="ln">102</span>        if turn != 0.0 and (self.steering * turn &lt;= 0.0 or abs(self.steering) &lt; abs(turn)):
+<span class="ln">103</span>            self.steering = limit_change(turn, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
+<span class="ln">104</span>        return self.wheels()
+<span class="ln">105</span>
+<span class="ln">106</span>    def avoid(self, phase, side, elapsed):
+<span class="ln">107</span>        """Returns (left, right) for a swerve phase (decision.AVOID_PHASES; the decision layer picks and ends it).
+<span class="ln">108</span>
+<span class="ln">109</span>        brake: stand still; turn_out, turn_in: turn in place toward the pass side; arc: curve away from it, around
+<span class="ln">110</span>        the cup; pass: straight on while the cup is in view during the curve (Decision.avoid_action).
+<span class="ln">111</span>        side: 'left' or 'right', the pass side; elapsed: seconds since the phase started (the kick).
+<span class="ln">112</span>        """
+<span class="ln">113</span>        if phase == 'brake':
+<span class="ln">114</span>            return self.stop(phase, elapsed)
+<span class="ln">115</span>        if phase == 'pass':
+<span class="ln">116</span>            return config.ARC_STRAIGHT, config.ARC_STRAIGHT
+<span class="ln">117</span>        toward = -1.0 if side == 'left' else 1.0  # sign of a turn toward the pass side (positive turns right)
+<span class="ln">118</span>        if phase == 'arc':
+<span class="ln">119</span>            outer, inner = config.ARC_WHEELS
+<span class="ln">120</span>            return (inner, outer) if toward &gt; 0 else (outer, inner)
+<span class="ln">121</span>        spin = toward * turn_speed(elapsed)
+<span class="ln">122</span>        return spin, -spin
+<span class="ln">123</span>
+<span class="ln">124</span>    def stop(self, phase, elapsed):
+<span class="ln">125</span>        """Returns (left, right) standing in front of a cup (decision.STOP_PHASES): brake = a short reverse pulse,
+<span class="ln">126</span>        because at 0 the motor board lets the wheels coast; back = slowly backwards; wait = off"""
+<span class="ln">127</span>        if phase == 'back':
+<span class="ln">128</span>            return -config.BACKUP_SPEED, -config.BACKUP_SPEED
+<span class="ln">129</span>        if phase == 'brake' and elapsed &lt; config.BRAKE[1]:
+<span class="ln">130</span>            return -config.BRAKE[0], -config.BRAKE[0]
+<span class="ln">131</span>        return 0.0, 0.0
+<span class="ln">132</span>
+<span class="ln">133</span>    def recover(self, side):
+<span class="ln">134</span>        """Returns (left, right) while the lane is not seen after the swerve: slowly forward, turning gently away
+<span class="ln">135</span>        from the pass side. The swerve ends with the lane found, so this only covers frames in which the lane model
+<span class="ln">136</span>        loses it again"""
+<span class="ln">137</span>        self.steering = (config.RECOVER_TURN if side == 'left' else -config.RECOVER_TURN)
+<span class="ln">138</span>        self.speed = config.RECOVER_SPEED
+<span class="ln">139</span>        return self.wheels()
+<span class="ln">140</span>
+<span class="ln">141</span>    def wheels(self):
+<span class="ln">142</span>        """(left, right) wheel speeds from the current speed and steering"""
+<span class="ln">143</span>        left = self.speed + self.steering + config.MOTOR_TRIM
+<span class="ln">144</span>        right = self.speed - self.steering - config.MOTOR_TRIM
+<span class="ln">145</span>        return max(-1.0, min(1.0, left)), max(-1.0, min(1.0, right))</pre>
+</div>
+<div class="srcfile">
+  <h3>find_lane.py <span class="fn">301 lines</span></h3>
+<pre><span class="ln">1</span>"""Finds the lane again after the robot has left it (state LINE_RECOVERY), from quick to thorough.
+<span class="ln">2</span>
+<span class="ln">3</span>    python3 find_lane.py     # the full search alone, for a robot put down off the lane
+<span class="ln">4</span>
+<span class="ln">5</span>    1. undo: drive the last 1.5 s of wheel commands backwards. The lane was seen about 15 cm before it was lost (all 8
+<span class="ln">6</span>       losses up to 2026-11-08) and the robot keeps its driving direction. Only right after following, at most twice in
+<span class="ln">7</span>       a row.
+<span class="ln">8</span>    2. sweep: turn about 100 degrees to each side, first toward where the lane should be.
+<span class="ln">9</span>    3. search, in small steps with the motors off between them: turn one full turn looking for the lane; not found: turn
+<span class="ln">10</span>       the shorter way to the nearest tape and drive across it, into the lane, then the next round. Right after following,
+<span class="ln">11</span>       a lane more than about 130 degrees from the heading at the start of the search is the wrong way along it and only
+<span class="ln">12</span>       counts in the last round. No forward pulse with a cup close ahead: that heading is skipped.
+<span class="ln">13</span>
+<span class="ln">14</span>Saves every stop and a stops.csv to usb/images/datasets/&lt;time&gt;_find_lane. Run inside the container.
+<span class="ln">15</span>"""
+<span class="ln">16</span>
+<span class="ln">17</span>import csv
+<span class="ln">18</span>import os
+<span class="ln">19</span>import sys
+<span class="ln">20</span>import time
+<span class="ln">21</span>
+<span class="ln">22</span>import cv2
+<span class="ln">23</span>
+<span class="ln">24</span>import config
+<span class="ln">25</span>import lane_mask
+<span class="ln">26</span>from control import turn_speed
+<span class="ln">27</span>from decision import band_cm, lane_found
+<span class="ln">28</span>from recorder import DATASET_ROOT
+<span class="ln">29</span>from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
+<span class="ln">30</span>
+<span class="ln">31</span>UNDO_SECONDS = 1.5    # seconds of wheel commands driven backwards (1.0 fell short when the lane was left in a wide turn)
+<span class="ln">32</span>UNDO_SURE = 0.6       # lane model value that counts as the lane back after the undo: 0.63 was the lane, one small turn
+<span class="ln">33</span>                      # later it read 0.97 (undo test 2026-11-09)
+<span class="ln">34</span>UNDO_TRIES = 2        # undos in a row before the robot looks around instead: the same curve may lose the lane again
+<span class="ln">35</span>UNDO_RESET = 5.0      # seconds after an undo from which the count of undos starts anew
+<span class="ln">36</span>TURN_PULSE = 0.15     # seconds of one turn pulse (kick plus a little)
+<span class="ln">37</span>PULSES_PER_TURN = 22  # turn pulses for one full turn: 19-25 measured, 2026-11-08
+<span class="ln">38</span>SWEEP_PULSES = 6      # turn pulses to each side in the sweep, about 100 degrees
+<span class="ln">39</span>HEADING_WINDOW = 7    # turn pulses from the heading at the start within which a found lane counts as the right way
+<span class="ln">40</span>PUSH_PULSE = 0.4      # seconds of one forward pulse (out on the floor the next tape can be a meter away)
+<span class="ln">41</span>PUSH_SPEED = 0.33     # wheel speed forward
+<span class="ln">42</span>PUSHES = 10           # forward pulses per round at most
+<span class="ln">43</span>PAST_TAPE = 3         # forward pulses after the tape has left the image's lower edge: into the lane
+<span class="ln">44</span>ROUNDS = 4            # rounds of the search before giving up
+<span class="ln">45</span>SETTLE_SECONDS = 0.3  # standing still before looking: the camera shows the robot late
+<span class="ln">46</span>CONFIRM_FRAMES = 3    # further frames that must agree before the lane counts as found: a single look was borderline
+<span class="ln">47</span>CUP_STOP_CM = 25.0    # no forward pulse with a cup this close in the middle of the image
+<span class="ln">48</span>CUP_STOP_X = 0.5
+<span class="ln">49</span>NEAR_ROW = 0.8        # fraction of the image height at which tape must be seen: close to the robot
+<span class="ln">50</span>SURE_LANE = 0.9       # lane model value that counts as standing well in the lane
+<span class="ln">51</span>TAPE_SLACK = 8        # image rows above the scan's lowest tape that still count as the heading of the nearest tape
+<span class="ln">52</span>NUDGES = 4            # extra turn pulses to reach that heading (the pulses are uneven)
+<span class="ln">53</span>BOTTOM_ROW = 0.93     # fraction of the image height from which tape counts as at the robot's nose
+<span class="ln">54</span>WARMUP_FRAMES = 5     # model calls with the motors off (the first call took up to 1.1 s)
+<span class="ln">55</span>FOUND = ('undo', 'sweep', 'search', 'search_any')  # results of run() with the lane found
+<span class="ln">56</span>KEPT_DIRECTION = ('undo', 'sweep', 'search')       # those with the robot still driving the same way along the lane
+<span class="ln">57</span>STOP_COLUMNS = ['stop', 'stage', 'heading', 'lane_visible', 'lane_x', 'lane_aligned', 'tape_row', 'tape_close']
+<span class="ln">58</span>
+<span class="ln">59</span>
+<span class="ln">60</span>class StopRecovery(Exception):
+<span class="ln">61</span>    """The run is over during the search: stopped by hand or time up (the text says which)"""
+<span class="ln">62</span>
+<span class="ln">63</span>
+<span class="ln">64</span>def on_lane(percept):
+<span class="ln">65</span>    """True if the robot stands well in the lane, pointing along it: at the border lane_found held, but the lane
+<span class="ln">66</span>    model then fell below 0.5 at the start of the drive (run avoid4_4)"""
+<span class="ln">67</span>    return lane_found(percept) and percept['lane_visible'] &gt;= SURE_LANE
+<span class="ln">68</span>
+<span class="ln">69</span>
+<span class="ln">70</span>def lane_back(percept):
+<span class="ln">71</span>    """True if the lane is seen again after the undo: the driving direction is known, so the two-line check (which a
+<span class="ln">72</span>    curve can fail) is not needed"""
+<span class="ln">73</span>    return percept['lane_visible'] &gt;= UNDO_SURE and abs(percept['lane_x']) &lt; config.TURN_IN_CENTERED
+<span class="ln">74</span>
+<span class="ln">75</span>
+<span class="ln">76</span>def tape_close(frame):
+<span class="ln">77</span>    """True if tape crosses the image's lower part: a distant lane also reads as found (run avoid4_5, known since v3_ccw_3)"""
+<span class="ln">78</span>    return len(lane_mask.line_centers(lane_mask.blue_mask(frame), NEAR_ROW)) &gt;= 1
+<span class="ln">79</span>
+<span class="ln">80</span>
+<span class="ln">81</span>def right_way(heading):
+<span class="ln">82</span>    """True if a heading (turn pulses, left positive) is within HEADING_WINDOW of the heading at the start, a full turn
+<span class="ln">83</span>    counting as none"""
+<span class="ln">84</span>    return abs((heading + PULSES_PER_TURN // 2) % PULSES_PER_TURN - PULSES_PER_TURN // 2) &lt;= HEADING_WINDOW
+<span class="ln">85</span>
+<span class="ln">86</span>
+<span class="ln">87</span>class FindLane(object):
+<span class="ln">88</span>    def __init__(self, perception, robot, camera, watchdog, battery):
+<span class="ln">89</span>        self.perception, self.robot, self.camera, self.watchdog, self.battery = perception, robot, camera, watchdog, battery
+<span class="ln">90</span>        self.frame = None
+<span class="ln">91</span>        self.out = None
+<span class="ln">92</span>        self.stops = 0
+<span class="ln">93</span>        self.heading = 0
+<span class="ln">94</span>        self.rows = []
+<span class="ln">95</span>        self.stage = ''
+<span class="ln">96</span>        self.deadline = None
+<span class="ln">97</span>        self.stop_event = None
+<span class="ln">98</span>        self.undos = 0
+<span class="ln">99</span>        self.last_undo = 0.0
+<span class="ln">100</span>        self.direction_known = False  # the heading at the start of the search is along the lane
+<span class="ln">101</span>
+<span class="ln">102</span>    def check_run(self):
+<span class="ln">103</span>        """Ends the search when the run is over, like the driving loop would"""
+<span class="ln">104</span>        if self.stop_event is not None and self.stop_event.is_set():
+<span class="ln">105</span>            raise StopRecovery('stopped by hand')
+<span class="ln">106</span>        if self.deadline is not None and time.time() &gt;= self.deadline:
+<span class="ln">107</span>            raise StopRecovery('time up')
+<span class="ln">108</span>
+<span class="ln">109</span>    def pulse(self, seconds, wheels):
+<span class="ln">110</span>        """Runs wheels(elapsed) -&gt; (left, right) for some seconds, then motors off"""
+<span class="ln">111</span>        since = time.time()
+<span class="ln">112</span>        while time.time() - since &lt; seconds:
+<span class="ln">113</span>            with self.watchdog.lock:
+<span class="ln">114</span>                self.robot.set_motors(*wheels(time.time() - since))
+<span class="ln">115</span>            self.watchdog.feed()
+<span class="ln">116</span>            self.frame = wait_for_new_frame(self.camera, self.frame)
+<span class="ln">117</span>        with self.watchdog.lock:
+<span class="ln">118</span>            self.robot.stop()
+<span class="ln">119</span>
+<span class="ln">120</span>    def observe_next(self):
+<span class="ln">121</span>        self.frame = wait_for_new_frame(self.camera, self.frame)
+<span class="ln">122</span>        return self.perception.observe(self.frame)
+<span class="ln">123</span>
+<span class="ln">124</span>    def look(self):
+<span class="ln">125</span>        """Stands still, then returns what the models see now (saves the frame and one line for stops.csv)"""
+<span class="ln">126</span>        self.check_run()
+<span class="ln">127</span>        self.battery.check()
+<span class="ln">128</span>        time.sleep(SETTLE_SECONDS)
+<span class="ln">129</span>        self.frame = wait_for_new_frame(self.camera, self.camera.value)
+<span class="ln">130</span>        for _ in range(4):  # the obstacle and curve models run on every second frame
+<span class="ln">131</span>            percept = self.observe_next()
+<span class="ln">132</span>        cv2.imwrite(os.path.join(self.out, 'frame_%05d.jpg' % self.stops), self.frame)
+<span class="ln">133</span>        self.rows.append(dict(stop=self.stops, stage=self.stage, heading=self.heading,
+<span class="ln">134</span>                              lane_visible=round(percept['lane_visible'], 3), lane_x=round(percept['lane_x'], 3),
+<span class="ln">135</span>                              lane_aligned=int(percept['lane_aligned']), tape_row=lane_mask.tape_row(self.frame),
+<span class="ln">136</span>                              tape_close=int(tape_close(self.frame))))
+<span class="ln">137</span>        self.stops += 1
+<span class="ln">138</span>        return percept
+<span class="ln">139</span>
+<span class="ln">140</span>    def turn(self, direction):
+<span class="ln">141</span>        """One turn pulse, direction -1 left, +1 right, and a look"""
+<span class="ln">142</span>        def wheels(elapsed):
+<span class="ln">143</span>            spin = direction * turn_speed(elapsed)
+<span class="ln">144</span>            return spin, -spin
+<span class="ln">145</span>        self.pulse(TURN_PULSE, wheels)
+<span class="ln">146</span>        self.heading -= direction
+<span class="ln">147</span>        return self.look()
+<span class="ln">148</span>
+<span class="ln">149</span>    def confirmed(self, test, percept):
+<span class="ln">150</span>        """True if the test holds for this look and the next CONFIRM_FRAMES frames"""
+<span class="ln">151</span>        if not (test(percept) and tape_close(self.frame)):
+<span class="ln">152</span>            return False
+<span class="ln">153</span>        return all(test(self.observe_next()) and tape_close(self.frame) for _ in range(CONFIRM_FRAMES))
+<span class="ln">154</span>
+<span class="ln">155</span>    def cup_blocks(self, percept):
+<span class="ln">156</span>        return any(band_cm(band) &lt;= CUP_STOP_CM and abs(band[0]) &lt; CUP_STOP_X for band in percept['cup_bands'])
+<span class="ln">157</span>
+<span class="ln">158</span>    def undo(self, history):
+<span class="ln">159</span>        """Drives the last UNDO_SECONDS of commands backwards, newest first, until the lane is seen again. True if found"""
+<span class="ln">160</span>        self.stage = 'undo'
+<span class="ln">161</span>        remaining = UNDO_SECONDS
+<span class="ln">162</span>        for dt, left, right in reversed(list(history)):
+<span class="ln">163</span>            if remaining &lt;= 0.0:
+<span class="ln">164</span>                break
+<span class="ln">165</span>            remaining -= dt
+<span class="ln">166</span>            with self.watchdog.lock:
+<span class="ln">167</span>                self.robot.set_motors(-left, -right)
+<span class="ln">168</span>            self.watchdog.feed()
+<span class="ln">169</span>            if lane_back(self.observe_next()) and tape_close(self.frame):
+<span class="ln">170</span>                break
+<span class="ln">171</span>        with self.watchdog.lock:
+<span class="ln">172</span>            self.robot.stop()
+<span class="ln">173</span>        return self.confirmed(lane_back, self.look())
+<span class="ln">174</span>
+<span class="ln">175</span>    def sweep(self, side):
+<span class="ln">176</span>        """Turns about 100 degrees to each side, first to `side` (-1 left, +1 right), and back. True if found"""
+<span class="ln">177</span>        self.stage = 'sweep'
+<span class="ln">178</span>        for direction, pulses in ((side, SWEEP_PULSES), (-side, 2 * SWEEP_PULSES), (side, SWEEP_PULSES)):
+<span class="ln">179</span>            for _ in range(pulses):
+<span class="ln">180</span>                if self.confirmed(on_lane, self.turn(direction)):
+<span class="ln">181</span>                    return True
+<span class="ln">182</span>        return False
+<span class="ln">183</span>
+<span class="ln">184</span>    def accepted(self, percept, any_way):
+<span class="ln">185</span>        """'search' or 'search_any' if the lane is found here, else None. The wrong way along it counts only if any_way"""
+<span class="ln">186</span>        way_known = self.direction_known and right_way(self.heading)
+<span class="ln">187</span>        if not (any_way or way_known) or not self.confirmed(on_lane, percept):
+<span class="ln">188</span>            return None
+<span class="ln">189</span>        return 'search' if way_known else 'search_any'
+<span class="ln">190</span>
+<span class="ln">191</span>    def search_round(self, any_way):
+<span class="ln">192</span>        """One scan and one push across the nearest tape. Returns a result of run(), or 'again'"""
+<span class="ln">193</span>        self.stage = 'search'
+<span class="ln">194</span>        amounts = []  # lowest tape row after each pulse of the scan
+<span class="ln">195</span>        for _ in range(PULSES_PER_TURN):
+<span class="ln">196</span>            percept = self.turn(-1)
+<span class="ln">197</span>            found = self.accepted(percept, any_way)
+<span class="ln">198</span>            if found:
+<span class="ln">199</span>                return found
+<span class="ln">200</span>            amounts.append(0 if self.cup_blocks(percept) else lane_mask.tape_row(self.frame))  # never head for a cup
+<span class="ln">201</span>        best = max(amounts)
+<span class="ln">202</span>        if best == 0:  # no tape in any direction: never drive blind (run line3_1 reached the wall)
+<span class="ln">203</span>            return 'again'
+<span class="ln">204</span>        left = amounts.index(best) + 1  # pulses to the left from the end of the scan (a full turn: back at its start)
+<span class="ln">205</span>        direction, steps = (-1, left) if left &lt;= PULSES_PER_TURN - left else (1, PULSES_PER_TURN - left)
+<span class="ln">206</span>        for _ in range(steps):
+<span class="ln">207</span>            percept = self.turn(direction)
+<span class="ln">208</span>        for _ in range(NUDGES):
+<span class="ln">209</span>            if lane_mask.tape_row(self.frame) &gt;= best - TAPE_SLACK:
+<span class="ln">210</span>                break
+<span class="ln">211</span>            percept = self.turn(direction)
+<span class="ln">212</span>        over_tape, past = False, 0
+<span class="ln">213</span>        for _ in range(PUSHES):
+<span class="ln">214</span>            if self.cup_blocks(percept):  # a cup came into view on the way: the next round picks another heading
+<span class="ln">215</span>                break
+<span class="ln">216</span>            self.pulse(PUSH_PULSE, lambda elapsed: (PUSH_SPEED, PUSH_SPEED))
+<span class="ln">217</span>            percept = self.look()
+<span class="ln">218</span>            found = self.accepted(percept, any_way)
+<span class="ln">219</span>            if found:
+<span class="ln">220</span>                return found
+<span class="ln">221</span>            if not over_tape and lane_mask.tape_row(self.frame) == 0:  # the tape it was heading for is out of view
+<span class="ln">222</span>                break
+<span class="ln">223</span>            at_bottom = lane_mask.blue_mask(self.frame)[int(BOTTOM_ROW * self.frame.shape[0]):].any()
+<span class="ln">224</span>            over_tape = over_tape or at_bottom
+<span class="ln">225</span>            past = past + 1 if over_tape and not at_bottom else 0
+<span class="ln">226</span>            if past &gt;= PAST_TAPE:
+<span class="ln">227</span>                break
+<span class="ln">228</span>        return 'again'
+<span class="ln">229</span>
+<span class="ln">230</span>    def stages(self, history, side):
+<span class="ln">231</span>        """Tries undo, sweep and search in turn. Returns a result: FOUND or 'again'"""
+<span class="ln">232</span>        now = time.time()
+<span class="ln">233</span>        if now - self.last_undo &gt; UNDO_RESET:
+<span class="ln">234</span>            self.undos = 0
+<span class="ln">235</span>        if history and self.undos &lt; UNDO_TRIES:
+<span class="ln">236</span>            self.undos += 1
+<span class="ln">237</span>            self.last_undo = now
+<span class="ln">238</span>            if self.undo(history):
+<span class="ln">239</span>                return 'undo'
+<span class="ln">240</span>        if side != 0 and self.sweep(side):
+<span class="ln">241</span>            return 'sweep'
+<span class="ln">242</span>        result = 'again'
+<span class="ln">243</span>        self.direction_known = bool(history)
+<span class="ln">244</span>        for number in range(ROUNDS):
+<span class="ln">245</span>            result = self.search_round(any_way=not history or number == ROUNDS - 1)
+<span class="ln">246</span>            if result != 'again':
+<span class="ln">247</span>                break
+<span class="ln">248</span>        return result
+<span class="ln">249</span>
+<span class="ln">250</span>    def run(self, history=(), side=0, deadline=None, stop_event=None):
+<span class="ln">251</span>        """Finds the lane. history: recent (dt, left, right) wheel commands, empty when undoing them makes no sense;
+<span class="ln">252</span>        side: where the lane should be (-1 left, +1 right, 0: no sweep); deadline: time.time() at which the run
+<span class="ln">253</span>        ends. Returns a result (FOUND or 'again'); raises StopRecovery when the run ends meanwhile"""
+<span class="ln">254</span>        self.deadline, self.stop_event = deadline, stop_event
+<span class="ln">255</span>        self.frame = wait_for_new_frame(self.camera, self.camera.value)
+<span class="ln">256</span>        self.out = os.path.join(DATASET_ROOT, time.strftime('%Y-%m-%d_%H-%M-%S') + '_find_lane')
+<span class="ln">257</span>        os.makedirs(self.out, exist_ok=True)
+<span class="ln">258</span>        self.stops, self.heading, self.rows = 0, 0, []
+<span class="ln">259</span>        try:
+<span class="ln">260</span>            result = self.stages(history, side)
+<span class="ln">261</span>        finally:
+<span class="ln">262</span>            with open(os.path.join(self.out, 'stops.csv'), 'w') as f:
+<span class="ln">263</span>                writer = csv.DictWriter(f, STOP_COLUMNS)
+<span class="ln">264</span>                writer.writeheader()
+<span class="ln">265</span>                writer.writerows(self.rows)
+<span class="ln">266</span>        print('line recovery: %s after %d stops' % (result, self.stops))
+<span class="ln">267</span>        return result
+<span class="ln">268</span>
+<span class="ln">269</span>
+<span class="ln">270</span>def main():
+<span class="ln">271</span>    from jetbot import Camera, Robot
+<span class="ln">272</span>    from perception import Perception
+<span class="ln">273</span>
+<span class="ln">274</span>    battery = BatteryGuard()
+<span class="ln">275</span>    if not battery.start_ok():
+<span class="ln">276</span>        raise SystemExit('battery %.2f V is too low: charge first' % battery.volts)
+<span class="ln">277</span>    perception = Perception()
+<span class="ln">278</span>    robot = Robot()
+<span class="ln">279</span>    camera = Camera.instance()
+<span class="ln">280</span>    watchdog = MotorWatchdog(robot)
+<span class="ln">281</span>    finder = FindLane(perception, robot, camera, watchdog, battery)
+<span class="ln">282</span>    try:
+<span class="ln">283</span>        frame = wait_for_new_frame(camera, camera.value, timeout=2.0)
+<span class="ln">284</span>        for _ in range(WARMUP_FRAMES):
+<span class="ln">285</span>            frame = wait_for_new_frame(camera, frame)
+<span class="ln">286</span>            perception.observe(frame)
+<span class="ln">287</span>        watchdog.start()
+<span class="ln">288</span>        result = finder.run()
+<span class="ln">289</span>    except KeyboardInterrupt:
+<span class="ln">290</span>        result = 'stopped by hand'
+<span class="ln">291</span>    finally:
+<span class="ln">292</span>        watchdog.running = False
+<span class="ln">293</span>        with watchdog.lock:
+<span class="ln">294</span>            robot.stop()
+<span class="ln">295</span>        camera.stop()
+<span class="ln">296</span>    print('find_lane: %s, %d stops, frames in %s, battery %.2f V' % (result, finder.stops, finder.out, battery.volts))
+<span class="ln">297</span>    sys.exit(0 if result in FOUND else 1)
+<span class="ln">298</span>
+<span class="ln">299</span>
+<span class="ln">300</span>if __name__ == '__main__':
+<span class="ln">301</span>    main()</pre>
+</div>
+<div class="srcfile">
+  <h3>config.py <span class="fn">133 lines</span></h3>
+<pre><span class="ln">1</span>"""All tuning values of the driving program in one place (Task 1: adaptive lane following)."""
+<span class="ln">2</span>
+<span class="ln">3</span>import os
+<span class="ln">4</span>
+<span class="ln">5</span>HERE = os.path.dirname(os.path.abspath(__file__))
+<span class="ln">6</span>MODEL_DIR = os.path.join(HERE, 'models')        # SD card
+<span class="ln">7</span>LOG_ROOT = '/workspace/usb/logs'                # USB stick (inside the Jupyter container)
+<span class="ln">8</span>
+<span class="ln">9</span># Perception
+<span class="ln">10</span>LANE_VISIBLE_THRESHOLD = 0.5  # probability above which the lane counts as visible
+<span class="ln">11</span>CURVE_EVERY = 2               # run the curve model every Nth frame: the curvature changes slowly, saves time
+<span class="ln">12</span>OBSTACLE_EVERY = 2            # run the obstacle model every Nth frame, on the frames without the curve model: a third
+<span class="ln">13</span>                              # model on every frame added 12 ms per step, and the robot swung after the cw sharp curve
+<span class="ln">14</span>CURVE_SMOOTHING = 0.3         # weight of a new curve prediction in the running average (single frames flickered)
+<span class="ln">15</span>
+<span class="ln">16</span># Steering (D4): smoothed PD on the lane center, lane_x -1 (left edge) .. 1 (right edge)
+<span class="ln">17</span>LANE_SMOOTHING = 1.0    # weight of the new lane_x in the running average (1 = none: any smoothing delay made the robot oversteer)
+<span class="ln">18</span>STEERING_KP = 0.15      # wheel speed difference per unit of lane_x (0.35 and a cubic term made the robot swing)
+<span class="ln">19</span>STEERING_KI = 0.0       # integral (off: 0.25 added delay and a growing swing on the track, 2026-09-20)
+<span class="ln">20</span>STEERING_I_LEAK = 1.5   # seconds: the integral fades after a curve instead of carrying over into the straight
+<span class="ln">21</span>STEERING_I_MAX = 0.12   # largest steering the integral may add (no wind-up)
+<span class="ln">22</span>STEERING_KD = 0.06      # wheel speed difference per unit of lane_x change per second (damping; 0.03 let the swing grow at 0.39)
+<span class="ln">23</span>D_SMOOTHING = 0.5       # weight of the new lane_x in the smoothed value the D term differentiates (P stays on the raw
+<span class="ln">24</span>                        # value): D on the raw value turned every frame-to-frame jump into a steering jerk (2026-10-01)
+<span class="ln">25</span>FEEDFORWARD_GENTLE = 0.015  # base turn added in a gentle curve (times the curve model's probability)
+<span class="ln">26</span>FEEDFORWARD_SHARP = 0.04    # base turn added in a sharp curve. With the direction from lane_x (on only part of the
+<span class="ln">27</span>                            # time) 0.04 ran wide; with the steady curve-model direction 0.07 turned in early and cut
+<span class="ln">28</span>                            # over the inner line (runs v3_ccw_1..3, seen by the user)
+<span class="ln">29</span>FEEDFORWARD_MIN_DIR = 0.2  # |curve_dir| (curve model: p_right - p_left) below which the direction is unclear and
+<span class="ln">30</span>                           # no feedforward is added. The direction used to come from lane_x, which stayed near 0
+<span class="ln">31</span>                           # and flipped sign in the sharp ccw curve (DATA2)
+<span class="ln">32</span>FEEDFORWARD_MAX_INSIDE = 0.10  # lane_x toward the outside of the curve (the robot is already inside it) from which
+<span class="ln">33</span>                               # no feedforward is added and P steers back (also during a short lane gap)
+<span class="ln">34</span>STEERING_REF_SPEED = 0.32  # speed the gains were tuned at; at other speeds they are scaled by REF/speed
+<span class="ln">35</span>                           # (at 0.40 the unscaled gains made the robot swing on the straight)
+<span class="ln">36</span>STEERING_RATE = 2.0     # maximum change of the steering command per second
+<span class="ln">37</span>MOTOR_TRIM = -0.01      # added to the left wheel, subtracted from the right; positive corrects a drift to the left.
+<span class="ln">38</span>                        # The robot drifts right: on straights the steering averaged -0.005..-0.013 and the robot sat
+<span class="ln">39</span>                        # right of center (mean lane_x -0.04..-0.11) in every run up to 2026-10-01
+<span class="ln">40</span>
+<span class="ln">41</span># Speed (D5): speed per curve class, blended by the curve model's probabilities
+<span class="ln">42</span>SPEED_STRAIGHT = 0.40
+<span class="ln">43</span>SPEED_GENTLE = 0.35
+<span class="ln">44</span>SPEED_SHARP = 0.31      # the robot does not move below about 0.27
+<span class="ln">45</span>TURN_SLOW_START = 0.10  # |lane_x| from which the robot counts as turning and slows down
+<span class="ln">46</span>TURN_SLOW_FULL = 0.30   # |lane_x| from which it drives at SPEED_SHARP (it sped up while still turning out of the sharp curve)
+<span class="ln">47</span>SPEED_UP_RATE = 0.10    # maximum speed increase per second (smooth acceleration)
+<span class="ln">48</span>SPEED_DOWN_RATE = 0.40  # maximum speed decrease per second (brake faster than accelerate)
+<span class="ln">49</span>
+<span class="ln">50</span># Baseline for the comparison (stock JetBot behaviour: constant speed, plain P steering, no smoothing)
+<span class="ln">51</span>BASELINE_SPEED = 0.32
+<span class="ln">52</span>
+<span class="ln">53</span># Decision
+<span class="ln">54</span>LANE_LOST_TIMEOUT = 0.5  # seconds without a visible lane before the robot stops
+<span class="ln">55</span>SLOW_DOWN_ENTER = 0.5    # p_sharp above which the state machine enters SLOW_DOWN (speed capped at SPEED_SHARP)
+<span class="ln">56</span>SLOW_DOWN_EXIT = 0.3     # p_sharp below which it returns to ROAD_FOLLOWING (hysteresis)
+<span class="ln">57</span>OBSTACLE_VISIBLE_THRESHOLD = 0.5  # obstacle model probability above which a cup counts as seen
+<span class="ln">58</span># Cup distance from the size of the red band (cup mask, OBST9): distance in cm = CUP_SIZE_CM / sqrt(band pixels). Learned
+<span class="ln">59</span># 2026-11-08 by backing away from a cup in 5 places (cup_learn.py, LEARN1), scaled on the ruler photos of 2026-09-27.
+<span class="ln">60</span># The size gives the straight-line distance in every place; the band's row moved 4-9 rows with the place (sharp curve,
+<span class="ln">61</span># cup off to the side) and 2-4 rows with the camera tilt. Closer than about 8 cm the band is below the view; beyond
+<span class="ln">62</span># about 70 cm it is smaller than the mask's minimum
+<span class="ln">63</span>CUP_SIZE_CM = 405.0
+<span class="ln">64</span>BAND_CUT_ROW = 222 / 224.0  # a band reaching this row is cut off by the image's lower edge, so its size says nothing: it is
+<span class="ln">65</span>                            # right in front of the robot (run avoid3_ccw_2: 36 pixels at row 223, about to hit the cup)
+<span class="ln">66</span>APPROACH_CM = 65.0         # a cup in the lane this close slows the robot (SLOW_DOWN): it rolls on less after the stop
+<span class="ln">67</span>OBSTACLE_CM = 40.0         # a cup in the lane this close is the trigger. At 0.31 and braked the robot still rolls on
+<span class="ln">68</span>                           # about 15 cm (camera delay, coasting), so it comes to rest at about 25 cm
+<span class="ln">69</span>OBSTACLE_CLEAR_CM = 60.0   # the cup only counts as gone when no band is this close (hysteresis: at the trigger distance
+<span class="ln">70</span>                           # a jittering reading released the robot early)
+<span class="ln">71</span>BRAKE = (0.31, 0.1)        # reverse wheel speed and seconds right after a stop: at 0 the motor board lets the wheels coast
+<span class="ln">72</span>BACKUP_CM = 20.0           # standing with the nearest band this close, the robot backs up
+<span class="ln">73</span>BACKUP_TARGET_CM = 26.0    # until the band is further than this (it rolls on a little backwards too)
+<span class="ln">74</span>BACKUP_SPEED = 0.31        # backwards, the slowest that moves the robot
+<span class="ln">75</span>BACKUP_MAX = 2.0           # seconds of backing up at most (a misread band must not drive it back far)
+<span class="ln">76</span>OBSTACLE_FRAMES = 4        # control steps in a row with a close cup before the robot counts as blocked (debounce;
+<span class="ln">77</span>                           # 2 fresh readings, the obstacle model runs every OBSTACLE_EVERY-th step)
+<span class="ln">78</span>OBSTACLE_CLEAR_FRAMES = 5  # control steps in a row with the cup gone before it drives on (stop-only mode)
+<span class="ln">79</span>CUP_IN_LANE = 0.4          # |band x - lane_x| below which a cup is in the lane (a cup beside it is not in the way)
+<span class="ln">80</span>CUP_DEAD_AHEAD = 0.25      # |band x| below which a cup is straight in front of the robot, whatever the lane model says: a
+<span class="ln">81</span>                           # close cup hides the lane (the lane model saw it in only 45 % of the frames at 18-25 cm, OBST8)
+<span class="ln">82</span>
+<span class="ln">83</span># Avoidance (AVOID3): swerve to the inside of the oval as turn 90 degrees toward the pass side in place, curve around
+<span class="ln">84</span># the cup, turn back onto the lane. No encoders or gyro (MOVE2): every phase ends on a camera mark (HYBRID) and has a
+<span class="ln">85</span># time limit. Turn rates in place, spin test 2026-10-29 at 12 V: wheel speed 0.35 about 305 deg/s, 0.30 about 200,
+<span class="ln">86</span># 0.27 about 100, 0.26 did not start
+<span class="ln">87</span>AVOID_BRAKE = 0.3          # seconds standing still before the first turn: turning while still rolling carried the robot
+<span class="ln">88</span>                           # toward the lane edge, which then left the image before it looked horizontal (avoid3_ccw_1)
+<span class="ln">89</span>TURN_SPEED = 0.28          # slowest wheel speed that turns reliably, little overshoot from the camera delay: at 0.27 the
+<span class="ln">90</span>                           # turn back stalled for 1.2 s at 11.9 V (run avoid4_2)
+<span class="ln">91</span>TURN_KICK = (0.35, 0.1)    # wheel speed and seconds at the start of a turn (0.26 and below did not start on their own)
+<span class="ln">92</span>TURN_EARLY = 13.0          # tape angle (degrees) before horizontal at which a 90-degree turn stops: the robot turned
+<span class="ln">93</span>                           # on by 11-14 degrees of tape angle after a stop at horizontal (camera delay, braking)
+<span class="ln">94</span>TURN_LOST = 25.0           # tape angle (degrees) before horizontal from which the edge leaving the image also counts as
+<span class="ln">95</span>                           # 90 degrees: close to the edge it is horizontal below the camera's view (avoid3_ccw_1: last
+<span class="ln">96</span>                           # seen at 16 degrees, then gone)
+<span class="ln">97</span>TURN_JUMP = 10.0           # degrees the reading may jump back before it counts as another tape piece (the edge has left)
+<span class="ln">98</span>TURN_OUT_MAX = 2.5         # seconds the turn out may take before the robot stops: 90 degrees took 0.8 s at about
+<span class="ln">99</span>                           # 100 deg/s, but about 60 deg/s on the track (avoid3_ccw_1, the user saw 180 degrees in 3 s)
+<span class="ln">100</span>TURN_IN_MIN = 0.4          # seconds the turn back lasts at least: it starts with the lane found, crossing it at an angle
+<span class="ln">101</span>TURN_IN_MAX = 2.2          # seconds the turn back may take (it took up to 1.9 s): longer means the robot turned past the
+<span class="ln">102</span>                           # lane and would take it facing backwards (run 2026-11-03_04-52-58)
+<span class="ln">103</span>TURN_IN_CENTERED = 0.4     # |lane_x| below which the turn back ends on an aligned lane. The curve ends at the lane's
+<span class="ln">104</span>                           # edge, so 0.15 was never met and the robot spun on; ROAD_RECOVERY then centers it (AVOID4)
+<span class="ln">105</span>CUP_NEAR_CM = 50.0         # during a swerve only bands this close count: cups further back are
+<span class="ln">106</span>                           # not the one being passed
+<span class="ln">107</span>CUP_EDGE = 0.6             # image x (0..1 toward the edge) the cup must have reached before it counts as having left
+<span class="ln">108</span>                           # the image sideways: last seen at 0.71-0.96 in 5 swerves, about 70-85 degrees turned (AVOID4)
+<span class="ln">109</span>ARC_WHEELS = (0.36, 0.31)  # outer and inner wheel in the curve around the cup. A wheel moves only above about 0.24 and
+<span class="ln">110</span>                           # then about in proportion to (speed - 0.24) (spin test). 0.37 / 0.30 was a circle of about
+<span class="ln">111</span>                           # 25 cm radius, too small for a cup more than about 25 cm ahead; this is about 35 cm (AVOID4)
+<span class="ln">112</span>ARC_STRAIGHT = 0.335       # both wheels while the cup is in view during the curve: drive on past it (AVOID4)
+<span class="ln">113</span>ARC_STOP_CM = 16.0         # a band this close in the middle of the image during the curve: stop
+<span class="ln">114</span>ARC_STOP_X = 0.5           # |band x| below which that band counts as in the way
+<span class="ln">115</span>ARC_LANE_MIN = 2.5         # seconds of curve before the lane found ends it: it first appeared 3.4-3.5 s in, inside the
+<span class="ln">116</span>                           # lane and 0.8 s before the far border (runs avoid4_1, avoid4_2). Earlier it could be the lane
+<span class="ln">117</span>                           # seen from the side, before the cup is passed
+<span class="ln">118</span>ARC_MIN = 1.0              # seconds the curve lasts at least (it starts with the lane edge horizontal ahead)
+<span class="ln">119</span>ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends (facing the lane again):
+<span class="ln">120</span>                           # it turns slower than a spin in place, so it overshoots less
+<span class="ln">121</span>TAPE_UNDER_ROW = 215 / 224.0  # the lane's border counts as under the robot's nose when the lowest tape in the image reaches
+<span class="ln">122</span>                              # this row
+<span class="ln">123</span>TAPE_PAST_ROW = 175 / 224.0   # and as crossed when the lowest tape is back above this row: the good curves ended right after
+<span class="ln">124</span>                              # that (18 of 19 recorded curves with a crossing, within 0.5 s); the curves that failed had not reached the tape yet
+<span class="ln">125</span>ARC_STRAIGHT_AFTER = 3.5   # seconds after which the robot drives straight instead of curving, if the tape was not crossed:
+<span class="ln">126</span>                           # started near a curve of the track, the curve would only circle on the open floor
+<span class="ln">127</span>ARC_MAX = 8.0              # seconds the curve may take in all before the lane counts as lost
+<span class="ln">128</span>RECOVER_SPEED = 0.31       # forward speed while looking for the lane (the slowest that moves the robot)
+<span class="ln">129</span>RECOVER_TURN = 0.04        # gentle turn toward the lane while it is not seen yet
+<span class="ln">130</span>RECOVER_CENTERED = 0.15    # |lane_x| below which the lane counts as found (and the lane mask must see the robot
+<span class="ln">131</span>                           # aligned: crosswise tape gave lane_x near 0, run avoid_ccw_1)
+<span class="ln">132</span>RECOVER_FRAMES = 5         # control steps in a row with the lane found before normal following resumes
+<span class="ln">133</span>RECOVER_TIMEOUT = 4.0      # seconds without finding the lane before the robot stops</pre>
+</div>
+<div class="srcfile">
+  <h3>safety.py <span class="fn">91 lines</span></h3>
+<pre><span class="ln">1</span>"""Safety checks shared by every program that drives the motors (DECISIONS.md, SAFETY)."""
+<span class="ln">2</span>
+<span class="ln">3</span>import threading
+<span class="ln">4</span>import time
+<span class="ln">5</span>
+<span class="ln">6</span>from battery import read_voltage
+<span class="ln">7</span>
+<span class="ln">8</span>MOTOR_TIMEOUT = 0.25  # seconds without a motor update before the watchdog stops the motors (the loop stalled up to 1.1 s)
+<span class="ln">9</span>STALE_TIMEOUT = 0.5  # seconds without a new camera frame before the robot stops (the camera froze on 2026-09-20)
+<span class="ln">10</span>
+<span class="ln">11</span># On 2026-09-20 the Jetson lost power mid-session (voltage sag under motor load).
+<span class="ln">12</span>MIN_START_VOLTAGE = 11.4  # volts at rest (about 50 %) needed to start driving
+<span class="ln">13</span>MIN_RUN_VOLTAGE = 10.8    # volts under load; staying below this stops the run before the Jetson browns out
+<span class="ln">14</span>LOW_VOLTAGE_TIME = 2.0    # seconds below MIN_RUN_VOLTAGE before stopping (short dips at start-up are normal)
+<span class="ln">15</span>VOLTAGE_PERIOD = 0.5      # seconds between battery readings
+<span class="ln">16</span>
+<span class="ln">17</span>
+<span class="ln">18</span>class CameraFrozen(Exception):
+<span class="ln">19</span>    """The camera stopped delivering new frames: the robot must not drive on an old image"""
+<span class="ln">20</span>
+<span class="ln">21</span>
+<span class="ln">22</span>class BatteryLow(Exception):
+<span class="ln">23</span>    """The battery voltage stayed too low under load"""
+<span class="ln">24</span>
+<span class="ln">25</span>
+<span class="ln">26</span>def wait_for_new_frame(camera, old, timeout=STALE_TIMEOUT):
+<span class="ln">27</span>    """Returns a frame newer than old; raises CameraFrozen if none arrives in time.
+<span class="ln">28</span>
+<span class="ln">29</span>    The JetBot camera thread ends silently on a read error and camera.value then keeps the last
+<span class="ln">30</span>    image forever, so every new frame is a new array object: the same object means no new frame.
+<span class="ln">31</span>    """
+<span class="ln">32</span>    start = time.time()
+<span class="ln">33</span>    while camera.value is old:
+<span class="ln">34</span>        if time.time() - start &gt; timeout:
+<span class="ln">35</span>            raise CameraFrozen()
+<span class="ln">36</span>        time.sleep(0.005)
+<span class="ln">37</span>    return camera.value
+<span class="ln">38</span>
+<span class="ln">39</span>
+<span class="ln">40</span>class BatteryGuard(object):
+<span class="ln">41</span>    """Reads the battery every VOLTAGE_PERIOD seconds and raises BatteryLow if it stays too low"""
+<span class="ln">42</span>
+<span class="ln">43</span>    def __init__(self):
+<span class="ln">44</span>        self.volts = read_voltage()
+<span class="ln">45</span>        self._last_read = time.time()
+<span class="ln">46</span>        self._low_since = None
+<span class="ln">47</span>
+<span class="ln">48</span>    def start_ok(self):
+<span class="ln">49</span>        return self.volts &gt;= MIN_START_VOLTAGE
+<span class="ln">50</span>
+<span class="ln">51</span>    def check(self):
+<span class="ln">52</span>        now = time.time()
+<span class="ln">53</span>        if now - self._last_read &lt; VOLTAGE_PERIOD:
+<span class="ln">54</span>            return self.volts
+<span class="ln">55</span>        self.volts, self._last_read = read_voltage(), now
+<span class="ln">56</span>        if self.volts &gt;= MIN_RUN_VOLTAGE:
+<span class="ln">57</span>            self._low_since = None
+<span class="ln">58</span>        elif self._low_since is None:
+<span class="ln">59</span>            self._low_since = now
+<span class="ln">60</span>        elif now - self._low_since &gt; LOW_VOLTAGE_TIME:
+<span class="ln">61</span>            raise BatteryLow('battery low (%.2f V)' % self.volts)
+<span class="ln">62</span>        return self.volts
+<span class="ln">63</span>
+<span class="ln">64</span>
+<span class="ln">65</span>class MotorWatchdog(threading.Thread):
+<span class="ln">66</span>    """Stops the motors when the control loop has not updated them for MOTOR_TIMEOUT seconds.
+<span class="ln">67</span>
+<span class="ln">68</span>    The loop can stall (first model call, a slow write): then the robot must wait, not drive blind.
+<span class="ln">69</span>    """
+<span class="ln">70</span>
+<span class="ln">71</span>    def __init__(self, robot, timeout=MOTOR_TIMEOUT):
+<span class="ln">72</span>        threading.Thread.__init__(self, daemon=True)
+<span class="ln">73</span>        self.robot = robot
+<span class="ln">74</span>        self.timeout = timeout
+<span class="ln">75</span>        self.last_feed = time.time()
+<span class="ln">76</span>        self.running = True
+<span class="ln">77</span>        self.lock = threading.Lock()  # the control loop holds it too: no interleaved I2C motor writes
+<span class="ln">78</span>
+<span class="ln">79</span>    def feed(self):
+<span class="ln">80</span>        """Called by the control loop every time it sets the motors"""
+<span class="ln">81</span>        self.last_feed = time.time()
+<span class="ln">82</span>
+<span class="ln">83</span>    def run(self):
+<span class="ln">84</span>        while self.running:
+<span class="ln">85</span>            if time.time() - self.last_feed &gt; self.timeout:
+<span class="ln">86</span>                try:
+<span class="ln">87</span>                    with self.lock:
+<span class="ln">88</span>                        self.robot.stop()
+<span class="ln">89</span>                except Exception as error:  # a transient I2C error must not end the watchdog
+<span class="ln">90</span>                    print('motor watchdog: %s' % error)
+<span class="ln">91</span>            time.sleep(0.05)</pre>
+</div>
+</div>
+<!-- APPENDIX END -->
+
+<script>
+(function(){
+  var body = document.body;
+  var deck = document.getElementById('deck');
+  var sections = Array.prototype.slice.call(deck.querySelectorAll('section'));
+  var railfill = document.getElementById('railfill');
+  var mapbtn = document.getElementById('mapbtn');
+  var modebtn = document.getElementById('modebtn');
+  var themebtn = document.getElementById('themebtn');
+  var index = 0, locked = 0;
+
+  function view(){
+    if(body.classList.contains('doc')){ return 'doc'; }
+    return body.classList.contains('slides') ? 'slides' : 'map';
+  }
+
+  function setView(next){
+    body.className = next;
+    modebtn.textContent = next === 'doc' ? 'Slides' : 'Document';
+    mapbtn.textContent = next === 'map' ? 'Slides' : 'Roadmap';
+    try{ localStorage.setItem('jetbot-view', next); }catch(e){}
+    if(next === 'slides'){ go(index, true); }
+    paint();
+  }
+
+  function setTheme(next){
+    if(next === 'dark'){ document.documentElement.setAttribute('data-theme','dark'); }
+    else { document.documentElement.removeAttribute('data-theme'); }
+    themebtn.textContent = next === 'dark' ? 'Light' : 'Dark';
+    try{ localStorage.setItem('jetbot-theme', next); }catch(e){}
+  }
+
+  function paint(){
+    railfill.style.width = view() === 'slides' ? Math.round((index + 1) / sections.length * 100) + '%' : '0%';
+  }
+
+  function go(i, instant){
+    index = Math.max(0, Math.min(sections.length - 1, i));
+    if(view() === 'slides'){
+      locked = Date.now();
+      deck.scrollTop = index * deck.clientHeight;
+    } else if(!instant){
+      sections[index].scrollIntoView({behavior:'smooth', block:'start'});
+    }
+    paint();
+  }
+
+  deck.addEventListener('scroll', function(){
+    if(view() !== 'slides' || Date.now() - locked < 400){ return; }
+    index = Math.round(deck.scrollTop / deck.clientHeight);
+    paint();
+  });
+
+  document.getElementById('card-w1').addEventListener('click', function(){ index = 0; setView('slides'); });
+
+  document.addEventListener('keydown', function(ev){
+    var tag = document.activeElement ? document.activeElement.tagName : '';
+    if(tag === 'INPUT' || tag === 'TEXTAREA'){ return; }
+    if(ev.ctrlKey || ev.metaKey || ev.altKey){ return; }
+    var k = ev.key;
+    if(k === 'd' || k === 'D'){ setView(view() === 'doc' ? 'slides' : 'doc'); return; }
+    if(k === 't' || k === 'T'){ setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); return; }
+    if(k === 'Escape'){ setView('map'); return; }
+    if(view() === 'map'){
+      if(k === 'Enter' || k === ' '){ ev.preventDefault(); index = 0; setView('slides'); }
+      return;
+    }
+    if(view() !== 'slides'){ return; }
+    if(k === 'ArrowRight' || k === 'ArrowDown' || k === ' ' || k === 'PageDown'){ ev.preventDefault(); go(index + 1); }
+    else if(k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp'){ ev.preventDefault(); go(index - 1); }
+    else if(k === 'Home'){ ev.preventDefault(); go(0); }
+    else if(k === 'End'){ ev.preventDefault(); go(sections.length - 1); }
+  });
+
+  mapbtn.addEventListener('click', function(){ setView(view() === 'map' ? 'slides' : 'map'); });
+  modebtn.addEventListener('click', function(){ setView(view() === 'doc' ? 'slides' : 'doc'); });
+  themebtn.addEventListener('click', function(){
+    setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+
+  var savedView = 'map', savedTheme = 'light';
+  try{
+    if(location.hash === '#slides'){ savedView = 'slides'; }
+    else if(location.hash === '#doc'){ savedView = 'doc'; }
+    else { savedView = localStorage.getItem('jetbot-view') || 'map'; }
+    savedTheme = localStorage.getItem('jetbot-theme') || 'light';
+  }catch(e){}
+  setTheme(savedTheme);
+  setView(savedView === 'slides' || savedView === 'doc' ? savedView : 'map');
+})();
+</script>
+</body>
+</html>
