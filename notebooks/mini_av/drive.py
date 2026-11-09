@@ -19,7 +19,8 @@ from jetbot import Camera, Robot
 
 import config
 from control import Controller
-from decision import FOLLOWING, HALT, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision, cup_ahead
+from find_lane import FindLane
+from decision import FOLLOWING, HALT, LINE_RECOVERY, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision, band_cm, cup_ahead
 from logger import RunLogger
 from perception import Perception
 from recorder import Recorder
@@ -67,7 +68,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
         return 'battery %.2f V is too low: charge first' % battery.volts, None
     perception = Perception(use_curve=use_curve and not baseline)
     controller = Controller(baseline=baseline, use_curve=use_curve)
-    decision = Decision(stop_only=stop_only, pass_side=pass_side)
+    decision = Decision(stop_only=stop_only, pass_side=pass_side, line_recovery=not baseline)
     robot = Robot()
     camera = Camera.instance()
     log = RunLogger(name, {'baseline': baseline, 'use_curve': use_curve, 'seconds': seconds,
@@ -78,6 +79,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                                      'frame_width': camera.width, 'frame_height': camera.height})
     frames, saver = start_frame_saver(recorder)
     watchdog = MotorWatchdog(robot)
+    finder = FindLane(perception, robot, camera, watchdog, battery)
     reason = 'time up'
     try:
         frame = wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
@@ -108,6 +110,19 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                 except queue.Full:
                     pass
             previous_state, state = decision.state, decision.update(percept, now)
+            if state == LINE_RECOVERY:  # takes many seconds, in small steps with their own safety checks
+                with watchdog.lock:
+                    robot.stop()
+                result = finder.run()
+                log.step(time=now - start, dt=dt, mode=LINE_RECOVERY, phase=result)
+                last = time.time()
+                frame = finder.frame
+                decision.line_recovery_done(result == 'found', last)
+                controller.reset()
+                if result == 'found':
+                    continue
+                reason = 'lane not found by line recovery (%s)' % result
+                break
             if state != previous_state and state in (OBSTACLE_AVOIDANCE, STOP):
                 controller.reset()  # restart slowly afterwards, without old steering or damping memory
             lane_seen = percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD
@@ -123,7 +138,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                 watchdog.feed()
             elif state in (OBSTACLE_AVOIDANCE, ROAD_RECOVERY):
                 if state == OBSTACLE_AVOIDANCE:
-                    left, right = controller.avoid(decision.avoid_phase, decision.pass_side(),
+                    left, right = controller.avoid(decision.avoid_action(), decision.pass_side(),
                                                    now - decision.phase_since)
                 else:
                     left, right = controller.recover(decision.pass_side())
@@ -150,9 +165,9 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                      left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
                      cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'],
                      lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
-                     band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None,
+                     band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None, band_cm=band_cm(ahead) if ahead else None,
                      bands=len(percept['cup_bands']),
-                     phase={OBSTACLE_AVOIDANCE: decision.avoid_phase, STOP: decision.stop_phase}.get(state, ''))
+                     phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''))
             if state == HALT:
                 break
     except NoLaneAtStart:

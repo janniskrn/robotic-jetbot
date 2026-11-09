@@ -107,11 +107,13 @@ class Controller(object):
         """Returns (left, right) for a swerve phase (decision.AVOID_PHASES; the decision layer picks and ends it).
 
         brake: stand still; turn_out, turn_in: turn in place toward the pass side; arc: curve away from it, around
-        the cup.
+        the cup; pass: straight on while the cup is in view during the curve (Decision.avoid_action).
         side: 'left' or 'right', the pass side; elapsed: seconds since the phase started (the kick).
         """
         if phase == 'brake':
             return self.stop(phase, elapsed)
+        if phase == 'pass':
+            return config.ARC_STRAIGHT, config.ARC_STRAIGHT
         toward = -1.0 if side == 'left' else 1.0  # sign of a turn toward the pass side (positive turns right)
         if phase == 'arc':
             outer, inner = config.ARC_WHEELS

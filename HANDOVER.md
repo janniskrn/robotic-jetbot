@@ -5,6 +5,15 @@ For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest
 
 **The team wants fast progress without side tracks, and simple solutions over precise ones.** Current plan: `PLAN.md`.
 
+## Update 2026-11-08 (newest decisions: OBST8, AVOID4, LEARN1)
+
+The cup-referenced swerve, the recognition fixes and the distance from the band's size (`OBST9`, learned with
+`cup_learn.py <label>` in 5 places, data `usb/logs/cup_learn_all_2026-11-08.csv`) are coded and pass the offline test
+(`usb/logs/test_avoid.py`, 62 checks). Track 2026-11-08 (3 cups, runs `avoid4_7`, `avoid4_8`, `avoid4_9`, `line1_1`): 11 of 12
+swerves came back to the road (whether a cup was touched was not observed). New state `LINE_RECOVERY` (`LINE1`,
+`find_lane.py`). Open: the recovery takes up to 48 s and can leave the
+robot driving the other way; cups entering the lane late (curve exit) trigger at 21-25 cm; the sharp-curve lane loss.
+
 ## Where we are
 
 - Task 1 works; a lane-gap fix for the sharp ccw curve (`GAP2`) is in, not yet confirmed on the track.

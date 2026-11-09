@@ -176,6 +176,10 @@ step test from now on (slides).
       middle and end of the straight, gentle and sharp curve, two cups 60 cm and 100 cm apart, one cup beside the
       lane. Pass: stops at 30 cm plus or minus 5 cm in 9 of 10 per position (ruler in the video), never for the
       cup beside the lane.
+    - [x] S1e (2026-11-08) distances taught with `cup_learn.py` (`LEARN1`) in 5 places; distance from the band's size
+      (`OBST9`). Code for the cup-referenced swerve and recognition (`AVOID4`, `OBST8`, parts
+      of S1d4 and S1d6) is written and passes 51 offline checks; not yet driven, not committed until approved on the
+      track.
     - [ ] S1d3 (track) the swerve from that fixed start on the straight, at its start, middle and end. Pass: 8 of 10
       back to following without touching the cup.
     - [ ] S1d4 (offline, then track) turn out referred to the cup: turn until the cup band reaches the image edge

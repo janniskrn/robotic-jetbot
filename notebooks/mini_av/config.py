@@ -55,24 +55,30 @@ LANE_LOST_TIMEOUT = 0.5  # seconds without a visible lane before the robot stops
 SLOW_DOWN_ENTER = 0.5    # p_sharp above which the state machine enters SLOW_DOWN (speed capped at SPEED_SHARP)
 SLOW_DOWN_EXIT = 0.3     # p_sharp below which it returns to ROAD_FOLLOWING (hysteresis)
 OBSTACLE_VISIBLE_THRESHOLD = 0.5  # obstacle model probability above which a cup counts as seen
-# Cup distances by the lower edge of the red band (cup mask, OBST6): 10 cm row 149 (ruler, run stop_s1d2_1),
-# 20 cm row 109, 30 cm row 98, 50 cm row 84 (survey 2026-09-27)
-APPROACH_ROW = 77 / 224.0  # a cup in the lane at or below this row (about 60 cm) slows the robot (SLOW_DOWN): it
-                           # rolls on less after the stop
-OBSTACLE_ROW = 91 / 224.0  # nearest red band in the lane at or below this row: the cup is close (about 40 cm). At 0.35
-                           # the robot rolled on 17 cm after STOP (camera delay, coasting: STOP at row 102 = 27 cm,
-                           # at rest at 10 cm, run stop_s1d2_1); slowed to 0.31 and braked it should rest at about 30 cm
-OBSTACLE_CLEAR_ROW = 85 / 224.0  # the cup only counts as gone when no red band is at or below this row (about 48 cm;
-                                 # hysteresis: at the trigger row a jittering reading released the robot early)
+# Cup distance from the size of the red band (cup mask, OBST9): distance in cm = CUP_SIZE_CM / sqrt(band pixels). Learned
+# 2026-11-08 by backing away from a cup in 5 places (cup_learn.py, LEARN1), scaled on the ruler photos of 2026-09-27.
+# The size gives the straight-line distance in every place; the band's row moved 4-9 rows with the place (sharp curve,
+# cup off to the side) and 2-4 rows with the camera tilt. Closer than about 8 cm the band is below the view; beyond
+# about 70 cm it is smaller than the mask's minimum
+CUP_SIZE_CM = 405.0
+BAND_CUT_ROW = 222 / 224.0  # a band reaching this row is cut off by the image's lower edge, so its size says nothing: it is
+                            # right in front of the robot (run avoid3_ccw_2: 36 pixels at row 223, about to hit the cup)
+APPROACH_CM = 65.0         # a cup in the lane this close slows the robot (SLOW_DOWN): it rolls on less after the stop
+OBSTACLE_CM = 40.0         # a cup in the lane this close is the trigger. At 0.31 and braked the robot still rolls on
+                           # about 15 cm (camera delay, coasting), so it comes to rest at about 25 cm
+OBSTACLE_CLEAR_CM = 60.0   # the cup only counts as gone when no band is this close (hysteresis: at the trigger distance
+                           # a jittering reading released the robot early)
 BRAKE = (0.31, 0.1)        # reverse wheel speed and seconds right after a stop: at 0 the motor board lets the wheels coast
-BACKUP_ROW = 109 / 224.0   # standing with the nearest band at or below this row (20 cm or closer), the robot backs up
-BACKUP_TARGET_ROW = 101 / 224.0  # until the band is above this row (about 27 cm; it rolls on a little backwards too)
+BACKUP_CM = 20.0           # standing with the nearest band this close, the robot backs up
+BACKUP_TARGET_CM = 26.0    # until the band is further than this (it rolls on a little backwards too)
 BACKUP_SPEED = 0.31        # backwards, the slowest that moves the robot
 BACKUP_MAX = 2.0           # seconds of backing up at most (a misread band must not drive it back far)
 OBSTACLE_FRAMES = 4        # control steps in a row with a close cup before the robot counts as blocked (debounce;
                            # 2 fresh readings, the obstacle model runs every OBSTACLE_EVERY-th step)
 OBSTACLE_CLEAR_FRAMES = 5  # control steps in a row with the cup gone before it drives on (stop-only mode)
 CUP_IN_LANE = 0.4          # |band x - lane_x| below which a cup is in the lane (a cup beside it is not in the way)
+CUP_DEAD_AHEAD = 0.25      # |band x| below which a cup is straight in front of the robot, whatever the lane model says: a
+                           # close cup hides the lane (the lane model saw it in only 45 % of the frames at 18-25 cm, OBST8)
 
 # Avoidance (AVOID3): swerve to the inside of the oval as turn 90 degrees toward the pass side in place, curve around
 # the cup, turn back onto the lane. No encoders or gyro (MOVE2): every phase ends on a camera mark (HYBRID) and has a
@@ -80,7 +86,8 @@ CUP_IN_LANE = 0.4          # |band x - lane_x| below which a cup is in the lane 
 # 0.27 about 100, 0.26 did not start
 AVOID_BRAKE = 0.3          # seconds standing still before the first turn: turning while still rolling carried the robot
                            # toward the lane edge, which then left the image before it looked horizontal (avoid3_ccw_1)
-TURN_SPEED = 0.27          # slowest wheel speed that turns reliably: little overshoot from the camera delay
+TURN_SPEED = 0.28          # slowest wheel speed that turns reliably, little overshoot from the camera delay: at 0.27 the
+                           # turn back stalled for 1.2 s at 11.9 V (run avoid4_2)
 TURN_KICK = (0.35, 0.1)    # wheel speed and seconds at the start of a turn (0.26 and below did not start on their own)
 TURN_EARLY = 13.0          # tape angle (degrees) before horizontal at which a 90-degree turn stops: the robot turned
                            # on by 11-14 degrees of tape angle after a stop at horizontal (camera delay, braking)
@@ -90,15 +97,29 @@ TURN_LOST = 25.0           # tape angle (degrees) before horizontal from which t
 TURN_JUMP = 10.0           # degrees the reading may jump back before it counts as another tape piece (the edge has left)
 TURN_OUT_MAX = 2.5         # seconds the turn out may take before the robot stops: 90 degrees took 0.8 s at about
                            # 100 deg/s, but about 60 deg/s on the track (avoid3_ccw_1, the user saw 180 degrees in 3 s)
-TURN_IN_MAX = 3.0          # seconds the turn back may take (it took up to 1.9 s)
-ARC_WHEELS = (0.37, 0.30)  # outer and inner wheel in the curve around the cup. A wheel moves only above about 0.24
-                           # and then about in proportion to (speed - 0.24) (spin test): 0.40 / 0.27 went only about
-                           # 20 cm to the side, the user asked for 1.8 times the distance (swerve_test 2026-10-29)
+TURN_IN_MIN = 0.4          # seconds the turn back lasts at least: it starts with the lane found, crossing it at an angle
+TURN_IN_MAX = 2.2          # seconds the turn back may take (it took up to 1.9 s): longer means the robot turned past the
+                           # lane and would take it facing backwards (run 2026-11-03_04-52-58)
+TURN_IN_CENTERED = 0.4     # |lane_x| below which the turn back ends on an aligned lane. The curve ends at the lane's
+                           # edge, so 0.15 was never met and the robot spun on; ROAD_RECOVERY then centers it (AVOID4)
+CUP_NEAR_CM = 50.0         # during a swerve only bands this close count: cups further back are
+                           # not the one being passed
+CUP_EDGE = 0.6             # image x (0..1 toward the edge) the cup must have reached before it counts as having left
+                           # the image sideways: last seen at 0.71-0.96 in 5 swerves, about 70-85 degrees turned (AVOID4)
+ARC_WHEELS = (0.36, 0.31)  # outer and inner wheel in the curve around the cup. A wheel moves only above about 0.24 and
+                           # then about in proportion to (speed - 0.24) (spin test). 0.37 / 0.30 was a circle of about
+                           # 25 cm radius, too small for a cup more than about 25 cm ahead; this is about 35 cm (AVOID4)
+ARC_STRAIGHT = 0.335       # both wheels while the cup is in view during the curve: drive on past it (AVOID4)
+ARC_STOP_CM = 16.0         # a band this close in the middle of the image during the curve: stop
+ARC_STOP_X = 0.5           # |band x| below which that band counts as in the way
+ARC_LANE_MIN = 2.5         # seconds of curve before the lane found ends it: it first appeared 3.4-3.5 s in, inside the
+                           # lane and 0.8 s before the far border (runs avoid4_1, avoid4_2). Earlier it could be the lane
+                           # seen from the side, before the cup is passed
 ARC_MIN = 1.0              # seconds the curve lasts at least (it starts with the lane edge horizontal ahead)
 ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends (facing the lane again):
                            # it turns slower than a spin in place, so it overshoots less
-ARC_MAX = 4.0              # seconds the curve may take before the robot stops (it took 2.85 s; longer drives blind
-                           # over the lane and the cup)
+ARC_LONGEST = 3.9          # seconds after which the curve ends even without a mark: the good curves took 2.3-3.7 s (run
+                           # avoid4_7), longer it reached the far border of the lane (avoid4_2, avoid4_8)
 RECOVER_SPEED = 0.31       # forward speed while looking for the lane (the slowest that moves the robot)
 RECOVER_TURN = 0.04        # gentle turn toward the lane while it is not seen yet
 RECOVER_CENTERED = 0.15    # |lane_x| below which the lane counts as found (and the lane mask must see the robot
