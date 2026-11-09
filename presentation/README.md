@@ -1,9 +1,29 @@
 # The weekly status update
 
-`index.html` is the presentation. One file, no server, no internet needed after the fonts have loaded once.
+The presentation is one HTML file. No server, no internet needed after the fonts have loaded once.
 Open it in a browser, present from it, print it to PDF. It is committed, so a `git pull` is all anyone needs.
 
+| File | What it is |
+| :--- | :--- |
+| `index_v3.html` | **The current deck.** Follows the professor's presentation guideline: architecture, source code, explanation, results, next plan |
+| `index_v2.html`, `index.html` | The 2 November decks, kept for the record. Their code snippets are paraphrased and no longer match the source |
+
 Rhythm and course rules: [`WEEKLY.md`](../WEEKLY.md). Look: [`design/THEME.md`](../design/THEME.md), locked.
+
+## The structure the professor asked for
+
+His guideline, point by point, and where each one lives in `index_v3.html`:
+
+| Point | Slides |
+| :--- | :--- |
+| i. Total architecture of the code | 3 module map, 4 one camera frame |
+| ii. Show the source code | 5 to 11, the real file on the slide, never a paraphrase |
+| iii. Detailed explanation of it | the numbered notes beside each listing |
+| iv. Results from the executed code | 12 models, 13 task 1, 14 the stop, 15 the swerve, 16 failures |
+| v. Next plan from results and bugs | 17 |
+
+Slides 1 and 2 come before that: where the project stands, and what happened since the last demonstration.
+The roadmap shows the same five points before anyone enters the slides, so he can see the order up front.
 
 ## Presenting it
 
@@ -23,20 +43,25 @@ on the slides.
 
 ## What is on which slide
 
-Ten slides, in the order the Tuesday rules ask for.
-
-| # | Slide | Answers |
+| # | Slide | Carries |
 | :--- | :--- | :--- |
-| 1 | Status board | where the project stands |
-| 2 | What we did since the last demonstration | Tuesday point i |
-| 3 | How the robot decides, every frame | point ii, with a code panel |
-| 4 | Six states, priority | point ii, with a code panel |
-| 5 | What the models get right and wrong | point iii, the accomplishment half |
-| 6 | Task 1 result | point iii, with a code panel |
-| 7 | Stopping at a cup | point iii |
-| 8 | Around the cup | point iii |
-| 9 | Four things went wrong | point iii, the failure half, with causes |
-| 10 | What we do before the next demonstration | point iv |
+| 1 | Status board | one row per task, colored by what actually ran |
+| 2 | Since the last demonstration | four days, oldest first, failures included |
+| 3 | Module map | the three layers, their line counts, who may touch the motors |
+| 4 | One camera frame | the five stages and the timing |
+| 5 | `drive.py` | the loop and the guards, 6 notes |
+| 6 | `perception.py` | models recognize, masks measure, 5 notes |
+| 7 | The state machine | the six states and the four swerve phases |
+| 8 | `decision.py` | priority as the order of the branches, 6 notes |
+| 9 | `control.py` | the eight pieces of the steering, each from a failure |
+| 10 | `config.py` and `safety.py` | no magic numbers, four guards |
+| 11 | The learning pipeline | record, label, train, convert, judge |
+| 12 | The three models | accuracy and the weakness under each |
+| 13 | Task 1 | six runs against a 60 s cap |
+| 14 | The stop at a cup | the three rows, and what the runs measured |
+| 15 | The swerve | the intended path, and which starts worked |
+| 16 | Failures | symptom, cause, fix, one row each |
+| 17 | Next plan | steps with their pass conditions |
 
 ## The weekly update, in order
 
@@ -50,11 +75,13 @@ Most weeks only the first four steps change anything.
    label to three words.
 3. **Last week** (slide 2, `.week`): four `.wday` blocks, oldest first. Class `good`, `bad` or `now` colors
    the top rule. One date line, one headline, one sentence. If a week had five events, cut the weakest.
-4. **Failures** (slide 9, `.chains`): one `.chain` per failure, three boxes: `c-sym` what we saw, `c-why` the
+4. **Failures** (slide 16, `.chains`): one `.chain` per failure, three boxes: `c-sym` what we saw, `c-why` the
    cause, `c-fix` the fix. Use `c-open` instead of `c-fix` while the cause is unknown, and say so out loud.
-5. **Next** (slide 10, `.steps`): one `.step` per step with its pass condition. Add `block` to the step that
+5. **Next** (slide 17, `.steps`): one `.step` per step with its pass condition. Add `block` to the step that
    blocks other tasks.
-6. **Numbers**: only if a new run happened. Sources are listed below.
+6. **Code slides** (5 to 11): only when that file changed. Re-copy the lines from the source and run
+   `check.py`, which is the whole point of having it.
+7. **Numbers**: only if a new run happened. Sources are listed below.
 
 ## Where every number comes from
 
@@ -68,39 +95,50 @@ Most weeks only the first four steps change anything.
 | What is done and what is next | `PLAN.md` section 6, `HANDOVER.md` |
 | Run logs | `usb/logs/` on the robot |
 
-**The honesty rule that keeps this defensible:** green means it completed runs on the track, amber means the
-code exists and has never completed a run, grey means it is blocked on something physical. A slide never
+**The honesty rule that keeps this defensible:** green means it completed runs on the track to its pass
+criterion, amber means it runs but has not reached that criterion, grey means it is blocked on something
+physical. A slide never
 claims more than the logs do, and anything measured in a test script says so.
 
-## Code panels
+## Code slides
 
-Four slides carry one. They open as an overlay with their own scroll, because a 16:9 slide cannot grow.
+A code slide is the real file on the left and numbered notes on the right. Copy the lines **verbatim** out of
+the source; `check.py` reads the file and fails if a line is not there any more. A line may be cut short with
+`...`, which only has to match the start of a real line. `<span class="m">N</span>` is the marker gutter, empty
+on unmarked lines, and `<span class="c">` is a comment, which the checker ignores.
 
 ```html
-<div class="codeblock deckonly" style="flex:none">
-  <button class="codebtn" type="button" data-code="c-name">Short label</button>
-</div>
-<div class="codewrap" id="c-name" data-open="false">
-  <p class="why"><b>Why it looks like this.</b> One or two sentences: the decision and what forced it.</p>
-<pre><span class="c"># file.py</span>
-code goes here, five to eight lines</pre>
-  <p class="where">file.py · where the numbers live</p>
+<div class="codeslide">
+  <div class="codesrc">
+    <div class="cf">control.py · update() · lines 71 to 93, shortened</div>
+<pre><span class="m">1</span>self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
+<span class="m"></span>    a line with no note</pre>
+  </div>
+  <ol class="notes">
+    <li><span class="nn">1</span><span><b>The claim in four words.</b> Then the evidence or the failure
+      that forced it.</span></li>
+  </ol>
 </div>
 ```
 
-Keep them to about eight lines and lead with the decision, not the syntax. The panel exists to answer "why is
-this number 0.15", which is the question that actually gets asked.
+Rules that keep these defensible: lead the note with the decision, not the syntax; name the failure that
+forced the line where there was one; keep lines under about 90 characters or they scroll sideways; about 20
+lines is the most a slide holds. `pre class="wrapcode"` wraps long comment lines, for `config.py`.
+
+The overlay panel (`codebtn` plus `codewrap`) still exists and now holds the whole function, for the question
+asked from the floor. It prints inline in document mode, which makes the PDF of `d` a source-code appendix.
 
 ## Checks before you present
 
 ```bash
-python presentation/check.py
+python presentation/check.py index_v3.html
 ```
 
 Tag balance, em dashes, unfilled placeholders, every `cqw` class having its document twin, the bar widths
-recomputed from their own values, and the palette contrasts. It needs no browser and takes a second.
+recomputed from their own values, every quoted code line still present in its source file, and the palette
+contrasts. It needs no browser and takes a second.
 
-**Then the overflow check, which needs a browser.** Open `index.html`, press `F12`, paste this in the console:
+**Then the overflow check, which needs a browser.** Open `index_v3.html`, press `F12`, paste this in the console:
 
 ```js
 const deck=document.getElementById('deck'), secs=[...deck.querySelectorAll('section')];
@@ -109,6 +147,7 @@ const over=[];
 for(let i=0;i<secs.length;i++){ deck.scrollTop=i*deck.clientHeight; await new Promise(r=>setTimeout(r,90));
   const n=secs[i].querySelector('.inner'); const o=n.scrollHeight-n.clientHeight; if(o>2) over.push({slide:i+1,over:o}); }
 console.table(over.length?over:[{slide:'all fit',over:0}]);
+console.table([...document.querySelectorAll('.codesrc pre')].map((p,i)=>({block:i,sideways:p.scrollWidth-p.clientWidth})));
 ```
 
 Anything over about 2 px is text that will be cut off on the projector, and it is always the last line of the

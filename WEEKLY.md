@@ -84,11 +84,12 @@ Keep it to the four required points, in that order. One slide per point is enoug
 | 5 | Failures, causes, and what we changed | the failure table of `summary.md` |
 | 6 | Next plan | `PLAN.md` section 6 |
 
-**The slides are a file in the repository:** `presentation/index.html`, opened from disk, no link and no
+**The slides are a file in the repository:** `presentation/index_v3.html`, opened from disk, no link and no
 internet needed. It starts on a roadmap of the six weeks and leads into the slides of the week being
-presented. What to change each week, where every number comes from, and the checks to run first are in
-[`presentation/README.md`](presentation/README.md); `python presentation/check.py` runs the static half in a
-second.
+presented, in the order of the professor's presentation guideline (architecture, source code, explanation,
+results, next plan). What to change each week, where every number comes from, and the checks to run first are in
+[`presentation/README.md`](presentation/README.md); `python presentation/check.py index_v3.html` runs the static half in a
+second, including a check that every line of code on a slide is still in its source file.
 
 **Demonstration:** live run on the track. Before it: battery charged, lane clear of cups unless the cup is part
 of the demo, other robots off the track, `scripts/stop_robot.sh` ready in a terminal. Fallback: the filmed run
