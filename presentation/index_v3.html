@@ -279,36 +279,6 @@ body.doc .notes{gap:.4rem}
 body.doc .notes li{grid-template-columns:1.1rem 1fr; gap:.45rem; font-size:.9rem}
 body.doc .nn{font-size:.62rem; width:1.1rem; height:1.1rem}
 
-/* code panel: the whole function, overlay on a slide, inline in the document */
-.codeblock{margin-top:.3cqw}
-.codebtn{font-family:var(--mono); font-size:.9cqw; letter-spacing:.07em; text-transform:uppercase;
-  color:var(--accent-ink); background:transparent; border:1px solid var(--rule); border-radius:.4cqw; padding:.4cqw .9cqw; cursor:pointer}
-.codebtn:hover{background:var(--accent-soft)}
-.codebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-.codewrap{display:none; margin-top:.7cqw; background:var(--raise); border:1px solid var(--rule); border-radius:.5cqw;
-  padding:1cqw 1.2cqw; gap:.6cqw; flex-direction:column}
-.codewrap[data-open="true"]{display:flex; position:absolute; inset:0; margin:0; overflow:auto; z-index:6;
-  padding:2.2cqw 2.6cqw 3.2cqw; border-radius:0; border:0; border-top:.25cqw solid var(--accent)}
-.codewrap[data-open="true"]::after{content:"click the panel background or press escape to close";
-  font-family:var(--mono); font-size:.88cqw; color:var(--faint); letter-spacing:.06em}
-.codewrap .why{font-size:1.05cqw; color:var(--muted); line-height:1.4; margin:0; max-width:none}
-.codewrap .why b{color:var(--ink)}
-.codewrap pre{margin:0; font-family:var(--mono); font-size:.9cqw; line-height:1.5; color:var(--ink);
-  background:var(--ground); border:1px solid var(--rule-soft); border-radius:.3cqw; padding:.8cqw 1cqw; overflow-x:auto}
-.codewrap pre .c{color:var(--faint)}
-.codewrap .where{font-family:var(--mono); font-size:.88cqw; color:var(--faint)}
-body.doc .codeblock{margin-top:0}
-body.doc .codebtn{display:none}
-body.doc .codewrap, body.doc .codewrap[data-open="true"]{display:flex !important; position:static; inset:auto;
-  border:1px solid var(--rule); border-radius:8px; padding:.85rem 1rem; gap:.45rem; margin-top:.5rem; overflow:visible}
-body.doc .codewrap[data-open="true"]::after{display:none}
-body.doc .codewrap .why{font-size:.92rem}
-body.doc .codewrap pre{font-size:.72rem; border-radius:4px; padding:.55rem .7rem}
-body.doc .codewrap .where{font-size:.7rem}
-
-.deckonly{display:block} .doconly{display:none}
-body.doc .deckonly{display:none} body.doc .doconly{display:block}
-
 @page{ size:297mm 167mm; margin:0 }
 @media print{
   :root, :root[data-theme="dark"]{ color-scheme:light;
@@ -324,9 +294,7 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
   body.slides #deck, body.map #deck{display:block; height:auto; overflow:visible}
   body.slides section, body.map section{height:167mm; width:297mm; page-break-after:always; break-after:page; display:flex; overflow:hidden}
   body.slides .slide, body.map .slide{width:297mm; height:167mm; aspect-ratio:auto}
-  body.slides .codewrap, body.map .codewrap{display:none !important}
   body.doc section{break-inside:avoid-page}
-  body.doc .codewrap{display:flex !important}
   *{-webkit-print-color-adjust:exact; print-color-adjust:exact}
 }
 </style>
@@ -569,7 +537,13 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
 <span class="m"></span>    elif state == STOP:
 <span class="c">        # brake, back up if too close, wait</span>
 <span class="m"></span>    log.step(time=now - start, dt=dt, mode=state, lane_visible=percept['lane_visible'],
-<span class="m">6</span>finally:
+<span class="m">6</span>except CameraFrozen:
+<span class="m"></span>    reason = 'camera frozen'
+<span class="m"></span>except BatteryLow as low:
+<span class="m"></span>    reason = str(low)
+<span class="m"></span>except KeyboardInterrupt:
+<span class="m"></span>    reason = 'stopped by hand'
+<span class="m">7</span>finally:
 <span class="m"></span>    watchdog.running = False
 <span class="m"></span>    robot.stop()</pre>
       </div>
@@ -579,34 +553,9 @@ body.doc .deckonly{display:none} body.doc .doconly{display:block}
         <li><span class="nn">3</span><span><b>One state per frame.</b> The loop asks the decision layer and does not decide anything itself.</span></li>
         <li><span class="nn">4</span><span><b>Control turns numbers into wheel speeds.</b> Each state has its own command function: update, hold, avoid, stop, recover.</span></li>
         <li><span class="nn">5</span><span><b>The lock belongs to the watchdog.</b> Motor writes go over I2C and the watchdog thread may stop the motors in the same moment.</span></li>
-        <li><span class="nn">6</span><span><b>The motors stop on every exit.</b> Time up, Ctrl-C, a flat battery, a frozen camera or a crash all land in the same finally.</span></li>
+        <li><span class="nn">6</span><span><b>Four ways a run ends, all caught.</b> A frozen camera, a flat battery, Ctrl-C from scripts/stop_robot.sh, or the time running out. Each writes its reason into the log.</span></li>
+        <li><span class="nn">7</span><span><b>The motors stop on every exit.</b> Whatever happened, including a crash we did not foresee, the finally block runs.</span></li>
       </ol>
-    </div>
-    <div class="codeblock deckonly" style="flex:none">
-      <button class="codebtn" type="button" data-code="c-drive">The exits and the guards, in full</button>
-    </div>
-    <div class="codewrap" id="c-drive" data-open="false">
-      <p class="why"><b>Why every driving program looks like this.</b> On 20 September a training job ran while the robot drove, memory ran out, the camera froze and the robot drove blind into a chair on one old frame. Since then nothing may drive without these four guards, and the rule is written in CLAUDE.md.</p>
-<pre><span class="c"># drive.py, run()</span>
-battery = BatteryGuard()
-if not battery.start_ok():
-    return 'battery %.2f V is too low: charge first' % battery.volts, None
-<span class="c">...</span>
-watchdog = MotorWatchdog(robot)
-<span class="c">...</span>
-except NoLaneAtStart:
-    reason = 'no lane at start: put the robot on the lane'
-except CameraFrozen:
-    reason = 'camera frozen'
-except BatteryLow as low:
-    reason = str(low)
-except KeyboardInterrupt:
-    reason = 'stopped by hand'
-finally:
-    watchdog.running = False
-    robot.stop()
-    camera.stop()</pre>
-      <p class="where">drive.py and safety.py · stop a run from a terminal with scripts/stop_robot.sh, which sends Ctrl-C</p>
     </div>
   </div></div>
 </section>
@@ -743,26 +692,6 @@ finally:
         <li><span class="nn">5</span><span><b>SLOW_DOWN has hysteresis.</b> It enters at p_sharp above 0.5 and leaves below 0.3, so it cannot flicker at the threshold.</span></li>
         <li><span class="nn">6</span><span><b>A lane gap of 0.5 s is tolerated</b>, longer ends the run. Short gaps are normal, a long one means the robot is lost.</span></li>
       </ol>
-    </div>
-    <div class="codeblock deckonly" style="flex:none">
-      <button class="codebtn" type="button" data-code="c-state">The four conditions a cup has to pass</button>
-    </div>
-    <div class="codewrap" id="c-state" data-open="false">
-      <p class="why"><b>Why a cup is three questions, not one.</b> The model says a cup is there, the mask says how far it is, and the lane position says whether it is in the way. A cup standing beside the lane must not stop the robot, and a second cup behind the first must not count.</p>
-<pre><span class="c"># decision.py</span>
-def cup_ahead(percept):
-    if percept['lane_visible'] &lt; config.LANE_VISIBLE_THRESHOLD:
-        return None
-    for x, row, _ in percept['cup_bands']:  <span class="c"># nearest first</span>
-        if abs(x - percept['lane_x']) &lt; config.CUP_IN_LANE:
-            return x, row
-    return None
-
-def cup_close(percept):
-    cup = cup_ahead(percept)
-    return (percept['cup_visible'] &gt;= config.OBSTACLE_VISIBLE_THRESHOLD
-            and cup is not None and cup[1] &gt;= config.OBSTACLE_ROW)</pre>
-      <p class="where">decision.py · the thresholds are config.py: CUP_IN_LANE 0.4, OBSTACLE_ROW row 91 of 224, about 40 cm</p>
     </div>
   </div></div>
 </section>
@@ -917,7 +846,7 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
     <div class="spacer" style="flex:.1"></div>
     <figure class="wide" style="flex:none">
       <div class="fl">What the robot sees · rows of the 224 pixel image</div>
-      <svg viewBox="0 0 560 170" role="img" aria-label="Camera image with the slow row, the stop row and the clear row" style="max-height:14.5cqw">
+      <svg viewBox="0 0 560 170" role="img" aria-label="Camera image with the slow row, the stop row and the clear row" style="max-height:11cqw">
         <rect x="120" y="8" width="320" height="150" fill="var(--raise)" stroke="var(--rule)"/>
         <g stroke="var(--cat2)" stroke-width="4" stroke-linecap="round">
           <path d="M160,158 L232,70"/><path d="M400,158 L328,70"/>
@@ -946,8 +875,15 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
       </svg>
     </figure>
     <div class="spacer" style="flex:.15"></div>
-    <p style="max-width:76ch">A cup in the lane at row 77 slows the robot to 0.31. At row 91 it stops, with a 0.1 s reverse pulse, because at motor value 0 the board lets the wheels coast. If it still ends up closer than 20 cm it backs up once. It drives on only when no band is above row 85 <b>and</b> the lane is visible again.</p>
-    <p class="src">Runs stop_s1d2_1 to 3, 5 November. Without the slow approach and the brake, a stop at 27 cm left the robot at 10 cm, measured with a ruler. The lane condition exists because a hand in front of the camera hid both cup and lane and the robot drove on blind.</p>
+    <div class="codesrc" style="flex:none">
+      <div class="cf">decision.py · the three conditions a cup has to pass</div>
+<pre>def cup_close(percept):
+    cup = cup_ahead(percept)                                   <span class="c"># a red band within 0.4 of the lane</span>
+    return (percept['cup_visible'] &gt;= config.OBSTACLE_VISIBLE_THRESHOLD
+            and cup is not None and cup[1] &gt;= config.OBSTACLE_ROW)</pre>
+    </div>
+    <p style="max-width:84ch">The model says a cup is there, the mask says how far, the lane position says whether it is in the way. At row 91 the robot stops with a 0.1 s reverse pulse, because at motor value 0 the board lets the wheels coast, and it backs up once if it still ends up closer than 20 cm.</p>
+    <p class="src">Runs stop_s1d2_1 to 3, 5 November. Without the slow approach and the brake, a stop at 27 cm left the robot at 10 cm, measured with a ruler.</p>
   </div></div>
 </section>
 
@@ -1102,28 +1038,6 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
 
   document.getElementById('card-w1').addEventListener('click', function(){ index = 0; setView('slides'); });
 
-  function closeCode(){
-    var open = document.querySelector('.codewrap[data-open="true"]');
-    if(!open){ return false; }
-    open.setAttribute('data-open','false');
-    var btn = document.querySelector('.codebtn[data-code="' + open.id + '"]');
-    if(btn){ btn.setAttribute('aria-expanded','false'); }
-    return true;
-  }
-
-  document.addEventListener('click', function(ev){
-    if(ev.target.classList && ev.target.classList.contains('codewrap')){ closeCode(); return; }
-    var btn = ev.target.closest ? ev.target.closest('.codebtn') : null;
-    if(!btn){ return; }
-    var panel = document.getElementById(btn.getAttribute('data-code'));
-    var wasOpen = panel.getAttribute('data-open') === 'true';
-    closeCode();
-    if(!wasOpen){
-      panel.setAttribute('data-open','true');
-      btn.setAttribute('aria-expanded','true');
-    }
-  });
-
   document.addEventListener('keydown', function(ev){
     var tag = document.activeElement ? document.activeElement.tagName : '';
     if(tag === 'INPUT' || tag === 'TEXTAREA'){ return; }
@@ -1131,7 +1045,7 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
     var k = ev.key;
     if(k === 'd' || k === 'D'){ setView(view() === 'doc' ? 'slides' : 'doc'); return; }
     if(k === 't' || k === 'T'){ setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); return; }
-    if(k === 'Escape'){ if(!closeCode()){ setView('map'); } return; }
+    if(k === 'Escape'){ setView('map'); return; }
     if(view() === 'map'){
       if(k === 'Enter' || k === ' '){ ev.preventDefault(); index = 0; setView('slides'); }
       return;
@@ -1158,9 +1072,6 @@ train = [r for r in rows if not any(v in r[1] for v in args.val)]</pre>
   }catch(e){}
   setTheme(savedTheme);
   setView(savedView === 'slides' || savedView === 'doc' ? savedView : 'map');
-  Array.prototype.forEach.call(document.querySelectorAll('.codebtn'), function(b){
-    b.setAttribute('aria-expanded','false');
-  });
 })();
 </script>
 </body>

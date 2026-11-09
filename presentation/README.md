@@ -33,7 +33,7 @@ The roadmap shows the same five points before anyone enters the slides, so he ca
 | `right`, `down`, `space`, `page down` | next slide |
 | `left`, `up`, `page up` | previous slide |
 | `home`, `end` | first, last |
-| `escape` | close a code panel, or go back to the roadmap |
+| `escape` | back to the roadmap |
 | `d` | the same content as a document, for reading and for the report |
 | `t` | dark palette, for a hall that cannot be dimmed |
 
@@ -49,7 +49,7 @@ on the slides.
 | 2 | Since the last demonstration | four days, oldest first, failures included |
 | 3 | Module map | the three layers, their line counts, who may touch the motors |
 | 4 | One camera frame | the five stages and the timing |
-| 5 | `drive.py` | the loop and the guards, 6 notes |
+| 5 | `drive.py` | the loop, the four exits and the guards, 7 notes |
 | 6 | `perception.py` | models recognize, masks measure, 5 notes |
 | 7 | The state machine | the six states and the four swerve phases |
 | 8 | `decision.py` | priority as the order of the branches, 6 notes |
@@ -58,7 +58,7 @@ on the slides.
 | 11 | The learning pipeline | record, label, train, convert, judge |
 | 12 | The three models | accuracy and the weakness under each |
 | 13 | Task 1 | six runs against a 60 s cap |
-| 14 | The stop at a cup | the three rows, and what the runs measured |
+| 14 | The stop at a cup | the three rows, the trigger code, what the runs measured |
 | 15 | The swerve | the intended path, and which starts worked |
 | 16 | Failures | symptom, cause, fix, one row each |
 | 17 | Next plan | steps with their pass conditions |
@@ -125,8 +125,9 @@ Rules that keep these defensible: lead the note with the decision, not the synta
 forced the line where there was one; keep lines under about 90 characters or they scroll sideways; about 20
 lines is the most a slide holds. `pre class="wrapcode"` wraps long comment lines, for `config.py`.
 
-The overlay panel (`codebtn` plus `codewrap`) still exists and now holds the whole function, for the question
-asked from the floor. It prints inline in document mode, which makes the PDF of `d` a source-code appendix.
+There are no hidden panels. Everything the slide claims is on the slide, because code behind a button reads
+as code not shown, and nobody clicks it while presenting. If a listing has to grow, cut the figure cap
+(`figure svg{max-height}`) or a sentence, and check the slide again.
 
 ## Checks before you present
 
