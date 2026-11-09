@@ -17,10 +17,10 @@ His guideline, point by point, and where each one lives in `index_v3.html`:
 | Point | Slides |
 | :--- | :--- |
 | i. Total architecture of the code | 3 module map, 4 one camera frame |
-| ii. Show the source code | 5 to 11, the real file on the slide, never a paraphrase |
-| iii. Detailed explanation of it | the numbered notes beside each listing |
-| iv. Results from the executed code | 12 models, 13 task 1, 14 the stop, 15 the swerve, 16 failures |
-| v. Next plan from results and bugs | 17 |
+| ii. Show the source code | 5 to 13 as excerpts, plus the full files in the appendix |
+| iii. Detailed explanation of it | the notes beside each listing, each anchored to a line number |
+| iv. Results from the executed code | 14 models, 15 task 1, 16 the stop, 17 the swerve, 18 failures |
+| v. Next plan from results and bugs | 19 |
 
 Slides 1 and 2 come before that: where the project stands, and what happened since the last demonstration.
 The roadmap shows the same five points before anyone enters the slides, so he can see the order up front.
@@ -49,19 +49,23 @@ on the slides.
 | 2 | Since the last demonstration | four days, oldest first, failures included |
 | 3 | Module map | the three layers, their line counts, who may touch the motors |
 | 4 | One camera frame | the five stages and the timing |
-| 5 | `drive.py` | the loop, the four exits and the guards, 7 notes |
-| 6 | `perception.py` | models recognize, masks measure, 5 notes |
-| 7 | The state machine | the six states and the four swerve phases |
-| 8 | `decision.py` | priority as the order of the branches, 6 notes |
-| 9 | `control.py` | the eight pieces of the steering, each from a failure |
-| 10 | `config.py` and `safety.py` | no magic numbers, four guards |
-| 11 | The learning pipeline | record, label, train, convert, judge |
-| 12 | The three models | accuracy and the weakness under each |
-| 13 | Task 1 | six runs against a 60 s cap |
-| 14 | The stop at a cup | the three rows, the trigger code, what the runs measured |
-| 15 | The swerve | the intended path, and which starts worked |
-| 16 | Failures | symptom, cause, fix, one row each |
-| 17 | Next plan | steps with their pass conditions |
+| 5 | `drive.py` | the loop, the four exits, the guards |
+| 6 | `perception.py` | the three models, the masks, and `split_curve_probs` |
+| 7 | The state machine | the six states and the four swerve phases, drawn |
+| 8 | `decision.py` transitions | `enter()` and how a phase advances or halts |
+| 9 | `decision.py` update | priority as the order of the branches |
+| 10 | `control.py` update | the eight pieces of the steering, each from a failure |
+| 11 | `control.py` commands | `target_speed`, `avoid`, `stop`, `recover` |
+| 12 | `config.py` and `safety.py` | no magic numbers, four guards |
+| 13 | The learning pipeline | record, label, train, convert, judge, and the network |
+| 14 | The three models | accuracy and the weakness under each |
+| 15 | Task 1 | six runs against a 60 s cap |
+| 16 | The stop at a cup | the three rows, the trigger code, what the runs measured |
+| 17 | The swerve | the intended path, and which starts worked |
+| 18 | Failures | symptom, cause, fix, one row each |
+| 19 | Next plan | steps with their pass conditions |
+
+Then, in document mode only, the appendix: the complete source of the six driving modules.
 
 ## The weekly update, in order
 
@@ -75,12 +79,12 @@ Most weeks only the first four steps change anything.
    label to three words.
 3. **Last week** (slide 2, `.week`): four `.wday` blocks, oldest first. Class `good`, `bad` or `now` colors
    the top rule. One date line, one headline, one sentence. If a week had five events, cut the weakest.
-4. **Failures** (slide 16, `.chains`): one `.chain` per failure, three boxes: `c-sym` what we saw, `c-why` the
+4. **Failures** (slide 18, `.chains`): one `.chain` per failure, three boxes: `c-sym` what we saw, `c-why` the
    cause, `c-fix` the fix. Use `c-open` instead of `c-fix` while the cause is unknown, and say so out loud.
-5. **Next** (slide 17, `.steps`): one `.step` per step with its pass condition. Add `block` to the step that
+5. **Next** (slide 19, `.steps`): one `.step` per step with its pass condition. Add `block` to the step that
    blocks other tasks.
-6. **Code slides** (5 to 11): only when that file changed. Re-copy the lines from the source and run
-   `check.py`, which is the whole point of having it.
+6. **Code slides** (5 to 13): only when that file changed. Re-copy the lines with their new numbers, run
+   `build_appendix.py`, then `check.py`, which is the whole point of having it.
 7. **Numbers**: only if a new run happened. Sources are listed below.
 
 ## Where every number comes from
@@ -102,32 +106,50 @@ claims more than the logs do, and anything measured in a test script says so.
 
 ## Code slides
 
-A code slide is the real file on the left and numbered notes on the right. Copy the lines **verbatim** out of
-the source; `check.py` reads the file and fails if a line is not there any more. A line may be cut short with
-`...`, which only has to match the start of a real line. `<span class="m">N</span>` is the marker gutter, empty
-on unmarked lines, and `<span class="c">` is a comment, which the checker ignores.
+A code slide is the real file on the left and notes on the right, and **every note is anchored to a line
+number**. The gutter prints the file's own numbering, so the excerpt proves its position and a jump in the
+numbers shows plainly where lines were left out. A note that cannot name a line is a note about nothing;
+rewrite it until it can.
 
 ```html
 <div class="codeslide">
   <div class="codesrc">
-    <div class="cf">control.py · update() · lines 71 to 93, shortened</div>
-<pre><span class="m">1</span>self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
-<span class="m"></span>    a line with no note</pre>
+    <div class="cf">control.py · update() and wheels() · lines 71 to 142, shortened</div>
+<pre><span class="ln on">71</span>self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
+<span class="ln">75</span>change = 0.0 if self.last_error is None else ...</pre>
   </div>
   <ol class="notes">
-    <li><span class="nn">1</span><span><b>The claim in four words.</b> Then the evidence or the failure
+    <li><span class="nn">71</span><span><b>The claim in four words.</b> Then the evidence or the failure
       that forced it.</span></li>
   </ol>
 </div>
 ```
 
+`class="ln on"` marks a line a note points at, `class="c"` is a comment the checker ignores, and a line may
+be cut short with `...`, which then only has to match the start of the real line. `check.py` reads the file
+named in the caption and fails if the line is not there **or is not at that number**, so an edit above the
+excerpt is caught instead of quietly making the slide lie.
+
 Rules that keep these defensible: lead the note with the decision, not the syntax; name the failure that
-forced the line where there was one; keep lines under about 90 characters or they scroll sideways; about 20
+forced the line where there was one; keep lines under about 85 characters or they scroll sideways; about 22
 lines is the most a slide holds. `pre class="wrapcode"` wraps long comment lines, for `config.py`.
 
 There are no hidden panels. Everything the slide claims is on the slide, because code behind a button reads
-as code not shown, and nobody clicks it while presenting. If a listing has to grow, cut the figure cap
-(`figure svg{max-height}`) or a sentence, and check the slide again.
+as code not shown, and nobody clicks it while presenting.
+
+## The appendix: the full source
+
+The slides show excerpts; the appendix shows the six driving modules complete, with the same line numbers, so
+anything cited can be looked up. It is in the document view only, which is also the PDF for the Thursday
+upload, and it is **generated**:
+
+```bash
+python presentation/build_appendix.py
+```
+
+Run it after any change to `drive.py`, `perception.py`, `decision.py`, `control.py`, `config.py` or
+`safety.py`. `check.py` fails when a file has grown or changed since the appendix was built, so the deck
+cannot ship a stale listing. To add a file, put it in `FILES` in `build_appendix.py`.
 
 ## Checks before you present
 
@@ -136,8 +158,8 @@ python presentation/check.py index_v3.html
 ```
 
 Tag balance, em dashes, unfilled placeholders, every `cqw` class having its document twin, the bar widths
-recomputed from their own values, every quoted code line still present in its source file, and the palette
-contrasts. It needs no browser and takes a second.
+recomputed from their own values, every quoted line of code still sitting at the line number the slide
+claims, the appendix being current, and the palette contrasts. It needs no browser and takes a second.
 
 **Then the overflow check, which needs a browser.** Open `index_v3.html`, press `F12`, paste this in the console:
 

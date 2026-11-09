@@ -3,8 +3,8 @@
     python presentation/check.py [index_v3.html]
 
 Tag balance, em dashes, unfilled placeholders, document twins for every class sized in cqw, bar widths
-recomputed from their own values, every quoted code line still present in its source file, and the
-palette contrasts against the targets in design/THEME.md.
+recomputed from their own values, every quoted code line still at the line number the slide
+claims for it, and the palette contrasts against the targets in design/THEME.md.
 The one thing it cannot see is a slide whose text runs off the bottom: that check is in README.md and
 needs a browser.
 """
@@ -67,10 +67,13 @@ def tokens(block):
     return dict(re.findall(r'--([\w-]+):\s*(#[0-9A-Fa-f]{6})', block))
 
 
-def code_text(line):
-    """One line of a <pre> block as plain code: markers and comments dropped, entities decoded"""
-    line = re.sub(r'<span class="[mc]">.*?</span>', '', line)
-    return html.unescape(re.sub(r'<[^>]+>', '', line)).split('#')[0].strip()
+def code_line(line):
+    """One line of a <pre> block as (line number or None, plain code): spans and comments dropped"""
+    number = re.match(r'\s*<span class="ln[^"]*">(\d*)</span>', line)
+    rest = line[number.end():] if number else line
+    rest = re.sub(r'<span class="[mc]">.*?</span>', '', rest)
+    text = html.unescape(re.sub(r'<[^>]+>', '', rest)).split('#')[0].strip()
+    return (int(number.group(1)) if number and number.group(1) else None), text
 
 
 def check_code_blocks(page):
@@ -95,15 +98,31 @@ def check_code_blocks(page):
             continue
         source = [l.split('#')[0].strip() for l in open(path, encoding='utf-8')]
         for line in lines:  # the first line already holds code when <pre> opens the block
-            text = code_text(line)
+            number, text = code_line(line)
             if not text or text == '...':
                 continue
-            if text.endswith('...'):
+            if number is not None:  # the slide claims a position, so check that too
+                at = source[number - 1] if 0 < number <= len(source) else ''
+                ok = at.startswith(text[:-3]) if text.endswith('...') else at == text
+                if not ok:
+                    fail('%s line %d is "%s", the slide shows "%s"' % (name, number, at, text))
+            elif text.endswith('...'):
                 head = text[:-3]
                 if not any(s.startswith(head) for s in source):
                     fail('%s has no line starting with: %s' % (name, head))
             elif text not in source:
                 fail('%s no longer contains: %s' % (name, text))
+
+
+def check_appendix(page):
+    """The appendix states each file's length: a file that grew would otherwise pass unnoticed,
+    because every line it still shows would match. Rebuild with build_appendix.py."""
+    for name, claimed in re.findall(r'<h3>([\w.]+\.py) <span class="fn">(\d+) lines</span></h3>', page):
+        path = os.path.join(SOURCE_DIR, name)
+        actual = len(open(path, encoding='utf-8').read().rstrip('\n').split('\n'))
+        if actual != int(claimed):
+            fail('appendix has %s at %s lines, the file has %d: run build_appendix.py'
+                 % (name, claimed, actual))
 
 
 def main():
@@ -149,6 +168,7 @@ def main():
             fail('bar for %s s drawn at %s %%, should be %s %% of the 60 s cap' % (value, width, expected))
 
     check_code_blocks(page)
+    check_appendix(page)
 
     # the swerve figure: the cup has to sit at the centre of the drawn curve
     arc = re.search(r'M(\d+),(\d+) A (\d+),\d+ 0 0 1 (\d+),', page)
