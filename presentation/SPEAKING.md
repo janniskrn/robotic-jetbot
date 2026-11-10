@@ -46,7 +46,22 @@ itself. On 9 November it was 14 of 18.
 
 The honest part: the first day is a failure and it stays on the slide.
 
-## Slide 3, code architecture
+## Slide 3, key capabilities implemented in git over the last week
+
+Say: 26 commits across four active sessions this week, turning our initial prototype into a closed-loop system.
+We solved three major limitations from the first week.
+
+First, we replaced the neural network's distance estimate with an empirical regression from optical band area,
+calibrated autonomously over 139 stops, giving us dependable 35 to 40 cm stops.
+
+Second, we replaced blind timed turns with visual marks that end the swerve when crossing the lane border,
+raising our curved track avoidance success to 14 of 18 passes.
+
+Third, we built a tri-modal recovery pipeline so track departures don't end in a permanent halt: it undoes the
+recent path, sweeps across angles, and searches for the line. Everything runs in a formal 7-state machine with
+active safety guards and zero magic numbers in config.py.
+
+## Slide 4, code architecture
 
 Say: This is the whole program in one picture. Three layers, left to right, and the arrows only go one way.
 A camera frame goes into perception, a dictionary of numbers goes into decision, one state goes into control,
@@ -60,7 +75,7 @@ reach a motor even by mistake. One grep shows it, and it takes ten seconds at th
 Underneath everything is `config.py`: 128 numbers, every tuning value in the program, none of them hidden in
 the logic.
 
-## Slide 4, one camera frame
+## Slide 5, one camera frame
 
 Say: The same thing again, but in time. One frame takes about 30 milliseconds for all three models, and we
 run about 21 frames a second.
@@ -69,7 +84,7 @@ The lane model runs on every frame, because steering needs a fresh position ever
 the cup model take turns on alternate frames. We tried all three on every frame: it cost 12 milliseconds more
 per step, and the steering got visibly worse.
 
-## Slide 5, drive.py, the loop
+## Slide 6, drive.py, the loop
 
 Say: Here is the loop itself. Read it as five steps.
 
@@ -84,7 +99,7 @@ time running out.
 If asked about line 147, the lock: motor commands go over I2C, and a watchdog thread can stop the motors at
 the same moment, so they take turns.
 
-## Slide 6, perception.py, the eyes
+## Slide 7, perception.py, the eyes
 
 Say: One picture goes in, about ten numbers come out, and nothing is decided here.
 
@@ -100,7 +115,7 @@ The small block at the bottom: the curve model has five classes, left and right 
 splits them into two separate signals. How sharp the curve is sets the speed. Which way it bends sets the
 steering. If the model is not sure of the direction, no steering is added.
 
-## Slide 7, the state machine
+## Slide 8, the state machine
 
 Say: Seven states. Across the top is normal driving: following the lane, driving around a cup, and getting
 back on the lane afterwards. Below are the ways out of trouble.
@@ -113,7 +128,7 @@ The four boxes at the bottom are the phases of driving around a cup. Every phase
 sees, never on a timer, and every phase has a time limit. We learned that the hard way: our first version
 timed the turns, and a turn we had calculated as 45 degrees came out as about 130.
 
-## Slide 8, decision.py, transitions
+## Slide 9, decision.py, transitions
 
 Say: This is how a state actually changes.
 
@@ -130,7 +145,7 @@ in front of the robot and the robot is pointing along it.
 The last line is the important one. If a mark never comes, the robot does not drive on blind: it goes to the
 lane search.
 
-## Slide 9, decision.py, the priority order
+## Slide 10, decision.py, the priority order
 
 Say: Same file, the other half, and this is the part the professor asked about.
 
@@ -144,7 +159,7 @@ Two details if asked. The cup needs four frames in a row before we believe it, b
 runs on every second frame. And slowing down enters at one threshold and leaves at a lower one, so it cannot
 flicker on and off at the boundary.
 
-## Slide 10, control.py, the steering
+## Slide 11, control.py, the steering
 
 Say: This is our own control layer, which is what task 1 asked for. The stock example multiplies the error by
 a constant. Ours has eight pieces, and every one of them came from a run that failed.
@@ -157,7 +172,7 @@ The feedforward is the interesting one. In the sharp curve the lane position rea
 so steering by position alone fails there. The direction now comes from the curve model instead, and that is
 what fixed the curve that kept throwing us off the track.
 
-## Slide 11, control.py, what each state commands
+## Slide 12, control.py, what each state commands
 
 Say: The brain picks a state; this file says what the wheels do in it.
 
@@ -169,7 +184,7 @@ The recovery creeps forward and turns gently.
 That is already the shape task 7 asks for. Adding a following distance means adding a third argument to the
 same minimum, and nothing else in the program changes.
 
-## Slide 12, config.py and safety.py
+## Slide 13, config.py and safety.py
 
 Say: Two rules we hold ourselves to.
 
@@ -184,7 +199,7 @@ new camera frame within half a second. A motor update within a quarter second. A
 froze, and the camera object kept returning the same old picture, so the robot drove blind into a chair. The
 watchdog compares frame objects now, and it caught a real freeze 46 seconds into a later run.
 
-## Slide 13, the learning pipeline
+## Slide 14, the learning pipeline
 
 Say: How a model is made here, and how it earns the right to drive.
 
@@ -198,7 +213,7 @@ Neighbouring frames look almost the same, so a random split would report a model
 If asked about accuracy: the labels come from the color masks, so the percentages are agreement with the
 mask, not ground truth. We say that on the next slide too.
 
-## Slide 14, the three models
+## Slide 15, the three models
 
 Say: What they get right, and where each one is weak. The weak line is why the decision layer never takes a
 model number on its own.
@@ -213,7 +228,7 @@ set. Every error is curve versus straight, which costs some speed but never stee
 The cup model finds the cup in 98.1 percent of frames up to half a metre (96 to 99 percent across individual
 recording sets), with 0.4 percent false alarms. Its distance we do not use at all.
 
-## Slide 15, task 1 results
+## Slide 16, task 1 results
 
 Say: Six runs of 60 seconds. The stock-style controller lost the lane after about 20 seconds in both
 directions. Ours drove the full minute.
@@ -224,7 +239,7 @@ sharp curve. Tracking error standard deviation (lateral oscillation amplitude) w
 
 These runs are from September and should be repeated with today's code. That is on the next-plan slide.
 
-## Slide 16, stopping at a cup
+## Slide 17, stopping at a cup
 
 Say: The distance comes from the size of the red band, not from where it sits in the picture. Centimetres
 equal 405 divided by the square root of the band's area in pixels.
@@ -239,7 +254,7 @@ close enough. Three conditions, all three required.
 Result: three runs, stops at 35 to 40 centimetres. Before the slow approach and the brake pulse, a stop
 commanded at 27 centimetres left the robot at 10.
 
-## Slide 17, driving around the cup
+## Slide 18, driving around the cup
 
 Say: The path. Turn until the cup leaves the picture, drive straight while the cup is beside the robot, then
 curve, then turn back onto the lane.
@@ -251,7 +266,7 @@ Result: 14 of 18 on 9 November, after 11 of 12 the day before. Three of the four
 limit without finding their mark, and we have not yet watched whether a cup was touched. Both are on the next
 plan.
 
-## Slide 18, failures and causes
+## Slide 19, failures and causes
 
 Say: Four failures, with the cause and what we changed. This is the slide to go slowly on, because the
 professor asks about the failures.
@@ -264,7 +279,7 @@ swinging and the swing grows: positions went minus 0.11, plus 0.24, minus 0.40, 
 ruled out the third model, the loop timing, and camera lag, which we measured at 115 to 160 milliseconds and
 constant. The fallback is a lower speed limit in that curve, but we would rather know why.
 
-## Slide 19, the next plan
+## Slide 20, the next plan
 
 Say: Five steps, each with the condition that decides whether it worked.
 
@@ -274,6 +289,23 @@ swerve, and give the curve a mark it can always find.
 The last row is the only one that blocks other tasks, and it is not a code problem. We need tape on the floor
 for an intersection and a parking box. Signs, intersection and parking all reuse the pipeline that already
 works.
+
+## Slide 21, object-oriented UML class architecture
+
+Say: This is the formal UML 2.5 class diagram of the entire software stack, showing five clear tiers.
+
+Top tier: hardware abstraction. Robot strictly owns two Motor instances via composition, while OpenCvGstCamera
+inherits from the abstract CameraBase. Neither the camera nor motors bleed into the logic.
+
+Second tier: safety and sensor fusion. MotorWatchdog monitors the robot thread and halts on 0.25 s starvation;
+BatteryGuard protects hardware. Perception runs three TensorRT engines and outputs an immutable PerceptDict record.
+
+Bottom tier: the state machine and control. Decision evaluates PerceptDict and transitions across the seven
+priority-ranked DrivingStates. Controller translates the state and curve geometry into bounded wheel velocities,
+while FindLane manages off-track recovery with zero motor power between sweeps.
+
+If asked about the diagram files: an interactive SVG showcase is rendered in `diagrams/mini_av_class_diagram.html`,
+backed by the validated JSON specification in `diagrams/mini_av.class.json` and Mermaid source.
 
 ---
 

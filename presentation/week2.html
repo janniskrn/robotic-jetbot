@@ -164,6 +164,22 @@ body.doc .wday .wd{font-size:.66rem}
 body.doc .wday .wt{font-size:.95rem}
 body.doc .wday .wp{font-size:.88rem}
 
+/* git activity cards */
+.gitgrid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1.2cqw}
+.gitcard{background:var(--raise); border:1px solid var(--rule); border-radius:.6cqw; padding:1cqw 1.1cqw; display:flex; flex-direction:column; gap:.5cqw; min-width:0}
+.gitcard .gh{display:flex; align-items:center; justify-content:space-between; gap:.6cqw}
+.gitcard .gt{font-family:var(--display); font-weight:700; font-size:1.3cqw; line-height:1.15; color:var(--ink)}
+.gitcard .gm{font-family:var(--mono); font-size:.82cqw; color:var(--accent-ink); background:var(--accent-soft); padding:.12cqw .4cqw; border-radius:.25cqw; white-space:nowrap}
+.gitcard .gb{font-size:.98cqw; color:var(--muted); line-height:1.32; margin:0}
+.gitcard .gf{font-family:var(--mono); font-size:.82cqw; color:var(--faint); line-height:1.3; border-top:1px solid var(--rule-soft); padding-top:.45cqw; margin-top:auto}
+body.doc .gitgrid{grid-template-columns:1fr; gap:.7rem}
+body.doc .gitcard{border-radius:8px; padding:.75rem; gap:.35rem}
+body.doc .gitcard .gh{gap:.3rem}
+body.doc .gitcard .gt{font-size:.98rem}
+body.doc .gitcard .gm{font-size:.66rem; padding:.08rem .3rem}
+body.doc .gitcard .gb{font-size:.88rem}
+body.doc .gitcard .gf{font-size:.72rem; padding-top:.35rem}
+
 /* failure chains */
 .chains{display:flex; flex-direction:column; gap:.8cqw}
 .chain{display:grid; grid-template-columns:1fr 1fr 1fr; gap:.7cqw; align-items:stretch}
@@ -375,11 +391,11 @@ body.doc .doconly{display:block}
   </div>
 
   <div class="glmap">
-    <div class="glstep"><span class="gi">i</span><span class="gt">Total architecture of the code</span><span class="gc">slides 3 and 4</span></div>
-    <div class="glstep"><span class="gi">ii</span><span class="gt">The source code itself</span><span class="gc">slides 5 to 13</span></div>
+    <div class="glstep"><span class="gi">i</span><span class="gt">Total architecture of the code</span><span class="gc">slides 4, 5 and 21</span></div>
+    <div class="glstep"><span class="gi">ii</span><span class="gt">The source code itself</span><span class="gc">slides 6 to 14</span></div>
     <div class="glstep"><span class="gi">iii</span><span class="gt">Detailed explanation of it</span><span class="gc">beside every listing</span></div>
-    <div class="glstep"><span class="gi">iv</span><span class="gt">Results from the executed code</span><span class="gc">slides 14 to 18</span></div>
-    <div class="glstep"><span class="gi">v</span><span class="gt">Next plan from empirical results and anomaly resolutions</span><span class="gc">slide 19</span></div>
+    <div class="glstep"><span class="gi">iv</span><span class="gt">Results from the executed code</span><span class="gc">slides 15 to 19</span></div>
+    <div class="glstep"><span class="gi">v</span><span class="gt">Next plan from empirical results and anomaly resolutions</span><span class="gc">slide 20</span></div>
   </div>
 
   <div class="legendrow">
@@ -446,7 +462,63 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 3 architecture: the module map -->
+<!-- 3 git changes -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>status</i>git repository development (3 Nov to 10 Nov)</div>
+    <h2 class="sh">Key capabilities implemented in git over the last week</h2>
+    <div class="spacer" style="flex:.2"></div>
+    <div class="facts" style="flex:none">
+      <div class="fact">
+        <span class="n">26 commits</span>
+        <span class="l">across 4 active sessions (8a938c9..36c0acd)</span>
+      </div>
+      <div class="fact">
+        <span class="n">139 stops</span>
+        <span class="l">automated empirical distance calibration</span>
+      </div>
+      <div class="fact">
+        <span class="n">14 of 18</span>
+        <span class="l">obstacle swerves completed on curved track</span>
+      </div>
+      <div class="fact">
+        <span class="n">3 stages</span>
+        <span class="l">tri-modal recovery (undo, sweep, search)</span>
+      </div>
+    </div>
+    <div class="spacer" style="flex:.2"></div>
+    <div class="gitgrid" style="flex:none">
+      <div class="gitcard">
+        <div class="gh">
+          <span class="gt">Distance Calibration</span>
+          <span class="gm">LEARN1 · GAP2</span>
+        </div>
+        <p class="gb">Replaced neural network distance prediction (which drifted by 28 rows behind pedestrians) with closed-form optical band area regression (d = 405 / sqrt(A)). Programmed an automated self-calibration routine logging 139 stops across 5 track locations to ensure dependable stops at 35 to 40 cm headway.</p>
+        <span class="gf">cup_learn.py (automated dataset logger) · cup_distance.py (metric regression)</span>
+      </div>
+      <div class="gitcard">
+        <div class="gh">
+          <span class="gt">Closed-Loop Swerve</span>
+          <span class="gm">AVOID4 · 4 PHASES</span>
+        </div>
+        <p class="gb">Replaced open-loop timed swerves with visual boundary marks: outward pivot terminates on lateral obstacle exit, tangential bypass clears obstacle geometry, and curvature arc terminates upon crossing the lane border. Enabled reliable avoidance on curved track, achieving 14 of 18 successful passes.</p>
+        <span class="gf">decision.py (sensory phase transitions) · control.py (differential arc velocities)</span>
+      </div>
+      <div class="gitcard">
+        <div class="gh">
+          <span class="gt">Tri-Modal Recovery</span>
+          <span class="gm">LINE2 · 7 STATES</span>
+        </div>
+        <p class="gb">Engineered active recovery for lane-loss events instead of aborting to a terminal HALT: rewinds trajectory history (-0.22 throttle), sweeps across angular margins, and executes translational search. Unified into 7 formal states with strict priority cascades, safety watchdogs, and centralized config parameters.</p>
+        <span class="gf">find_lane.py (recovery engine) · safety.py (watchdogs) · config.py (constants)</span>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <p class="src">Git commits 8a938c9 to 36c0acd (3 Nov to 10 Nov 2026). 26 commits across autonomy, calibration, recovery, and test toolchain. Documented in DECISIONS.md.</p>
+  </div></div>
+</section>
+
+<!-- 4 architecture: the module map -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>i</i>total architecture of the code</div>
@@ -518,7 +590,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 4 architecture: one frame -->
+<!-- 5 architecture: one frame -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>i</i>total architecture of the code</div>
@@ -538,7 +610,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 5 drive.py -->
+<!-- 6 drive.py -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · drive.py</div>
@@ -581,7 +653,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 6 perception.py -->
+<!-- 7 perception.py -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · perception.py</div>
@@ -619,7 +691,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 7 state machine diagram -->
+<!-- 8 state machine diagram -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · the state machine</div>
@@ -689,7 +761,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 8 state transitions in code -->
+<!-- 9 state transitions in code -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · decision.py</div>
@@ -731,7 +803,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 9 decision.py -->
+<!-- 10 decision.py -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · decision.py</div>
@@ -772,7 +844,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 10 control.py -->
+<!-- 11 control.py -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · control.py</div>
@@ -809,7 +881,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 11 what each state commands -->
+<!-- 12 what each state commands -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · control.py</div>
@@ -852,7 +924,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 12 config.py and safety.py -->
+<!-- 13 config.py and safety.py -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · config.py and safety.py</div>
@@ -882,7 +954,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 13 the learning pipeline -->
+<!-- 14 the learning pipeline -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · the learning pipeline</div>
@@ -911,7 +983,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 14 model results -->
+<!-- 15 model results -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>iv</i>results · the models</div>
@@ -943,7 +1015,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 15 task 1 result -->
+<!-- 16 task 1 result -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>iv</i>results · task 1</div>
@@ -963,7 +1035,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 16 cup stop -->
+<!-- 17 cup stop -->
 <section>
   <div class="slide"><div class="inner" style="gap:1.1cqw">
     <div class="gl"><i>iv</i>results · task 2: distance-gated stop</div>
@@ -1016,7 +1088,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 17 around the cup -->
+<!-- 18 around the cup -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>iv</i>results · task 2: obstacle circumvention</div>
@@ -1058,7 +1130,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 18 failures -->
+<!-- 19 failures -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>iv</i>results · failures and their causes</div>
@@ -1091,7 +1163,7 @@ body.doc .doconly{display:block}
   </div></div>
 </section>
 
-<!-- 19 next -->
+<!-- 20 next -->
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>v</i>next plan, from empirical results and anomaly resolutions</div>
@@ -1107,6 +1179,169 @@ body.doc .doconly{display:block}
     <div class="spacer"></div>
     <p>Only the final item blocks subsequent milestones. Sign recognition, intersection negotiation, and parking reuse the proven perception-decision pipeline.</p>
     <p class="src">Steps and pass conditions from PLAN.md section 6 and the open items of 8 November. Escape returns to the roadmap, d gives the document version with the full source.</p>
+  </div></div>
+</section>
+
+<!-- 21 architecture: class diagram -->
+<section>
+  <div class="slide"><div class="inner">
+    <div class="gl"><i>i</i>total architecture of the code · class diagram</div>
+    <h2 class="sh">Code architecture: object-oriented UML class diagram</h2>
+    <div class="spacer" style="flex:.08"></div>
+    <figure style="flex:none">
+      <div class="fl">UML 2.5 Architecture: 1 Eyes (Acquisition &amp; Fusion) &rarr; 2 Brain (State Machine) &rarr; 3 Hands (PD Control) &rarr; 4 Hardware Isolation</div>
+      <svg viewBox="0 0 660 250" style="max-height:31.5cqw" role="img" aria-label="UML Class Diagram showing CameraBase, Perception, PerceptDict, Decision, DrivingState, Controller, FindLane, MotorWatchdog, BatteryGuard, Robot, and Motor">
+        <defs>
+          <marker id="uTri" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="var(--raise)" stroke="var(--ink)" stroke-width="1.2"/></marker>
+          <marker id="uDiaC" viewBox="0 0 12 10" refX="0" refY="5" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,5 L6,1 L12,5 L6,9 Z" fill="var(--ink)" stroke="var(--ink)" stroke-width="1.2"/></marker>
+          <marker id="uDiaA" viewBox="0 0 12 10" refX="0" refY="5" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,5 L6,1 L12,5 L6,9 Z" fill="var(--raise)" stroke="var(--ink)" stroke-width="1.2"/></marker>
+          <marker id="uArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--ink)" stroke-width="1.4"/></marker>
+          <marker id="uArrAcc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--accent)" stroke-width="1.4"/></marker>
+        </defs>
+        <g font-family="IBM Plex Mono, monospace">
+          <!-- ZONE 1: EYES (Camera & Perception) -->
+          <rect x="8" y="8" width="276" height="154" rx="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-dasharray="4 3" opacity="0.45"/>
+          <text x="16" y="20" fill="var(--accent-ink)" font-size="7.5" font-weight="600" letter-spacing=".08em">1 · EYES · CAMERA &amp; SENSOR FUSION</text>
+
+          <rect x="16" y="26" width="114" height="54" rx="4" fill="var(--ground)" stroke="var(--rule)"/>
+          <text x="24" y="38" fill="var(--muted)" font-size="7">&laquo;abstract&raquo;</text>
+          <text x="24" y="49" fill="var(--ink)" font-size="10.5" font-style="italic" font-weight="600">CameraBase</text>
+          <line x1="16" y1="53" x2="130" y2="53" stroke="var(--rule)" stroke-width="1"/>
+          <text x="24" y="63" fill="var(--muted)" font-size="7.8">+value: ndarray</text>
+          <text x="24" y="73" fill="var(--ink)" font-size="7.5">+{static}instance(), widget()</text>
+
+          <rect x="16" y="96" width="114" height="56" rx="4" fill="var(--ground)" stroke="var(--rule)"/>
+          <text x="24" y="109" fill="var(--ink)" font-size="9.5" font-weight="600">OpenCvGstCamera</text>
+          <line x1="16" y1="113" x2="130" y2="113" stroke="var(--rule)" stroke-width="1"/>
+          <text x="24" y="124" fill="var(--muted)" font-size="7.8">+cap, width, height, fps</text>
+          <text x="24" y="135" fill="var(--ink)" font-size="7.8">+start(), +stop()</text>
+          <text x="24" y="145" fill="var(--ink)" font-size="7.8">+restart()</text>
+
+          <path d="M73,96 L73,80" stroke="var(--ink)" stroke-width="1.3" marker-end="url(#uTri)"/>
+
+          <path d="M130,53 L142,53" stroke="var(--accent)" stroke-width="1.4" marker-end="url(#uArrAcc)"/>
+
+          <rect x="142" y="26" width="134" height="60" rx="4" fill="var(--ground)" stroke="var(--accent)"/>
+          <text x="150" y="40" fill="var(--accent-ink)" font-size="11" font-weight="600">Perception</text>
+          <text x="268" y="40" text-anchor="end" fill="var(--muted)" font-size="7.5">&laquo;vision&raquo;</text>
+          <line x1="142" y1="45" x2="276" y2="45" stroke="var(--accent)" stroke-width="1"/>
+          <text x="150" y="56" fill="var(--muted)" font-size="7.8">+3 TRTModels (lane,curve,cup)</text>
+          <text x="150" y="66" fill="var(--muted)" font-size="7.8">+2 HSV masks (lane, cup)</text>
+          <line x1="142" y1="70" x2="276" y2="70" stroke="var(--rule)" stroke-width="1"/>
+          <text x="150" y="80" fill="var(--ink)" font-size="8.2" font-weight="600">+observe(): PerceptDict</text>
+
+          <path d="M209,86 L209,96" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="3 2" marker-end="url(#uArrAcc)"/>
+
+          <rect x="142" y="96" width="134" height="56" rx="4" fill="var(--ground)" stroke="var(--accent)"/>
+          <text x="150" y="108" fill="var(--accent-ink)" font-size="8.5" font-weight="600">&laquo;dataType&raquo; PerceptDict</text>
+          <line x1="142" y1="112" x2="276" y2="112" stroke="var(--rule)" stroke-width="1"/>
+          <text x="150" y="122" fill="var(--muted)" font-size="7.5">+lane_visible, lane_x (-1..1)</text>
+          <text x="150" y="132" fill="var(--muted)" font-size="7.5">+curve_probs, curve_dir</text>
+          <text x="150" y="142" fill="var(--muted)" font-size="7.5">+cup_visible, bands, tape_row</text>
+
+          <!-- ZONE 2: BRAIN (Decision State Machine) -->
+          <rect x="296" y="8" width="186" height="154" rx="6" fill="none" stroke="var(--accent)" stroke-dasharray="4 3" opacity="0.45"/>
+          <text x="304" y="20" fill="var(--accent-ink)" font-size="7.5" font-weight="600" letter-spacing=".08em">2 · BRAIN · STATE MACHINE</text>
+
+          <path d="M276,124 L304,124" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="3 2" marker-end="url(#uArrAcc)"/>
+          <text x="290" y="119" text-anchor="middle" fill="var(--accent-ink)" font-size="7">percept</text>
+
+          <rect x="304" y="26" width="170" height="74" rx="4" fill="var(--ground)" stroke="var(--accent)"/>
+          <text x="312" y="40" fill="var(--accent-ink)" font-size="11" font-weight="600">Decision</text>
+          <text x="466" y="40" text-anchor="end" fill="var(--muted)" font-size="7.5">&laquo;state machine&raquo;</text>
+          <line x1="304" y1="45" x2="474" y2="45" stroke="var(--accent)" stroke-width="1"/>
+          <text x="312" y="55" fill="var(--muted)" font-size="8">+state: DrivingState</text>
+          <text x="312" y="65" fill="var(--muted)" font-size="8">+avoid_phase: AvoidPhase</text>
+          <line x1="304" y1="69" x2="474" y2="69" stroke="var(--rule)" stroke-width="1"/>
+          <text x="312" y="79" fill="var(--ink)" font-size="8" font-weight="600">+update(percept): DrivingState</text>
+          <text x="312" y="88" fill="var(--ink)" font-size="7.8">+update_avoidance(), lane_gone()</text>
+          <text x="312" y="97" fill="var(--ink)" font-size="7.8">+pass_side(): 'left' | 'right'</text>
+
+          <path d="M389,100 L389,108" stroke="var(--ink)" stroke-width="1.3" marker-end="url(#uArr)"/>
+
+          <rect x="304" y="108" width="170" height="44" rx="4" fill="var(--ground)" stroke="var(--rule)"/>
+          <text x="312" y="119" fill="var(--ink)" font-size="7.5" font-weight="600">&laquo;enum&raquo; DrivingState (strict priority)</text>
+          <line x1="304" y1="122" x2="474" y2="122" stroke="var(--rule)" stroke-width="1"/>
+          <text x="312" y="132" fill="var(--alarm)" font-weight="600" font-size="7.2">1: HALT (safe off)</text>
+          <text x="388" y="132" fill="var(--muted)" font-size="7.2">2: AVOID / RECOVER</text>
+          <text x="312" y="143" fill="var(--muted)" font-size="7.2">3: STOP</text>
+          <text x="348" y="143" fill="var(--muted)" font-size="7.2">4: SLOW_DOWN</text>
+          <text x="408" y="143" fill="var(--ok)" font-weight="600" font-size="7.2">5: FOLLOWING</text>
+
+          <!-- ZONE 3: HANDS (PD Control) -->
+          <rect x="494" y="8" width="158" height="154" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/>
+          <text x="502" y="20" fill="var(--muted)" font-size="7.5" font-weight="600" letter-spacing=".08em">3 · HANDS · PD CONTROL</text>
+
+          <path d="M474,56 L502,56" stroke="var(--ink)" stroke-width="1.4" marker-end="url(#uArr)"/>
+          <text x="488" y="51" text-anchor="middle" fill="var(--faint)" font-size="7">state</text>
+
+          <rect x="502" y="26" width="142" height="94" rx="4" fill="var(--ground)" stroke="var(--ink)"/>
+          <text x="510" y="40" fill="var(--ink)" font-size="11" font-weight="600">Controller</text>
+          <text x="636" y="40" text-anchor="end" fill="var(--muted)" font-size="7.5">&laquo;PD control&raquo;</text>
+          <line x1="502" y1="45" x2="644" y2="45" stroke="var(--rule)" stroke-width="1"/>
+          <text x="510" y="55" fill="var(--muted)" font-size="7.8">+lane_x, steering, speed</text>
+          <text x="510" y="65" fill="var(--muted)" font-size="7.8">+baseline, use_curve: bool</text>
+          <line x1="502" y1="69" x2="644" y2="69" stroke="var(--rule)" stroke-width="1"/>
+          <text x="510" y="79" fill="var(--ink)" font-size="7.8" font-weight="600">+update(x, probs): (l, r)</text>
+          <text x="510" y="89" fill="var(--ink)" font-size="7.8">+target_speed(), +avoid()</text>
+          <text x="510" y="99" fill="var(--ink)" font-size="7.8">+hold(), +stop(), +recover()</text>
+          <text x="510" y="109" fill="var(--ink)" font-size="7.8">+wheels(): (float, float)</text>
+
+          <path d="M573,120 L573,146 L466,146 L466,186" fill="none" stroke="var(--accent)" stroke-width="1.6" marker-end="url(#uArrAcc)"/>
+          <text x="520" y="141" fill="var(--accent-ink)" font-size="7.5" font-weight="600">set_motors(left, right)</text>
+
+          <!-- ZONE 4: ACTUATORS & SAFETY SUPERVISORS -->
+          <rect x="8" y="170" width="644" height="74" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/>
+          <text x="16" y="180" fill="var(--faint)" font-size="7.5" font-weight="600" letter-spacing=".08em">4 · ACTUATORS &amp; SAFETY GUARDS (HARDWARE ISOLATION)</text>
+
+          <rect x="16" y="186" width="114" height="52" rx="4" fill="var(--ground)" stroke="var(--rule)"/>
+          <text x="24" y="199" fill="var(--ink)" font-size="9.5" font-weight="600">FindLane</text>
+          <text x="122" y="199" text-anchor="end" fill="var(--muted)" font-size="7">&laquo;recovery&raquo;</text>
+          <line x1="16" y1="203" x2="130" y2="203" stroke="var(--rule)" stroke-width="1"/>
+          <text x="24" y="213" fill="var(--muted)" font-size="7.5">+heading, stage, undos</text>
+          <text x="24" y="223" fill="var(--ink)" font-size="7.5" font-weight="600">+run(hist, side): str</text>
+          <text x="24" y="232" fill="var(--ink)" font-size="7.2">+undo(), sweep(), search()</text>
+
+          <rect x="138" y="186" width="126" height="52" rx="4" fill="var(--ground)" stroke="var(--alarm)"/>
+          <text x="146" y="199" fill="var(--alarm)" font-size="9.5" font-weight="600">MotorWatchdog</text>
+          <text x="256" y="199" text-anchor="end" fill="var(--muted)" font-size="7">&laquo;thread&raquo;</text>
+          <line x1="138" y1="203" x2="264" y2="203" stroke="var(--alarm)" stroke-width="1"/>
+          <text x="146" y="213" fill="var(--muted)" font-size="7.5">+timeout: 0.25 s, lock</text>
+          <text x="146" y="223" fill="var(--ink)" font-size="7.5">+feed(), +run()</text>
+          <text x="146" y="232" fill="var(--alarm)" font-size="7.2">halts motors on timeout</text>
+
+          <path d="M264,212 L394,212" stroke="var(--ink)" stroke-width="1.3" marker-start="url(#uDiaA)"/>
+          <text x="329" y="207" text-anchor="middle" fill="var(--faint)" font-size="7.2">monitors</text>
+
+          <rect x="276" y="186" width="108" height="52" rx="4" fill="var(--ground)" stroke="var(--ok)"/>
+          <text x="284" y="199" fill="var(--ok)" font-size="9.5" font-weight="600">BatteryGuard</text>
+          <line x1="276" y1="203" x2="384" y2="203" stroke="var(--ok)" stroke-width="1"/>
+          <text x="284" y="213" fill="var(--muted)" font-size="7.5">+volts: float (&gt;=11.4V)</text>
+          <text x="284" y="223" fill="var(--ink)" font-size="7.5">+start_ok(): bool</text>
+          <text x="284" y="232" fill="var(--ink)" font-size="7.5">+check(): float</text>
+
+          <rect x="394" y="186" width="138" height="52" rx="4" fill="var(--ground)" stroke="var(--rule)"/>
+          <text x="402" y="199" fill="var(--ink)" font-size="10" font-weight="600">Robot</text>
+          <text x="524" y="199" text-anchor="end" fill="var(--muted)" font-size="7">&laquo;singleton&raquo;</text>
+          <line x1="394" y1="203" x2="532" y2="203" stroke="var(--rule)" stroke-width="1"/>
+          <text x="402" y="213" fill="var(--muted)" font-size="7.5">+i2c_bus: int = 1</text>
+          <text x="402" y="223" fill="var(--ink)" font-size="7.5" font-weight="600">+set_motors(left, right)</text>
+          <text x="402" y="232" fill="var(--ink)" font-size="7.2">+forward(), backward(), stop()</text>
+
+          <path d="M532,212 L552,212" stroke="var(--ink)" stroke-width="1.3" marker-start="url(#uDiaC)"/>
+          <text x="542" y="207" text-anchor="middle" fill="var(--muted)" font-size="7.5" font-weight="600">2</text>
+
+          <rect x="552" y="186" width="92" height="52" rx="4" fill="var(--ground)" stroke="var(--rule)"/>
+          <text x="560" y="199" fill="var(--ink)" font-size="9.5" font-weight="600">Motor</text>
+          <line x1="552" y1="203" x2="644" y2="203" stroke="var(--rule)" stroke-width="1"/>
+          <text x="560" y="213" fill="var(--muted)" font-size="7.5">+value, alpha, beta</text>
+          <text x="560" y="223" fill="var(--ink)" font-size="7.5">-_write_value(v)</text>
+          <text x="560" y="232" fill="var(--ink)" font-size="7.5">-_release()</text>
+        </g>
+      </svg>
+    </figure>
+    <div class="spacer"></div>
+    <p class="src">One-way data contracts: Perception &rarr; PerceptDict &rarr; Decision &rarr; Controller &rarr; Robot. Full interactive schema: diagrams/mini_av_class_diagram.html.</p>
   </div></div>
 </section>
 

@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "diagram_type": "class",
+  "meta": {
+    "title": "Mini-AV JetBot Object-Oriented Architecture",
+    "subtitle": "High-level UML Class Diagram showing Perception, Decision, Control, Safety, and Hardware Abstraction layers",
+    "output": "diagrams/mini_av_class_diagram.html",
+    "quality_profile": "showcase"
+  },
+  "layout": {
+    "mode": "grid"
+  },
+  "types": [
+    {
+      "id": "robot",
+      "label": "Robot",
+      "kind": "class",
+      "sublabel": "Hardware actuator driver (SingletonConfigurable)",
+      "row": 0,
+      "col": 0,
+      "attributes": [
+        { "name": "left_motor", "type": "Motor", "visibility": "public" },
+        { "name": "right_motor", "type": "Motor", "visibility": "public" },
+        { "name": "i2c_bus", "type": "int", "visibility": "public" },
+        { "name": "motor_driver", "type": "Adafruit_MotorHAT | QwiicScmd", "visibility": "protected" }
+      ],
+      "methods": [
+        { "name": "set_motors", "parameters": "left_speed: float, right_speed: float", "returns": "void", "visibility": "public" },
+        { "name": "forward", "parameters": "speed: float, duration: float = None", "returns": "void", "visibility": "public" },
+        { "name": "backward", "parameters": "speed: float", "returns": "void", "visibility": "public" },
+        { "name": "left", "parameters": "speed: float = 1.0", "returns": "void", "visibility": "public" },
+        { "name": "right", "parameters": "speed: float = 1.0", "returns": "void", "visibility": "public" },
+        { "name": "stop", "returns": "void", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "motor",
+      "label": "Motor",
+      "kind": "class",
+      "sublabel": "Individual DC motor PWM controller",
+      "row": 0,
+      "col": 1,
+      "attributes": [
+        { "name": "value", "type": "float", "visibility": "public" },
+        { "name": "alpha", "type": "float", "visibility": "public" },
+        { "name": "beta", "type": "float", "visibility": "public" },
+        { "name": "_channel", "type": "int", "visibility": "private" }
+      ],
+      "methods": [
+        { "name": "_write_value", "parameters": "value: float", "returns": "void", "visibility": "private" },
+        { "name": "_release", "returns": "void", "visibility": "private" }
+      ]
+    },
+    {
+      "id": "camera_base",
+      "label": "CameraBase",
+      "kind": "abstract",
+      "sublabel": "Abstract frame acquisition base (HasTraits)",
+      "row": 0,
+      "col": 2,
+      "attributes": [
+        { "name": "value", "type": "np.ndarray (BGR8)", "visibility": "public" }
+      ],
+      "methods": [
+        { "name": "instance", "parameters": "*args, **kwargs", "returns": "CameraBase", "visibility": "public", "static": true },
+        { "name": "widget", "returns": "ipywidgets.Image", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "opencv_gst_camera",
+      "label": "OpenCvGstCamera",
+      "kind": "class",
+      "sublabel": "CSI hardware camera via GStreamer pipeline",
+      "row": 1,
+      "col": 2,
+      "attributes": [
+        { "name": "cap", "type": "cv2.VideoCapture", "visibility": "protected" },
+        { "name": "width", "type": "int", "visibility": "public" },
+        { "name": "height", "type": "int", "visibility": "public" }
+      ],
+      "methods": [
+        { "name": "start", "returns": "void", "visibility": "public" },
+        { "name": "stop", "returns": "void", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "motor_watchdog",
+      "label": "MotorWatchdog",
+      "kind": "class",
+      "sublabel": "Failsafe thread: stops robot if loop stalls >0.25s",
+      "row": 1,
+      "col": 0,
+      "attributes": [
+        { "name": "timeout", "type": "float", "visibility": "public" },
+        { "name": "last_feed", "type": "float", "visibility": "public" },
+        { "name": "running", "type": "bool", "visibility": "public" },
+        { "name": "lock", "type": "threading.Lock", "visibility": "public" }
+      ],
+      "methods": [
+        { "name": "feed", "returns": "void", "visibility": "public" },
+        { "name": "run", "returns": "void", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "battery_guard",
+      "label": "BatteryGuard",
+      "kind": "class",
+      "sublabel": "Monitors voltage dips under motor load",
+      "row": 1,
+      "col": 1,
+      "attributes": [
+        { "name": "volts", "type": "float", "visibility": "public" },
+        { "name": "_last_read", "type": "float", "visibility": "private" },
+        { "name": "_low_since", "type": "float", "visibility": "private" }
+      ],
+      "methods": [
+        { "name": "start_ok", "returns": "bool", "visibility": "public" },
+        { "name": "check", "returns": "float", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "perception",
+      "label": "Perception",
+      "kind": "class",
+      "sublabel": "3 deep TensorRT models + 2 HSV color masks",
+      "row": 2,
+      "col": 0,
+      "attributes": [
+        { "name": "lane_model", "type": "TRTModule", "visibility": "public" },
+        { "name": "curve_model", "type": "TRTModule", "visibility": "public" },
+        { "name": "obstacle_model", "type": "TRTModule", "visibility": "public" },
+        { "name": "frame_count", "type": "int", "visibility": "public" },
+        { "name": "curve_model_probs", "type": "list[float]", "visibility": "public" }
+      ],
+      "methods": [
+        { "name": "observe", "parameters": "frame: np.ndarray", "returns": "PerceptDict", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "percept_dict",
+      "label": "PerceptDict",
+      "kind": "record",
+      "sublabel": "Metric sensor fusion per-frame observation record",
+      "row": 2,
+      "col": 1,
+      "attributes": [
+        { "name": "lane_visible", "type": "float (0..1)", "visibility": "public" },
+        { "name": "lane_x", "type": "float (-1..1)", "visibility": "public" },
+        { "name": "curve_probs", "type": "tuple[float,float,float]", "visibility": "public" },
+        { "name": "curve_dir", "type": "float (-1..1)", "visibility": "public" },
+        { "name": "curve_class", "type": "str", "visibility": "public" },
+        { "name": "cup_visible", "type": "float (0..1)", "visibility": "public" },
+        { "name": "cup_row", "type": "float (0..1)", "visibility": "public" },
+        { "name": "cup_x", "type": "float (-1..1)", "visibility": "public" },
+        { "name": "lane_aligned", "type": "bool", "visibility": "public" },
+        { "name": "tape_angle", "type": "float | None", "visibility": "public" },
+        { "name": "tape_row", "type": "float (0..1)", "visibility": "public" },
+        { "name": "cup_bands", "type": "list[tuple]", "visibility": "public" },
+        { "name": "inference_ms", "type": "float (ms)", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "find_lane",
+      "label": "FindLane",
+      "kind": "class",
+      "sublabel": "Tri-modal off-track search & recovery",
+      "row": 2,
+      "col": 2,
+      "attributes": [
+        { "name": "heading", "type": "int", "visibility": "public" },
+        { "name": "stage", "type": "str", "visibility": "public" },
+        { "name": "undos", "type": "int", "visibility": "public" },
+        { "name": "direction_known", "type": "bool", "visibility": "public" }
+      ],
+      "methods": [
+        { "name": "run", "parameters": "history: deque = (), side: int = 0, deadline: float = None, stop_event: Event = None", "returns": "str", "visibility": "public" },
+        { "name": "undo", "parameters": "history: deque", "returns": "bool", "visibility": "public" },
+        { "name": "sweep", "parameters": "side: int", "returns": "bool", "visibility": "public" },
+        { "name": "search_round", "parameters": "any_way: bool = False", "returns": "str", "visibility": "public" },
+        { "name": "pulse", "parameters": "seconds: float, wheels: Callable", "returns": "void", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "decision",
+      "label": "Decision",
+      "kind": "class",
+      "sublabel": "Priority-based state machine (Task 6)",
+      "row": 3,
+      "col": 0,
+      "attributes": [
+        { "name": "state", "type": "DrivingState", "visibility": "public" },
+        { "name": "avoid_phase", "type": "str", "visibility": "public" },
+        { "name": "stop_phase", "type": "str", "visibility": "public" },
+        { "name": "stop_only", "type": "bool", "visibility": "public" },
+        { "name": "line_recovery", "type": "bool", "visibility": "public" },
+        { "name": "fixed_side", "type": "str | None", "visibility": "public" },
+        { "name": "curve_sum", "type": "float", "visibility": "public" }
+      ],
+      "methods": [
+        { "name": "update", "parameters": "percept: PerceptDict, now: float", "returns": "DrivingState", "visibility": "public" },
+        { "name": "update_avoidance", "parameters": "percept: PerceptDict, now: float", "returns": "void", "visibility": "public" },
+        { "name": "update_stop", "parameters": "percept: PerceptDict, now: float", "returns": "void", "visibility": "public" },
+        { "name": "lane_gone", "parameters": "now: float", "returns": "void", "visibility": "public" },
+        { "name": "line_recovery_done", "parameters": "found: bool, now: float, kept_direction: bool = False", "returns": "void", "visibility": "public" },
+        { "name": "pass_side", "returns": "str ('left' | 'right')", "visibility": "public" },
+        { "name": "avoid_action", "returns": "str", "visibility": "public" },
+        { "name": "enter", "parameters": "state: DrivingState, now: float", "returns": "void", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "driving_state",
+      "label": "DrivingState",
+      "kind": "enum",
+      "sublabel": "Strict priority order: 1 (highest) to 5 (lowest)",
+      "row": 3,
+      "col": 1,
+      "attributes": [
+        { "name": "HALT", "type": "Priority 1 (motors off)", "visibility": "public" },
+        { "name": "OBSTACLE_AVOIDANCE", "type": "Priority 2 (swerve)", "visibility": "public" },
+        { "name": "LINE_RECOVERY", "type": "Priority 2 (find lane)", "visibility": "public" },
+        { "name": "ROAD_RECOVERY", "type": "Priority 2 (re-center)", "visibility": "public" },
+        { "name": "STOP", "type": "Priority 3 (hold position)", "visibility": "public" },
+        { "name": "SLOW_DOWN", "type": "Priority 4 (sharp curve / cup ahead)", "visibility": "public" },
+        { "name": "ROAD_FOLLOWING", "type": "Priority 5 (normal driving)", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "avoid_phase",
+      "label": "AvoidPhase",
+      "kind": "enum",
+      "sublabel": "Deterministic obstacle avoidance sequence",
+      "row": 3,
+      "col": 2,
+      "attributes": [
+        { "name": "brake", "type": "reverse pulse braking", "visibility": "public" },
+        { "name": "turn_out", "type": "spin outward to pass side", "visibility": "public" },
+        { "name": "arc", "type": "differential swerve curve", "visibility": "public" },
+        { "name": "pass", "type": "tangential straight clearance", "visibility": "public" },
+        { "name": "turn_in", "type": "spin back to align lane", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "controller",
+      "label": "Controller",
+      "kind": "class",
+      "sublabel": "PD steering with feedforward & adaptive speed envelope",
+      "row": 4,
+      "col": 0,
+      "attributes": [
+        { "name": "baseline", "type": "bool", "visibility": "public" },
+        { "name": "use_curve", "type": "bool", "visibility": "public" },
+        { "name": "lane_x", "type": "float", "visibility": "public" },
+        { "name": "steering", "type": "float", "visibility": "public" },
+        { "name": "speed", "type": "float", "visibility": "public" }
+      ],
+      "methods": [
+        { "name": "update", "parameters": "lane_x: float, curve_probs: list, curve_dir: float, dt: float, speed_limit: float = None", "returns": "tuple[float, float]", "visibility": "public" },
+        { "name": "target_speed", "parameters": "curve_probs: list, lane_x: float", "returns": "float", "visibility": "public" },
+        { "name": "curve_turn", "parameters": "curve_probs: list, curve_dir: float", "returns": "float", "visibility": "public" },
+        { "name": "feedforward", "parameters": "curve_probs: list, curve_dir: float", "returns": "float", "visibility": "public" },
+        { "name": "avoid", "parameters": "phase: str, side: str, elapsed: float", "returns": "tuple[float, float]", "visibility": "public" },
+        { "name": "hold", "parameters": "curve_probs: list, curve_dir: float, dt: float", "returns": "tuple[float, float]", "visibility": "public" },
+        { "name": "stop", "parameters": "phase: str, elapsed: float", "returns": "tuple[float, float]", "visibility": "public" },
+        { "name": "recover", "parameters": "side: str", "returns": "tuple[float, float]", "visibility": "public" },
+        { "name": "reset", "returns": "void", "visibility": "public" },
+        { "name": "wheels", "returns": "tuple[float, float]", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "run_logger",
+      "label": "RunLogger",
+      "kind": "class",
+      "sublabel": "Line-buffered telemetry CSV logging to USB",
+      "row": 4,
+      "col": 1,
+      "attributes": [
+        { "name": "dir", "type": "str", "visibility": "public" },
+        { "name": "_file", "type": "TextIO", "visibility": "private" },
+        { "name": "_writer", "type": "csv.DictWriter", "visibility": "private" }
+      ],
+      "methods": [
+        { "name": "step", "parameters": "**values: Any", "returns": "void", "visibility": "public" },
+        { "name": "close", "parameters": "reason: str", "returns": "void", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "recorder",
+      "label": "Recorder",
+      "kind": "class",
+      "sublabel": "Background image streaming & session writer",
+      "row": 4,
+      "col": 2,
+      "attributes": [
+        { "name": "session_dir", "type": "str", "visibility": "public" },
+        { "name": "count", "type": "int", "visibility": "public" },
+        { "name": "_queue", "type": "queue.Queue", "visibility": "private" }
+      ],
+      "methods": [
+        { "name": "offer", "parameters": "jpeg_bytes: bytes", "returns": "bool", "visibility": "public" },
+        { "name": "close", "returns": "void", "visibility": "public" }
+      ]
+    }
+  ],
+  "relationships": [
+    { "id": "robot_motors", "from": "robot", "to": "motor", "kind": "composition", "label": "owns 2 motors" },
+    { "id": "camera_impl", "from": "opencv_gst_camera", "to": "camera_base", "kind": "inheritance", "label": "subclasses" },
+    { "id": "watchdog_robot", "from": "motor_watchdog", "to": "robot", "kind": "aggregation", "label": "monitors" },
+    { "id": "percept_gen", "from": "perception", "to": "percept_dict", "kind": "dependency", "label": "produces" },
+    { "id": "decision_state", "from": "decision", "to": "driving_state", "kind": "dependency", "label": "switches" },
+    { "id": "decision_avoid_phase", "from": "decision", "to": "avoid_phase", "kind": "dependency", "label": "advances" },
+    { "id": "decision_eval", "from": "decision", "to": "percept_dict", "kind": "dependency", "label": "evaluates" },
+    { "id": "finder_perception", "from": "find_lane", "to": "perception", "kind": "aggregation", "label": "observes via" },
+    { "id": "finder_robot", "from": "find_lane", "to": "robot", "kind": "aggregation", "label": "pulses" }
+  ]
+}

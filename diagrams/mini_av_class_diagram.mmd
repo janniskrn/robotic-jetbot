@@ -1,0 +1,219 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% Enumerations & Value Objects
+    %% ==========================================
+    class DrivingState {
+        <<enumeration>>
+        +HALT : Priority 1
+        +OBSTACLE_AVOIDANCE : Priority 2
+        +LINE_RECOVERY : Priority 2
+        +ROAD_RECOVERY : Priority 2
+        +STOP : Priority 3
+        +SLOW_DOWN : Priority 4
+        +ROAD_FOLLOWING : Priority 5
+    }
+
+    class AvoidPhase {
+        <<enumeration>>
+        +brake : reverse pulse
+        +turn_out : spin to pass side
+        +arc : curve around obstacle
+        +pass : straight tangent
+        +turn_in : align to road
+    }
+
+    class StopPhase {
+        <<enumeration>>
+        +brake : reverse pulse
+        +back : reverse if close
+        +wait : motors off
+    }
+
+    class PerceptDict {
+        <<dataType>>
+        +lane_visible : float
+        +lane_x : float
+        +curve_probs : list~float~
+        +curve_dir : float
+        +curve_class : str
+        +cup_visible : float
+        +cup_row : float
+        +cup_x : float
+        +lane_aligned : bool
+        +tape_angle : float
+        +tape_row : float
+        +cup_bands : list~tuple~
+        +inference_ms : float
+    }
+
+    %% ==========================================
+    %% Hardware Abstraction Layer (jetbot)
+    %% ==========================================
+    class Robot {
+        +i2c_bus : int = 1
+        +motor_driver : Any
+        +set_motors(left_speed: float, right_speed: float) void
+        +forward(speed: float) void
+        +backward(speed: float) void
+        +left(speed: float) void
+        +right(speed: float) void
+        +stop() void
+    }
+
+    class Motor {
+        +value : float
+        +alpha : float = 1.0
+        +beta : float = 0.0
+        -_channel : int
+        -_driver : Any
+        -_write_value(value: float) void
+        -_release() void
+    }
+
+    class CameraBase {
+        <<abstract>>
+        +value : ndarray
+        +{static} instance() CameraBase
+        +widget() Image
+    }
+
+    class OpenCvGstCamera {
+        +cap : VideoCapture
+        +width : int
+        +height : int
+        +start() void
+        +stop() void
+    }
+
+    CameraBase <|-- OpenCvGstCamera : generalization
+    Robot *-- "2" Motor : composition
+
+    %% ==========================================
+    %% Safety & Guard Layer
+    %% ==========================================
+    class BatteryGuard {
+        +volts : float
+        -_last_read : float
+        -_low_since : float
+        +start_ok() bool
+        +check() float
+    }
+
+    class MotorWatchdog {
+        +timeout : float = 0.25
+        +last_feed : float
+        +running : bool
+        +lock : Lock
+        +feed() void
+        +run() void
+    }
+
+    MotorWatchdog o-- "1" Robot : monitors
+
+    %% ==========================================
+    %% Perception Layer
+    %% ==========================================
+    class Perception {
+        +lane_model : TRTModule
+        +curve_model : TRTModule
+        +obstacle_model : TRTModule
+        +frame_count : int
+        +curve_model_probs : list~float~
+        +cup : list~float~
+        +observe(frame: ndarray) PerceptDict
+    }
+
+    Perception ..> PerceptDict : produces
+
+    %% ==========================================
+    %% Decision Layer (State Machine)
+    %% ==========================================
+    class Decision {
+        +state : DrivingState
+        +avoid_phase : AvoidPhase
+        +stop_phase : StopPhase
+        +stop_only : bool
+        +line_recovery : bool
+        +fixed_side : str
+        +curve_sum : float
+        +curve_weight : float
+        +update(percept: PerceptDict, now: float) DrivingState
+        +update_avoidance(percept: PerceptDict, now: float) void
+        +update_stop(percept: PerceptDict, now: float) void
+        +lane_gone(now: float) void
+        +line_recovery_done(found: bool, now: float, kept_direction: bool) void
+        +pass_side() str
+        +avoid_action() str
+        +enter(state: DrivingState, now: float) void
+    }
+
+    Decision --> "1" DrivingState : maintains
+    Decision --> "1" AvoidPhase : executes
+    Decision --> "1" StopPhase : executes
+    Decision ..> PerceptDict : evaluates
+
+    %% ==========================================
+    %% Control Layer
+    %% ==========================================
+    class Controller {
+        +baseline : bool
+        +use_curve : bool
+        +lane_x : float
+        +d_lane_x : float
+        +integral : float
+        +steering : float
+        +speed : float
+        +reset() void
+        +update(lane_x: float, curve_probs: list, curve_dir: float, dt: float, speed_limit: float) tuple~float,float~
+        +target_speed(curve_probs: list, lane_x: float) float
+        +curve_turn(curve_probs: list, curve_dir: float) float
+        +feedforward(curve_probs: list, curve_dir: float) float
+        +hold(curve_probs: list, curve_dir: float, dt: float) tuple~float,float~
+        +avoid(phase: str, side: str, elapsed: float) tuple~float,float~
+        +stop(phase: str, elapsed: float) tuple~float,float~
+        +recover(side: str) tuple~float,float~
+        +wheels() tuple~float,float~
+    }
+
+    %% ==========================================
+    %% Off-Track Search & Recovery
+    %% ==========================================
+    class FindLane {
+        +heading : int
+        +stage : str
+        +direction_known : bool
+        +run(history: deque, side: int, deadline: float, stop_event: Event) str
+        +undo(history: deque) bool
+        +sweep(side: int) bool
+        +search_round(any_way: bool) str
+        +pulse(seconds: float, wheels: Callable) void
+    }
+
+    FindLane o-- "1" Perception : queries
+    FindLane o-- "1" Robot : pulses
+    FindLane o-- "1" CameraBase : captures
+    FindLane o-- "1" MotorWatchdog : feeds
+    FindLane o-- "1" BatteryGuard : checks
+
+    %% ==========================================
+    %% Telemetry & Data Logging
+    %% ==========================================
+    class RunLogger {
+        +dir : str
+        -_file : TextIO
+        -_writer : DictWriter
+        +step(**values) void
+        +close(reason: str) void
+    }
+
+    class Recorder {
+        +period : float
+        +root : str
+        +session_dir : str
+        +count : int
+        +start(name: str, metadata: dict) str
+        +offer(jpeg_bytes: bytes) bool
+        +stop() str
+    }

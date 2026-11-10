@@ -20,13 +20,13 @@ His guideline, point by point, and where each one lives in `week2.html`:
 
 | Point | Slides |
 | :--- | :--- |
-| i. Total architecture of the code | 3 module map, 4 one camera frame |
-| ii. Show the source code | 5 to 13 as excerpts, plus the full files in the appendix |
+| i. Total architecture of the code | 4 module map, 5 one camera frame, 21 UML class diagram |
+| ii. Show the source code | 6 to 14 as excerpts, plus the full files in the appendix |
 | iii. Detailed explanation of it | the notes beside each listing, each anchored to a line number |
-| iv. Results from the executed code | 14 models, 15 task 1, 16 the stop, 17 the swerve, 18 failures |
-| v. Next plan from results and bugs | 19 |
+| iv. Results from the executed code | 15 models, 16 task 1, 17 the stop, 18 the swerve, 19 failures |
+| v. Next plan from results and bugs | 20 |
 
-Slides 1 and 2 come before that: where the project stands, and what happened since the last demonstration.
+Slides 1, 2 and 3 come before that: where the project stands, what happened since the last demonstration, and git repository changes over the last week.
 The roadmap shows the same five points before anyone enters the slides, so he can see the order up front.
 
 ## Presenting it
@@ -47,7 +47,7 @@ The roadmap shows the same five points before anyone enters the slides, so he ca
 "/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu --no-pdf-header-footer --virtual-time-budget=20000 --print-to-pdf=presentation/week2.pdf presentation/week2.html
 ```
 
-20 pages at 297 by 167 mm: the roadmap, then the 19 slides. Headless Chrome starts with an empty
+22 pages at 297 by 167 mm: the roadmap, then the 21 slides. Headless Chrome starts with an empty
 localStorage, so it prints the roadmap view, which is what the page rules are written for. The appendix is
 not in it; for that, print from document mode by hand. Print also forces the light palette even if the dark
 toggle is on.
@@ -60,23 +60,25 @@ on the slides.
 | :--- | :--- | :--- |
 | 1 | Status board | one row per task, colored by what actually ran |
 | 2 | Since the last demonstration | four days, oldest first, failures included |
-| 3 | Module map | the three layers, their line counts, who may touch the motors |
-| 4 | One camera frame | the five stages and the timing |
-| 5 | `drive.py` | the loop, the four exits, the guards |
-| 6 | `perception.py` | the three models, the masks, and `split_curve_probs` |
-| 7 | The state machine | the seven states and the four swerve phases, drawn |
-| 8 | `decision.py` transitions | `enter()` and how a phase advances or halts |
-| 9 | `decision.py` update | priority as the order of the branches |
-| 10 | `control.py` update | the eight pieces of the steering, each from a failure |
-| 11 | `control.py` commands | `target_speed`, `avoid`, `stop`, `recover` |
-| 12 | `config.py` and `safety.py` | no magic numbers, four guards |
-| 13 | The learning pipeline | record, label, train, convert, judge, and the network |
-| 14 | The three models | accuracy and the weakness under each |
-| 15 | Task 1 | six runs against a 60 s cap |
-| 16 | The stop at a cup | distance from the band size, the trigger code, what the runs measured |
-| 17 | The swerve | the intended path, and which starts worked |
-| 18 | Failures | symptom, cause, fix, one row each |
-| 19 | Next plan | steps with their pass conditions |
+| 3 | Git repository changes | 26 commits: distance calibration, closed-loop circumvention, tri-modal recovery |
+| 4 | Module map | the three layers, their line counts, who may touch the motors |
+| 5 | One camera frame | the five stages and the timing |
+| 6 | `drive.py` | the loop, the four exits, the guards |
+| 7 | `perception.py` | the three models, the masks, and `split_curve_probs` |
+| 8 | The state machine | the seven states and the four swerve phases, drawn |
+| 9 | `decision.py` transitions | `enter()` and how a phase advances or halts |
+| 10 | `decision.py` update | priority as the order of the branches |
+| 11 | `control.py` update | the eight pieces of the steering, each from a failure |
+| 12 | `control.py` commands | `target_speed`, `avoid`, `stop`, `recover` |
+| 13 | `config.py` and `safety.py` | no magic numbers, four guards |
+| 14 | The learning pipeline | record, label, train, convert, judge, and the network |
+| 15 | The three models | accuracy and the weakness under each |
+| 16 | Task 1 | six runs against a 60 s cap |
+| 17 | The stop at a cup | distance from the band size, the trigger code, what the runs measured |
+| 18 | The swerve | the intended path, and which starts worked |
+| 19 | Failures | symptom, cause, fix, one row each |
+| 20 | Next plan | steps with their pass conditions |
+| 21 | UML class diagram | 5-tier object-oriented architecture: HAL actuators, supervisors, perception records, state machine, and control |
 
 Then, in document mode only, the appendix: the complete source of the seven driving modules.
 
