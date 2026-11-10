@@ -21,6 +21,12 @@ The Tuesday presentation must cover four points:
 | 3 | Accomplishments **and** failures, with our own analysis of why a task did not succeed | run logs, `results/`, model metrics, the failure table of the week |
 | 4 | The next plan to turn the failure into a success | the next open steps in `PLAN.md` section 6 |
 
+On top of those four, **every week the presentation shows two changes against the week before**: one in the
+approach and one in the code. Each one says what it was, what it is now, and what forced the move, whether
+that was a new approach, a fault we fixed, or something working that we improved. The point is that progress
+has to be visible as a difference, not only as a result: the professor saw last week's version, so the honest
+thing to show is what moved since.
+
 The professor's guidance is based on what we actually did, and the discussion is about the failures. So an
 honest failure with a measured cause is worth more than a vague success.
 
