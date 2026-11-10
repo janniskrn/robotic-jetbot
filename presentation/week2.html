@@ -311,7 +311,8 @@ body.doc .doconly{display:block}
   }
   html,body{height:auto; overflow:visible}
   .chrome,.rail{display:none !important}
-  body.map .roadmap{display:flex}
+  body.map .roadmap{display:flex; height:167mm; overflow:hidden; gap:3mm}
+  body.map .legendrow{display:none}  /* keyboard keys mean nothing on paper */
   body.slides #deck, body.map #deck{display:block; height:auto; overflow:visible}
   body.slides section, body.map section{height:167mm; width:297mm; page-break-after:always; break-after:page; display:flex; overflow:hidden}
   body.slides .slide, body.map .slide{width:297mm; height:167mm; aspect-ratio:auto}

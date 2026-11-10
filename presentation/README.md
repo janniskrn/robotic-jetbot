@@ -41,7 +41,16 @@ The roadmap shows the same five points before anyone enters the slides, so he ca
 | `d` | the same content as a document, for reading and for the report |
 | `t` | dark palette, for a hall that cannot be dimmed |
 
-**PDF:** print from slides mode for one landscape page per slide, or from document mode for a report.
+**PDF:** `week2.pdf` is committed next to the deck. Regenerate it after any change:
+
+```bash
+"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu --no-pdf-header-footer --virtual-time-budget=20000 --print-to-pdf=presentation/week2.pdf presentation/week2.html
+```
+
+20 pages at 297 by 167 mm: the roadmap, then the 19 slides. Headless Chrome starts with an empty
+localStorage, so it prints the roadmap view, which is what the page rules are written for. The appendix is
+not in it; for that, print from document mode by hand. Print also forces the light palette even if the dark
+toggle is on.
 The light palette is forced in print even if the dark toggle is on. Code panels print in the document, not
 on the slides.
 
