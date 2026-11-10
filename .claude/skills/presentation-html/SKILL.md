@@ -64,7 +64,7 @@ of the example. Copy neither its content, sections or subject.
 4. **Ask which form every figure takes** (§ Ask before you draw a figure). Collect the
    whole deck's figures and ask once, not eight times.
 5. **Build the deck.**
-6. **Prose pass over every visible string** (§ Prose).
+6. **Prose pass over every visible string** (§ Prose and Technical Register).
 7. **Static pass over the file** (§ The static pass). Cheap, and it catches what a
    screenshot cannot.
 8. **Publish** (§ Publishing).
@@ -523,7 +523,7 @@ A technical presentation is evaluated by professors, domain experts, and technic
 
 ### 2. Distinguish AI Slop from Engineering Precision
 Eliminating "AI slop" means stripping out empty promotional fluff, generic corporate buzzwords, and dramatic staging:
-- **Banned AI fluff**: *delve, foster, leverage, utilize, facilitate, empower, streamline, robust, cutting-edge, paradigm shift, game changer, tapestry, realm, beacon, multifaceted, meticulous, intricate, paramount, transformative, elevate, embark, supercharge, harness, ever-evolving*.
+- **Banned AI fluff**: *delve, foster, leverage, utilize, facilitate, empower, streamline, robust (promotional/figurative puffery only; preserve legitimate technical & mathematical uses, e.g. robust control, robust estimation), cutting-edge, paradigm shift, game changer, tapestry, realm, beacon, multifaceted, meticulous, intricate, paramount, transformative, elevate, embark, supercharge, harness, ever-evolving*.
 - **Mandatory engineering vocabulary**: Terms such as *deterministic, stochastic, covariance, gain scheduling, derivative damping, latency, bandwidth, hysteresis, occlusion, threshold, convergence, serialization, regression, classification, telemetry, MAE, infimum, fail-safe* are essential technical tools, NOT buzzwords. Never delete or soften them.
 
 ### 3. Syntax, Formatting, and Punctuation
@@ -785,7 +785,7 @@ Edit the template. Never the generated file.
       on the sources slide
 - [ ] `prefers-reduced-motion` respected; the page still makes sense with animation off
 - [ ] Readable at ~400 px wide, for the people who open the link on a phone afterwards
-- [ ] Slop pass done; no em dashes in visible copy
+- [ ] Slop pass done; technical domain vocabulary preserved without colloquial simplification; no em dashes in visible copy
 - [ ] Printed to PDF from both modes; page count equals section count; nothing clipped,
       no dark ground, no missing tint
 - [ ] One question asked of the person, out loud: can the hall be dimmed? A dark deck has

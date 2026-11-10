@@ -41,7 +41,7 @@ PHRASES = [
 WORDS = [
     "seamless", "holistic", "tailored", "innovative", "revolutioniz", "groundbreaking", "cutting-edge", "essential",
     "multifaceted", "profound", "synergy", "synergies", "milestone", "cornerstone", "underscore", "highlight",
-    "diverse", "comprehensive", "exciting", "valuable", "robust", "delve", "tapestry", "leverag", "pivotal",
+    "diverse", "comprehensive", "exciting", "valuable", "delve", "tapestry", "leverag", "pivotal",
     "testament", "showcase", "foster", "meticulous", "landscape", "elevate", "empower", "crucial", "vibrant",
     "journey", "unlock", "navigate", "realm",
 ]

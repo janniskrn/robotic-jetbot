@@ -14,9 +14,10 @@ For detect requests, make sure the response names each pattern found with a quot
 6. Are points front-loaded where that improves clarity without forcing every unit into the same structure?
 7. Do sentences earn their place, with concrete facts, protected details, and direct verbs where the draft supports them?
 8. Does every generic sentence pass the portability test, or was it cut or made specific to this subject?
-9. Does the draft use active voice with human subjects where possible?
+9. Does the draft use active voice with human subjects where possible, while preserving natural passive voice for inanimate physical processes and software execution?
 10. Does the edit keep useful edge and preserve structure unless the structure was hurting the piece?
 11. Are genuinely tangled sentences fixed while clear spoken cadence, fragments, and changes in pace remain intact?
+12. In technical, scientific, and academic drafts, is rigorous domain terminology strictly preserved without colloquial lay simplification?
 
 ## Words to cut
 

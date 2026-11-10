@@ -36,7 +36,7 @@ A language model as judge ("does this sound like AI?") is only worth using once 
 | Material, build, stance, procedure, final check | this skill | applies before all others |
 | A specific author's voice | [references/voice-profile.md](references/voice-profile.md), `scripts/voice_profile.py` | swappable, kept outside the skill; beats all rules |
 | Invisible characters, watermarks | [references/watermarks.md](references/watermarks.md), `scripts/invisible_chars.py` | find characters and clean them after approval; only explain statistical watermarks |
-| Word and sentence patterns, keeping the voice | `slop-prose` (edit and audit) or `slop-humanizer` (stricter rewrite, 26 patterns, strongest first) | use one of the two per text, not both |
+| Word and sentence patterns, keeping the voice | `slop-prose` (use exclusively for technical, academic, and engineering texts) or `slop-humanizer` (for creative, personal, or general non-technical writing) | use one of the two per text, not both |
 
 Where the skills disagree, this one wins. `slop-prose` in particular is too absolute: a rule that applies everywhere creates a pattern of its own. So here:
 
@@ -129,10 +129,10 @@ In non-fiction AI reads impersonal and dense: fewer hedges, intensifiers and eva
 
 After the script, read aloud or half aloud. Answer each question with yes or no.
 
-1. Is there any sentence that explains the meaning of the text? Delete it.
+1. Is there any sentence that explains the meaning of the text? Delete it (except in technical presentations/reports where stating the physical consequence or architectural significance is required).
 2. Does the text end with a summary, a lesson, an outlook or a punchline? Replace with the last concrete sentence or leave open.
 3. Does something stay open that a person would leave open at this point?
-4. Is there at least one jump (time, place, topic) and one side thought? For very short texts (email, under 100 words) one of the two is enough.
+4. Is there at least one jump (time, place, topic) and one side thought? For very short texts (email, under 100 words) one of the two is enough (does not apply to technical slides or engineering specifications, where strict coherence is required).
 5. Is there at least one real name, a number or a detail only this author can know, or a placeholder that explicitly asks for it?
 6. Are paragraphs and sections of uneven length and uneven build?
 7. Does every section have the same form (heading, three points, conclusion)? Then rebuild one.
@@ -140,7 +140,7 @@ After the script, read aloud or half aloud. Answer each question with yes or no.
 9. Are facts, names, numbers and quotes unchanged against the draft, and is nothing invented?
 10. Does a passage sound like advertising, marketing puffery, or a corporate life lesson? Strip the fluff. For general personal writing, rewrite into what the author would tell a friend. For technical, academic, and engineering texts, rewrite into what an engineer or scientist writes in a peer-reviewed paper or technical evaluation: precise, formal, objective, data-backed, without conversational slang or colloquial shortcuts.
 11. Does the text end with a question to the readers that could stand under any other post ("What do you think?")? Delete. A question or request that fits only this text may stay if it comes from the material.
-12. Is there an image, a joke or an exaggeration that a careful editor would strike? If not and the tone allows it: dare one (group A, point B).
+12. Is there an image, a joke or an exaggeration that a careful editor would strike? If not and the tone allows it: dare one (group A, point B; strictly skipped for academic, scientific, and engineering texts).
 13. Do sentence length and rhythm follow the author's voice (without a voice: the content), instead of a rule? Are there no rows of short fragments as punchlines, and no comma chains where the author writes short?
 14. Does the ending return to the beginning? Then end differently.
 15. Do numbers, names and lists agree everywhere in the text (the same list in two sections, the same number in text and table), and has every technical term kept its fixed form? Machine text holds the tone steady and lets the facts drift.
