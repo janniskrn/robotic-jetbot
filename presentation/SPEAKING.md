@@ -16,8 +16,9 @@ The robot does the same four things, about twenty times a second.
 1. **The camera gives one picture.** 224 by 224 pixels.
 2. **Perception turns the picture into numbers.** Where the lane is, how sharp the curve is, whether a cup is
    there and how far away.
-3. **Decision turns the numbers into one word.** The name of the state: following the lane, slowing down,
-   driving around a cup, searching for a lost lane, stopped, or finished.
+3. **Decision turns the numbers into one word.** The active operational state (seven in total):
+   following the lane, slowing down, obstacle circumvention, centering recovery, line search recovery,
+   stopped, or terminal halt.
 4. **Control turns that word into two numbers.** The speed of the left wheel and the speed of the right wheel.
 
 One file does each job, and a fifth file, `drive.py`, is the loop that calls them in that order and writes the
@@ -209,8 +210,8 @@ in sight.
 The curve model is 88.6 percent over five classes, and it never confused left with right in the validation
 set. Every error is curve versus straight, which costs some speed but never steers the wrong way.
 
-The cup model finds the cup in 96 to 99 percent of frames up to half a metre, with 0.4 percent false alarms.
-Its distance we do not use at all.
+The cup model finds the cup in 98.1 percent of frames up to half a metre (96 to 99 percent across individual
+recording sets), with 0.4 percent false alarms. Its distance we do not use at all.
 
 ## Slide 15, task 1 results
 
@@ -218,8 +219,8 @@ Say: Six runs of 60 seconds. The stock-style controller lost the lane after abou
 directions. Ours drove the full minute.
 
 Be precise about what the curve model bought: it did not make the steering smoother. It got us through the
-sharp curve. Wobble went from 0.150 to 0.087, and the adaptive run is 0.099 because it drives faster on the
-straights.
+sharp curve. Tracking error standard deviation (lateral oscillation amplitude) went from 0.150 down to
+0.087, and the adaptive run is 0.099 because it drives faster on the straights.
 
 These runs are from September and should be repeated with today's code. That is on the next-plan slide.
 
@@ -282,7 +283,7 @@ works.
 seven driving modules, with the same line numbers the slides cite.
 
 **"Did you write this yourselves?"** The stock NVIDIA notebooks are used as building blocks only, untouched.
-Steering, speed, avoidance, recovery, the state machine and the parking logic are ours: 3136 lines in 26 files.
+Steering, speed, avoidance, recovery, the state machine and the parking logic are ours: 3301 lines in 26 files.
 
 **"Why is this number 0.15?"** Every constant in `config.py` carries the run that set it in its comment. Read
 the comment out loud; that is what it is for.

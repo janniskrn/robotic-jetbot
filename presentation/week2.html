@@ -378,7 +378,7 @@ body.doc .doconly{display:block}
     <div class="glstep"><span class="gi">ii</span><span class="gt">The source code itself</span><span class="gc">slides 5 to 13</span></div>
     <div class="glstep"><span class="gi">iii</span><span class="gt">Detailed explanation of it</span><span class="gc">beside every listing</span></div>
     <div class="glstep"><span class="gi">iv</span><span class="gt">Results from the executed code</span><span class="gc">slides 14 to 18</span></div>
-    <div class="glstep"><span class="gi">v</span><span class="gt">Next plan from results and bugs</span><span class="gc">slide 19</span></div>
+    <div class="glstep"><span class="gi">v</span><span class="gt">Next plan from empirical results and anomaly resolutions</span><span class="gc">slide 19</span></div>
   </div>
 
   <div class="legendrow">
@@ -459,16 +459,16 @@ body.doc .doconly{display:block}
         </defs>
         <g font-family="IBM Plex Mono, monospace" font-size="9">
           <rect x="8" y="16" width="414" height="150" rx="7" fill="none" stroke="var(--accent)" stroke-dasharray="5 4"/>
-          <text x="20" y="31" fill="var(--accent-ink)">drive.py · 207 lines · the loop, and the only file that calls set_motors</text>
+          <text x="20" y="31" fill="var(--accent-ink)">drive.py · 221 lines · the loop, and the only file that calls set_motors</text>
 
           <rect x="24" y="62" width="106" height="48" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
           <text x="77" y="81" text-anchor="middle" fill="var(--ink)">perception.py</text>
-          <text x="77" y="94" text-anchor="middle" fill="var(--faint)" font-size="8">85 lines</text>
+          <text x="77" y="94" text-anchor="middle" fill="var(--faint)" font-size="8">86 lines</text>
           <text x="77" y="104" text-anchor="middle" fill="var(--muted)" font-size="8">3 models, 2 masks</text>
 
           <rect x="160" y="62" width="106" height="48" rx="5" fill="var(--raise)" stroke="var(--accent)"/>
           <text x="213" y="81" text-anchor="middle" fill="var(--ink)">decision.py</text>
-          <text x="213" y="94" text-anchor="middle" fill="var(--faint)" font-size="8">288 lines</text>
+          <text x="213" y="94" text-anchor="middle" fill="var(--faint)" font-size="8">294 lines</text>
           <text x="213" y="104" text-anchor="middle" fill="var(--muted)" font-size="8">state machine</text>
 
           <rect x="296" y="62" width="106" height="48" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
@@ -501,7 +501,7 @@ body.doc .doconly{display:block}
           <text x="20" y="209" fill="var(--muted)" font-size="8">camera watchdog, battery guard,</text>
           <text x="20" y="219" fill="var(--muted)" font-size="8">motor watchdog</text>
           <rect x="194" y="180" width="174" height="44" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
-          <text x="206" y="197" fill="var(--ink)">find_lane.py · 169 lines</text>
+          <text x="206" y="197" fill="var(--ink)">find_lane.py · 301 lines</text>
           <text x="206" y="209" fill="var(--muted)" font-size="8">tri-modal recovery in discrete</text>
           <text x="206" y="219" fill="var(--muted)" font-size="8">steps with zero motor power between</text>
           <rect x="380" y="180" width="172" height="44" rx="5" fill="var(--raise)" stroke="var(--rule)"/>
@@ -512,7 +512,7 @@ body.doc .doconly{display:block}
       </svg>
     </figure>
     <div class="spacer"></div>
-    <p><b>3136 lines in 26 Python files, all written by us.</b> The stock NVIDIA notebooks are untouched and used as building blocks only. Data flows one way, and the layers are separated by their imports, not by a comment.</p>
+    <p><b>3301 lines in 26 Python files, all written by us.</b> The stock NVIDIA notebooks are untouched and used as building blocks only. Data flows one way, and the layers are separated by their imports, not by a comment.</p>
     <p class="src">Provable in one command: grep "^import|^from" perception.py decision.py control.py. Neither decision.py nor control.py imports jetbot, so neither can reach a motor.</p>
   </div></div>
 </section>
@@ -527,7 +527,7 @@ body.doc .doconly{display:block}
       <div class="pstep"><span class="pn">1 · camera</span><span class="pt">Frame</span><span class="pd">224 &times; 224 px, nominal 21.6 to 22.8 Hz</span></div>
       <div class="pstep mid"><span class="pn">2 · perception</span><span class="pt">Three models</span><span class="pd">ResNet18, TensorRT</span>
         <span class="chip">lane: visible, x</span><span class="chip">curve: class, side</span><span class="chip">cup: seen, row, x</span></div>
-      <div class="pstep"><span class="pn">3 · decision</span><span class="pt">State machine</span><span class="pd">Six states, deterministic priority evaluation</span></div>
+      <div class="pstep"><span class="pn">3 · decision</span><span class="pt">State machine</span><span class="pd">Seven states, deterministic priority evaluation</span></div>
       <div class="pstep"><span class="pn">4 · control</span><span class="pt">Steering and speed</span><span class="pd">Gain-scheduled PD controller with curve feedforward</span></div>
       <div class="pstep"><span class="pn">5 · motors</span><span class="pt">Wheels</span><span class="pd">Protected by battery guard, camera watchdog, and motor watchdog</span></div>
     </div>
@@ -542,7 +542,7 @@ body.doc .doconly{display:block}
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · drive.py</div>
     <h2 class="sh">Main control loop: drive.py</h2>
-    <p class="role"><b>drive.py is the loop.</b> One frame in, two wheel speeds out. The only file that writes to the motors.</p>
+    <p class="role"><b>drive.py orchestrates the control loop.</b> Synchronous frame acquisition, perception telemetry, state arbitration, and actuator output.</p>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">drive.py · run() · lines 102 to 197, shortened</div>
@@ -585,7 +585,7 @@ body.doc .doconly{display:block}
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · perception.py</div>
     <h2 class="sh">Perception layer: three models, two color masks</h2>
-    <p class="role"><b>perception.py is the eyes.</b> An image in, numbers out, no decisions. Models recognize, color masks measure.</p>
+    <p class="role"><b>Perceptual state estimation.</b> Semantic classification via deep neural networks; metric geometry via deterministic color segmentation.</p>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">perception.py · observe() · lines 60 to 83, shortened</div>
@@ -625,7 +625,7 @@ body.doc .doconly{display:block}
     <h2 class="sh">State machine: seven states and the avoidance phases</h2>
     <div class="spacer" style="flex:.15"></div>
     <figure class="wide" style="flex:none">
-      <div class="fl">Driving across the top, the ways out of trouble below</div>
+      <div class="fl">Nominal tracking envelope across top, exception handling and recovery transitions below</div>
       <svg viewBox="0 0 560 160" role="img" aria-label="Following, avoidance and recovery across the top; stop, line recovery and halt below">
         <defs>
           <marker id="arG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--faint)" stroke-width="1.7"/></marker>
@@ -644,7 +644,7 @@ body.doc .doconly{display:block}
           <g stroke="var(--faint)" stroke-width="1.7" fill="none" marker-end="url(#arG)">
             <path d="M126,42 L192,42"/><path d="M316,42 L382,42"/><path d="M445,20 L445,8 L65,8 L65,20"/>
           </g>
-          <text x="159" y="35" text-anchor="middle" fill="var(--faint)" font-size="8">cup in the way</text>
+          <text x="159" y="35" text-anchor="middle" fill="var(--faint)" font-size="8">obstacle in path</text>
           <text x="349" y="35" text-anchor="middle" fill="var(--faint)" font-size="8">done</text>
           <text x="255" y="5" text-anchor="middle" fill="var(--faint)" font-size="8">lane found, aligned, 5 steps</text>
 
@@ -666,7 +666,7 @@ body.doc .doconly{display:block}
           <text x="176" y="90" fill="var(--faint)" font-size="7.5">lost</text>
           <text x="124" y="70" text-anchor="middle" fill="var(--faint)" font-size="7.5">found</text>
           <path d="M255,64 L255,100" stroke="var(--faint)" stroke-width="1.7" fill="none" marker-end="url(#arG)"/>
-          <text x="262" y="84" fill="var(--faint)" font-size="7.5">a phase misses its mark</text>
+          <text x="262" y="84" fill="var(--faint)" font-size="7.5">phase timeout fallback</text>
           <path d="M445,64 L445,88 L352,88 L352,112 L348,112" stroke="var(--faint)" stroke-width="1.5" fill="none" marker-end="url(#arG)"/>
           <text x="368" y="84" fill="var(--faint)" font-size="7.5">4 s without the lane</text>
 
@@ -692,8 +692,8 @@ body.doc .doconly{display:block}
 <section>
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · decision.py</div>
-    <h2 class="sh">State transitions and the swerve phases</h2>
-    <p class="role"><b>decision.py is the brain, first half.</b> It owns which state the robot is in. Here: the four phases of driving around a cup.</p>
+    <h2 class="sh">State transitions and circumvention phases</h2>
+    <p class="role"><b>decision.py governs state arbitration (Part 1).</b> Evaluates sensory transitions across the four circumvention phases.</p>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">decision.py · enter(), lane_gone() and update_avoidance() · lines 32 to 235</div>
@@ -735,7 +735,7 @@ body.doc .doconly{display:block}
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · decision.py</div>
     <h2 class="sh">Decision layer: priority order in decision.py</h2>
-    <p class="role"><b>decision.py is the brain, second half.</b> Every frame the same questions in the same order, and the first yes wins.</p>
+    <p class="role"><b>Deterministic priority arbitration.</b> Evaluated synchronously per frame; highest-priority safety condition pre-empts tracking.</p>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">decision.py · update() · lines 239 to 293, shortened</div>
@@ -802,7 +802,7 @@ body.doc .doconly{display:block}
         <li><span class="nn">83</span><span><b>Model-based curvature feedforward.</b> Supplies a steady steering bias without a large tracking error; its direction comes from the classifier.</span></li>
         <li><span class="nn">85</span><span><b>Actuator slew-rate limiter.</b> Caps the steering gradient at 2.0/s, so a single-frame outlier cannot jerk the wheels.</span></li>
         <li><span class="nn">87</span><span><b>Multi-constraint velocity arbitration.</b> Speed is the infimum of the curvature and lateral-error limits, extensible to headway control.</span></li>
-        <li><span class="nn">143</span><span><b>Empirical actuator trim compensation.</b> Fixed offset (+0.01 left) cancels intrinsic chassis and gearbox asymmetry.</span></li>
+        <li><span class="nn">143</span><span><b>Empirical actuator trim compensation.</b> Fixed offset (-0.01 left, +0.01 right) cancels intrinsic chassis and gearbox asymmetry.</span></li>
       </ol>
     </div>
   </div></div>
@@ -813,7 +813,7 @@ body.doc .doconly{display:block}
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · control.py</div>
     <h2 class="sh">Control layer: what each state commands</h2>
-    <p class="role"><b>control.py is the hands, second half.</b> One function per state: whatever the brain picked, this is what the wheels do.</p>
+    <p class="role"><b>State-to-actuator mapping.</b> Operational states execute dedicated open- or closed-loop velocity profiles.</p>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">control.py · one command function per state · lines 38 to 139, shortened</div>
@@ -856,7 +856,7 @@ body.doc .doconly{display:block}
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · config.py and safety.py</div>
     <h2 class="sh">Configuration constants and safety guards</h2>
-    <p class="role"><b>config.py is the dial board, safety.py is the brake.</b> Every tuning number in one file, away from the logic; the guards in the other.</p>
+    <p class="role"><b>Centralized parameter repository (config.py) and hardware safety watchdogs (safety.py).</b> Tuning constants are decoupled from control logic; safety guards run asynchronously.</p>
     <div class="codeslide">
       <div class="codesrc">
         <div class="cf">config.py · 5 of 128 values</div>
@@ -886,7 +886,7 @@ body.doc .doconly{display:block}
   <div class="slide"><div class="inner">
     <div class="gl"><i>ii + iii</i>source code · the learning pipeline</div>
     <h2 class="sh">Model training pipeline and offline validation</h2>
-    <p class="role"><b>This is how a model is born.</b> The robot records itself, the masks write the labels, and no model drives before it is judged.</p>
+    <p class="role"><b>Supervised ML pipeline lifecycle.</b> Autonomous data collection, mask-based ground truth generation, and offline replay benchmarks.</p>
     <div class="spacer" style="flex:.2"></div>
     <div class="pipe" style="flex:none">
       <div class="pstep"><span class="pn">1 · record</span><span class="pt">auto_record.py</span><span class="pd">Autonomous data acquisition via color-mask tracking; no teleoperation bias</span></div>
@@ -965,7 +965,7 @@ body.doc .doconly{display:block}
 <!-- 16 cup stop -->
 <section>
   <div class="slide"><div class="inner" style="gap:1.1cqw">
-    <div class="gl"><i>iv</i>results · task 2, the stop</div>
+    <div class="gl"><i>iv</i>results · task 2: distance-gated stop</div>
     <h2 class="sh" style="max-width:38ch">Obstacle detection and distance-gated stop <span class="tag t-run">3 runs, 35 to 40 cm</span></h2>
     <div class="spacer" style="flex:.1"></div>
     <figure class="wide" style="flex:none">
@@ -1018,7 +1018,7 @@ body.doc .doconly{display:block}
 <!-- 17 around the cup -->
 <section>
   <div class="slide"><div class="inner">
-    <div class="gl"><i>iv</i>results · task 2, the swerve</div>
+    <div class="gl"><i>iv</i>results · task 2: obstacle circumvention</div>
     <h2 class="sh">Obstacle circumvention and lane recovery <span class="tag t-run">14 of 18 on 9 November</span></h2>
     <div class="spacer" style="flex:.15"></div>
     <figure class="wide" style="flex:none">
@@ -1093,7 +1093,7 @@ body.doc .doconly{display:block}
 <!-- 19 next -->
 <section>
   <div class="slide"><div class="inner">
-    <div class="gl"><i>v</i>next plan, from the results and the bugs</div>
+    <div class="gl"><i>v</i>next plan, from empirical results and anomaly resolutions</div>
     <h2 class="sh">Next plan and pass criteria</h2>
     <div class="spacer" style="flex:.25"></div>
     <div class="steps" style="flex:none">
