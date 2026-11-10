@@ -127,6 +127,10 @@ rewrite it until it can.
 </div>
 ```
 
+**The number in a note is a line number, and it must be one of the lines the slide shows.** `check.py`
+fails otherwise, and `--fix` moves the note numbers together with the code they point at. The same goes for
+the caption: if it says "lines 102 to 197", those have to be the first and last line on the slide.
+
 `class="ln on"` marks a line a note points at, `class="c"` is a comment the checker ignores, and a line may
 be cut short with `...`, which then only has to match the start of the real line. `check.py` reads the file
 named in the caption and fails if the line is not there **or is not at that number**, so an edit above the

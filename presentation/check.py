@@ -102,17 +102,21 @@ def renumber(page):
     The code changes every week; the numbers must not be maintained by hand. A line whose text has
     changed cannot be guessed, so it is reported and fixed on the slide.
     """
-    out, last, changed = [], 0, 0
+    out, last, changed, moved = [], 0, 0, {}
     for match in re.finditer(r'<pre[^>]*>(.*?)</pre>', page, re.S):
         names = re.findall(r'([\w.]+\.py)', page[max(0, match.start() - 200):match.start()]
                            + ' ' + match.group(1).split('\n')[0])
         if not names or not os.path.exists(os.path.join(SOURCE_DIR, names[-1])):
             continue
-        source, lines = source_lines(names[-1]), []
+        source, lines, previous = source_lines(names[-1]), [], 0
         for line in match.group(1).split('\n'):
             number, text = code_line(line)
             if number is not None and text and text != '...':
                 hits = find_text(source, text, number)
+                ahead = [n for n in hits if n > previous]  # a listing runs down the file, not back up
+                hits = ahead + [n for n in hits if n not in ahead]
+                if hits:
+                    moved[number], previous = hits[0], hits[0]
                 if hits and hits[0] != number:
                     line = re.sub(r'(<span class="ln[^"]*">)\d+(</span>)',
                                   r'\g<1>%d\g<2>' % hits[0], line, count=1)
@@ -124,8 +128,15 @@ def renumber(page):
         out.append('\n'.join(lines))
         last = match.end(1)
     out.append(page[last:])
-    print('renumbered %d lines' % changed)
-    return ''.join(out)
+    page = ''.join(out)
+
+    # the notes point at those lines by number, so they have to move with them
+    def anchor(match):
+        number = moved.get(int(match.group(1)))
+        return match.group(0) if number is None else '<span class="nn">%d</span>' % number
+    page, badges = re.subn(r'<span class="nn">(\d+)</span>', anchor, page)
+    print('renumbered %d lines (%d note anchors checked)' % (changed, badges))
+    return page
 
 
 def check_code_blocks(page):
@@ -164,6 +175,29 @@ def check_code_blocks(page):
                     fail('%s has no line starting with: %s' % (name, head))
             elif text not in source:
                 fail('%s no longer contains: %s' % (name, text))
+
+
+def check_note_anchors(page):
+    """A note's number must be a line the slide shows.
+
+    A note pointing at a line nobody can see is worse than no number: the reader looks for it,
+    does not find it, and stops trusting the other numbers.
+    """
+    for block in re.findall(r'<div class="codeslide">(.*?)</ol>', page, re.S):
+        shown = set(re.findall(r'<span class="ln[^"]*">(\d+)</span>', block))
+        caption = re.search(r'<div class="cf">([^<]*)</div>', block)
+        for note in re.findall(r'<span class="nn">(\d+)</span>', block):
+            if note not in shown:
+                fail('note %s points at a line the slide does not show (%s)'
+                     % (note, caption.group(1)[:46] if caption else '?'))
+
+    # a caption that says "lines A to B" has to be the range the slide really shows
+    for block in re.findall(r'<div class="cf">([^<]*)</div>\s*<pre[^>]*>(.*?)</pre>', page, re.S):
+        said = re.search(r'lines (\d+) to (\d+)', block[0])
+        shown = [int(n) for n in re.findall(r'<span class="ln[^"]*">(\d+)</span>', block[1])]
+        if said and shown and (int(said.group(1)), int(said.group(2))) != (min(shown), max(shown)):
+            fail('caption says lines %s to %s, the slide shows %d to %d (%s)'
+                 % (said.group(1), said.group(2), min(shown), max(shown), block[0][:40]))
 
 
 def check_appendix(page):
@@ -230,6 +264,7 @@ def main():
 
     check_code_blocks(page)
     check_appendix(page)
+    check_note_anchors(page)
 
     # the swerve figure: the cup has to sit at the centre of the drawn curve
     arc = re.search(r'M(\d+),(\d+) A (\d+),\d+ 0 0 1 (\d+),', page)

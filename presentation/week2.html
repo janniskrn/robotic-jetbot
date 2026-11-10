@@ -541,7 +541,7 @@ body.doc .doconly{display:block}
     <h2 class="sh">Main control loop: drive.py</h2>
     <div class="codeslide">
       <div class="codesrc">
-        <div class="cf">drive.py · run() · lines 98 to 183, shortened</div>
+        <div class="cf">drive.py · run() · lines 102 to 197, shortened</div>
 <pre><span class="ln">102</span>while time.time() - start &lt; seconds:
 <span class="ln on">106</span>    frame = wait_for_new_frame(camera, frame)
 <span class="ln on">109</span>    percept = perception.observe(frame)
@@ -564,13 +564,13 @@ body.doc .doconly{display:block}
 <span class="ln">197</span>    robot.stop()</pre>
       </div>
       <ol class="notes">
-        <li><span class="nn">102</span><span><b>Never a stale image.</b> The camera thread dies silently on a read error and then returns the same array forever; this waits for a new frame object and times out after 0.5 s.</span></li>
-        <li><span class="nn">105</span><span><b>Perception only reads.</b> It returns a dictionary of plain numbers and can take no action.</span></li>
-        <li><span class="nn">112</span><span><b>Deterministic single state.</b> The main loop delegates all state transitions strictly to the decision layer.</span></li>
-        <li><span class="nn">113</span><span><b>Blocking sub-routine for line recovery.</b> find_lane.py executes multi-second step-wise search maneuvers with zero inter-step motor torque, returning recovery status and heading retention.</span></li>
-        <li><span class="nn">132</span><span><b>Control translates state into wheel speeds.</b> Each operational state calls its dedicated actuator mapping function.</span></li>
-        <li><span class="nn">136</span><span><b>Thread-safe I2C motor bus access.</b> The lock prevents concurrent bus collisions between periodic control writes and asynchronous watchdog shutdowns.</span></li>
-        <li><span class="nn">175</span><span><b>Exhaustive exception handling and failsafe shutdown.</b> All termination pathways trigger the finally block to guarantee zero-motor fail-stop.</span></li>
+        <li><span class="nn">106</span><span><b>Never a stale image.</b> The camera thread dies silently on a read error and then returns the same array forever; this waits for a new frame object and times out after 0.5 s.</span></li>
+        <li><span class="nn">109</span><span><b>Perception only reads.</b> It returns a dictionary of plain numbers and can take no action.</span></li>
+        <li><span class="nn">116</span><span><b>Deterministic single state.</b> The main loop delegates all state transitions strictly to the decision layer.</span></li>
+        <li><span class="nn">117</span><span><b>Blocking sub-routine for line recovery.</b> find_lane.py executes multi-second step-wise search maneuvers with zero inter-step motor torque, returning recovery status and heading retention.</span></li>
+        <li><span class="nn">143</span><span><b>Control translates state into wheel speeds.</b> Each operational state calls its dedicated actuator mapping function.</span></li>
+        <li><span class="nn">147</span><span><b>Thread-safe I2C motor bus access.</b> The lock prevents concurrent bus collisions between periodic control writes and asynchronous watchdog shutdowns.</span></li>
+        <li><span class="nn">189</span><span><b>Exhaustive exception handling and failsafe shutdown.</b> All termination pathways trigger the finally block to guarantee zero-motor fail-stop.</span></li>
       </ol>
     </div>
   </div></div>
@@ -693,7 +693,7 @@ body.doc .doconly{display:block}
     <h2 class="sh">State transitions and the swerve phases</h2>
     <div class="codeslide">
       <div class="codesrc">
-        <div class="cf">decision.py · enter(), lane_gone() and update_avoidance() · lines 32 to 229</div>
+        <div class="cf">decision.py · enter(), lane_gone() and update_avoidance() · lines 32 to 235</div>
 <pre><span class="ln on">32</span>AVOID_PHASES = ('brake', 'turn_out', 'arc', 'turn_in')
 <span class="ln on">155</span>def enter(self, state, now):
 <span class="ln">156</span>    self.state, self.state_since = state, now
@@ -717,11 +717,11 @@ body.doc .doconly{display:block}
       </div>
       <ol class="notes">
         <li><span class="nn">32</span><span><b>Ordered tuple defines phase sequence.</b> Monotonic progression via index lookup centralizes sequence modifications.</span></li>
-        <li><span class="nn">154</span><span><b>Centralized state transition via enter().</b> Timestamps establish deterministic baselines for timeout checks and debounce filters.</span></li>
-        <li><span class="nn">199</span><span><b>Sensory-driven outward pivot termination.</b> Maneuver completes upon obstacle lateral exit; tape angle serves strictly as fallback.</span></li>
-        <li><span class="nn">210</span><span><b>Tangential bypass before curvature onset.</b> Prevents premature vehicle turning into obstacle footprint; concludes upon road tape transit beneath chassis.</span></li>
-        <li><span class="nn">220</span><span><b>Re-entry requires lane alignment and centering</b> within 0.4 of image center. Parallel heading verification prevents false locks on orthogonal tape intersections.</span></li>
-        <li><span class="nn">229</span><span><b>Fault tolerance via recovery escalation.</b> Phase timeouts trigger LINE_RECOVERY rather than immediate non-recoverable HALT.</span></li>
+        <li><span class="nn">155</span><span><b>Centralized state transition via enter().</b> Timestamps establish deterministic baselines for timeout checks and debounce filters.</span></li>
+        <li><span class="nn">202</span><span><b>Sensory-driven outward pivot termination.</b> Maneuver completes upon obstacle lateral exit; tape angle serves strictly as fallback.</span></li>
+        <li><span class="nn">213</span><span><b>Tangential bypass before curvature onset.</b> Prevents premature vehicle turning into obstacle footprint; concludes upon road tape transit beneath chassis.</span></li>
+        <li><span class="nn">226</span><span><b>Re-entry requires lane alignment and centering</b> within 0.4 of image center. Parallel heading verification prevents false locks on orthogonal tape intersections.</span></li>
+        <li><span class="nn">235</span><span><b>Fault tolerance via recovery escalation.</b> Phase timeouts trigger LINE_RECOVERY rather than immediate non-recoverable HALT.</span></li>
       </ol>
     </div>
     <p class="src">The four phases are the figure on the previous slide; every constant they use is in config.py.</p>
@@ -735,12 +735,12 @@ body.doc .doconly{display:block}
     <h2 class="sh">Decision layer: priority order in decision.py</h2>
     <div class="codeslide">
       <div class="codesrc">
-        <div class="cf">decision.py · update() · lines 233 to 287, shortened</div>
+        <div class="cf">decision.py · update() · lines 239 to 293, shortened</div>
 <pre><span class="ln on">239</span>if self.state in (HALT, LINE_RECOVERY):
 <span class="ln">240</span>    return self.state
 <span class="ln on">241</span>if self.state == OBSTACLE_AVOIDANCE:
 <span class="ln">242</span>    self.update_avoidance(percept, now)
-<span class="ln">240</span>    return self.state
+<span class="ln">243</span>    return self.state
 <span class="ln on">244</span>if self.state == ROAD_RECOVERY:
 <span class="ln">245</span>    self.centered_frames = self.centered_frames + 1 if lane_found(percept) else 0
 <span class="ln">246</span>    if self.centered_frames &gt;= config.RECOVER_FRAMES:
@@ -757,12 +757,12 @@ body.doc .doconly{display:block}
 <span class="ln">293</span>    self.lane_gone(now)</pre>
       </div>
       <ol class="notes">
-        <li><span class="nn">233</span><span><b>Deterministic priority cascade.</b> Sequential conditional evaluation guarantees critical safety conditions (obstacles) pre-empt lower-priority tracking (curves).</span></li>
-        <li><span class="nn">235</span><span><b>Exclusive state ownership during maneuvers.</b> Obstacle circumvention suppresses nominal lane following until sensory or timeout completion.</span></li>
-        <li><span class="nn">238</span><span><b>Conservative re-engagement qualification.</b> Demands 5 consecutive frames with centered position and parallel heading to preclude out-of-bounds latching.</span></li>
-        <li><span class="nn">248</span><span><b>Four-frame temporal debounce.</b> Given alternating model execution, four frames guarantee two independent affirmative obstacle detections.</span></li>
-        <li><span class="nn">270</span><span><b>Schmitt-trigger hysteresis on speed transitions.</b> Enters on P(sharp) &gt;= 0.5 and exits below 0.3 to prevent limit-cycle chatter.</span></li>
-        <li><span class="nn">286</span><span><b>0.5 s tracking persistence window.</b> Bridges brief line dropouts without state change; sustained loss initiates active recovery.</span></li>
+        <li><span class="nn">239</span><span><b>Deterministic priority cascade.</b> Sequential conditional evaluation guarantees critical safety conditions (obstacles) pre-empt lower-priority tracking (curves).</span></li>
+        <li><span class="nn">241</span><span><b>Exclusive state ownership during maneuvers.</b> Obstacle circumvention suppresses nominal lane following until sensory or timeout completion.</span></li>
+        <li><span class="nn">244</span><span><b>Conservative re-engagement qualification.</b> Demands 5 consecutive frames with centered position and parallel heading to preclude out-of-bounds latching.</span></li>
+        <li><span class="nn">254</span><span><b>Four-frame temporal debounce.</b> Given alternating model execution, four frames guarantee two independent affirmative obstacle detections.</span></li>
+        <li><span class="nn">276</span><span><b>Schmitt-trigger hysteresis on speed transitions.</b> Enters on P(sharp) &gt;= 0.5 and exits below 0.3 to prevent limit-cycle chatter.</span></li>
+        <li><span class="nn">292</span><span><b>0.5 s tracking persistence window.</b> Bridges brief line dropouts without state change; sustained loss initiates active recovery.</span></li>
       </ol>
     </div>
   </div></div>
@@ -793,11 +793,11 @@ body.doc .doconly{display:block}
       <ol class="notes">
         <li><span class="nn">71</span><span><b>Proportional gain on instantaneous error.</b> Low-pass filtering lateral error introduced uncompensated phase lag and overshoot, so weight is 1.0.</span></li>
         <li><span class="nn">74</span><span><b>Derivative damping on smoothed signal.</b> Finite-difference differentiation of raw detections amplified frame noise into actuator jitter.</span></li>
-        <li><span class="nn">78</span><span><b>Anti-windup leaky integrator.</b> Accumulates tracking error in curves, decaying on straights; currently zeroed (Ki = 0) as Ki = 0.25 induced steering instability.</span></li>
+        <li><span class="nn">78</span><span><b>Anti-windup leaky integrator.</b> Accumulates error in curves, decays on straights; zeroed today, as Ki = 0.25 induced instability.</span></li>
         <li><span class="nn">82</span><span><b>Velocity-dependent gain scheduling.</b> Control gains inversely scale with forward velocity to maintain uniform closed-loop pole placement.</span></li>
-        <li><span class="nn">83</span><span><b>Model-based curvature feedforward.</b> Supplies steady-state steering bias without requiring large tracking error; direction is isolated from classification.</span></li>
+        <li><span class="nn">83</span><span><b>Model-based curvature feedforward.</b> Supplies a steady steering bias without a large tracking error; its direction comes from the classifier.</span></li>
         <li><span class="nn">85</span><span><b>Actuator slew-rate limiter.</b> Enforces a maximum steering gradient of 2.0/s, suppressing single-frame outliers and preserving mechanical stability.</span></li>
-        <li><span class="nn">87</span><span><b>Multi-constraint velocity arbitration.</b> Speed is the infimum of curvature limits and lateral error constraints, directly extensible to headway control.</span></li>
+        <li><span class="nn">87</span><span><b>Multi-constraint velocity arbitration.</b> Speed is the infimum of the curvature and lateral-error limits, extensible to headway control.</span></li>
         <li><span class="nn">143</span><span><b>Empirical actuator trim compensation.</b> Fixed offset (+0.01 left) cancels intrinsic chassis and gearbox asymmetry.</span></li>
       </ol>
     </div>
@@ -866,10 +866,10 @@ body.doc .doconly{display:block}
 <span class="ln">12</span>MIN_START_VOLTAGE = 11.4  <span class="c"># volts at rest (about 50 %) needed to start driving</span></pre>
       </div>
       <ol class="notes">
-        <li><span class="nn">1</span><span><b>Centralized configuration repository.</b> All algorithmic thresholds and parameters are externalized, ensuring parameter tuning requires zero logic changes.</span></li>
-        <li><span class="nn">2</span><span><b>Empirical provenance documentation.</b> Every constant references specific test runs, validating design choices and supporting systematic rollbacks.</span></li>
-        <li><span class="nn">3</span><span><b>Calibrated metric distance estimation.</b> Obstacle distance follows d = 405 / sqrt(A) (cm), calibrated on 139 empirical robot stops across multiple track locations.</span></li>
-        <li><span class="nn">4</span><span><b>Four-tier hardware safety watchdog:</b> pre-drive/under-load battery monitoring, 0.5 s camera frame heartbeat, 0.25 s motor update deadline, and unconditional failsafe stop.</span></li>
+        <li><span class="nn">18</span><span><b>Centralized configuration repository.</b> All algorithmic thresholds and parameters are externalized, ensuring parameter tuning requires zero logic changes.</span></li>
+        <li><span class="nn">37</span><span><b>Empirical provenance documentation.</b> Every constant references specific test runs, validating design choices and supporting systematic rollbacks.</span></li>
+        <li><span class="nn">63</span><span><b>Calibrated metric distance estimation.</b> Obstacle distance follows d = 405 / sqrt(A) (cm), calibrated on 139 empirical robot stops across multiple track locations.</span></li>
+        <li><span class="nn">8</span><span><b>Four-tier hardware safety watchdog:</b> pre-drive/under-load battery monitoring, 0.5 s camera frame heartbeat, 0.25 s motor update deadline, and unconditional failsafe stop.</span></li>
       </ol>
     </div>
     <p class="src">Safety watchdogs are mandatory across all operational software, preventing open-loop runaway execution in the event of camera pipeline failure.</p>
