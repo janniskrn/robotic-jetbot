@@ -25,6 +25,8 @@ Never: insert random typos or grammar errors, fake leftovers of a publication (a
 
 Never swap words for synonyms to make a text look different. That is exactly what paraphrasing tools do, and it leaves a trace of its own that is easy to spot ("tortured phrases"): in a checked term paper (2026-10-27) it said "Model Concept Protocol" instead of Model Context Protocol, "Controlled Vertical Dominance" instead of Regulated Verticals, "almost hard" instead of almost impossible. Technical terms, proper names and fixed phrases stay verbatim. The build is rewritten, not the vocabulary.
 
+In technical, scientific, and engineering documents (slide decks, specifications, project reports, architecture docs), standard domain terminology (e.g. *obstacle detection & distance-gated stop, circumvention maneuver, proportional-derivative controller, gain scheduling, feedforward curvature compensation, underdamped lateral oscillation, session-disjoint split, data leakage, empirical calibration, hysteresis*) is strictly required. Never replace technical terms with colloquial simplifications or conversational folk descriptions (e.g. do NOT write "backs away in pulses and learns cm", write "automated incremental empirical distance calibration ($d = 405 / \sqrt{A}$)").
+
 A language model as judge ("does this sound like AI?") is only worth using once it has been checked on known pairs. The local Qwen3.8-27B got only 3.5 of 8 right on the pairs from blind test 1 (chance would be 4) and mostly took the smoother text for the human one. Claude got the same pairs 8 of 8.
 
 ## Who does what
@@ -92,7 +94,7 @@ C. **Tell it in the order it happened.** In short texts humans order by experien
 D. **No rounded ending.** No return to the image from the beginning, no closing punchline, no framing, no call to the reader the author does not have. Humans often simply stop, in the middle of the matter.
 E. **Asides in the middle of the sentence.** Parentheses, afterthoughts, self-corrections ("well, that is not quite true") sit inside the sentence for humans. Claude moves them into paragraphs of their own or drops them.
 F. **Choose one form and carry it through.** If the material has a form (live ticker, martial-arts metaphor, letter, list), write consistently in it instead of retelling it.
-G. **Leave everyday language alone.** "approx.", "etc.", slashes, a clumsy phrase, a filler word: human in guides and lay texts. Do not iron out everything that is not wrong.
+G. **Leave everyday language alone in informal texts, but enforce engineering rigor in technical texts.** "approx.", "etc.", slashes, a clumsy phrase, a filler word: acceptable in personal guides and informal lay texts. **Exception:** In technical presentations, academic defenses, engineering documentation, and scientific evaluations, clumsy phrasing and conversational slang degrade credibility. There, use formal, precise, and unambiguous domain terminology.
 
 ## Counter-moves, group B: from StoryScope
 
@@ -119,9 +121,9 @@ In non-fiction AI reads impersonal and dense: fewer hedges, intensifiers and eva
 
 - an evaluation you can attribute ("I find it too expensive") and a real doubt ("I am not sure this holds")
 - a question to the reader or to yourself that is not answered at once
-- verbs instead of nouns: "we switched over" instead of "the implementation of the changeover"
-- a case from the author's everyday life instead of a general example
-- technical word, insider word, dialect or colloquial speech when the author talks that way
+- verbs instead of empty nouns: "we migrated" instead of "we carried out the execution of the migration"
+- a concrete test run or failure case instead of an abstract generalization
+- precise technical terms: never soften domain terminology into casual colloquialisms in engineering contexts
 
 ## Reading check
 
@@ -136,7 +138,7 @@ After the script, read aloud or half aloud. Answer each question with yes or no.
 7. Does every section have the same form (heading, three points, conclusion)? Then rebuild one.
 8. Would the author recognize the text as theirs?
 9. Are facts, names, numbers and quotes unchanged against the draft, and is nothing invented?
-10. Does a passage sound like advertising, a speech or a life lesson? Rewrite it into what the author would tell a friend.
+10. Does a passage sound like advertising, marketing puffery, or a corporate life lesson? Strip the fluff. For general personal writing, rewrite into what the author would tell a friend. For technical, academic, and engineering texts, rewrite into what an engineer or scientist writes in a peer-reviewed paper or technical evaluation: precise, formal, objective, data-backed, without conversational slang or colloquial shortcuts.
 11. Does the text end with a question to the readers that could stand under any other post ("What do you think?")? Delete. A question or request that fits only this text may stay if it comes from the material.
 12. Is there an image, a joke or an exaggeration that a careful editor would strike? If not and the tone allows it: dare one (group A, point B).
 13. Do sentence length and rhythm follow the author's voice (without a voice: the content), instead of a rule? Are there no rows of short fragments as punchlines, and no comma chains where the author writes short?

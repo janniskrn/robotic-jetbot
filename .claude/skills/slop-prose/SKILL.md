@@ -29,7 +29,7 @@ If the goal is unclear, ask what the reader should think, feel, or do after read
 - **Lead with the point when the setup adds nothing.** Cut generic throat-clearing. Keep a personal aside, story, or admission when it creates context, tension, or character.
 - **Front-load only when it improves clarity.** Put conclusions early when that helps the reader. Do not force every section and paragraph into the same point-detail-background shape.
 - **Keep the user's meaning.** Don't invent claims, examples, stats, or opinions. If something is unclear, ask.
-- **Open it up, don't dumb it down.** Keep the substance, nuance, and precision. Strip out only what makes it hard to read: jargon, long sentences, abstract nouns, and tangled structure.
+- **Open it up, don't dumb it down.** Keep the substance, nuance, and precision. Strip out empty corporate jargon and buzzwords, but **strictly preserve domain-specific engineering and scientific terminology**. Control theory, robotics, machine learning, and mathematics require exact terms (e.g. *gain scheduling, feedforward, underdamped oscillation, session-disjoint split, latency*); replacing these with colloquial lay terms is a defect.
 - **Use active voice.** "The team shipped it Tuesday" beats "the decision emerged." Never let inanimate things do human verbs.
 - **Make every sentence earn its place.** Cut empty qualifiers and throat-clearing. Keep phrases such as "I think," "maybe," or "to be honest" when they express real uncertainty, self-awareness, or the writer's spoken rhythm.
 - **Untangle sentences without flattening the cadence.** Split sentences and paragraphs when they are genuinely hard to follow. Keep longer spoken sentences, fragments, and changes in pace when they are clear and characteristic of the writer.
@@ -39,7 +39,7 @@ If the goal is unclear, ask what the reader should think, feel, or do after read
 - **Protect the specific fact.** Don't smooth a useful detail into generic importance. "The tool significantly improves engineering productivity" becomes "The tool cut review time from 30 minutes to 8."
 - **Make verbs do the work.** Replace weak verb phrases with direct verbs. "Made a decision" becomes "decided." "Has the ability to" becomes "can."
 - **Know the job.** Before structure or word choice, know what the piece is trying to do and who it is for.
-- **Preserve useful edge and character.** Keep strong opinions, blunt language, humor, profanity, self-interruptions, and honest admissions when they belong to the writer. Don't replace them with safer or more professional wording.
+- **Preserve useful edge and character while matching the required register.** Keep strong opinions and honest admissions about failures. In technical and academic engineering drafts, maintain a formal, rigorous, and professional tone; do not inject casual slang or conversational filler.
 - **Keep structure unless it's hurting the piece.** Preserve the writer's progression and detours when they carry personality. If you reorganize, say why in the What changed section.
 
 ## Words to cut

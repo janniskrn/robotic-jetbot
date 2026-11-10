@@ -1,6 +1,6 @@
 ---
 name: presentation-html
-description: Build a presentation as one self-contained HTML file with a deck mode, a doc mode and a print mode that gives a PDF of either. Carries the running order, the visual directions to choose between, the sizing architecture and its doc-mode twin rule, the rules that keep numbers honest in front of a room, the reusable blocks, the static pass that checks the file without a browser, how to run a correction round, and the traps that each cost a rebuild. Use whenever a talk, slide deck, lecture, pitch, defence or conference presentation is being planned, outlined, restructured, styled, built, corrected, reviewed or published,. Also read it before picking a look for one, before a final review, and before publishing one as an Artifact. Says what NOT to build: no slide framework, no second artifact, no interaction a projector cannot use.
+description: Build a presentation as one self-contained HTML file with a deck mode, a doc mode and a print mode that gives a PDF of either. Carries the running order, the visual directions to choose between, the sizing architecture and its doc-mode twin rule, the rules that enforce technical engineering precision and verifiable numbers in front of a room, the reusable blocks, the static pass that checks the file without a browser, how to run a correction round, and the traps that each cost a rebuild. Use whenever a talk, slide deck, lecture, pitch, defence or conference presentation is being planned, outlined, restructured, styled, built, corrected, reviewed or published. Also read it before picking a look for one, before a final review, and before publishing one as an Artifact. Says what NOT to build: no slide framework, no second artifact, no interaction a projector cannot use.
 ---
 
 # A presentation is one HTML file
@@ -463,9 +463,11 @@ a national budget, that budget is a bar on the chart, drawn as an outline becaus
 not the subject's money. A comparison that exists only in the sentence makes the chart
 look like it is hiding something.
 
-**No proper noun the room cannot place.** A second site "near Rostock" is fine.
+**No obscure proper noun the room cannot place.** A second site "near Rostock" is fine.
 "Dummerstorf" is a question from the audience. A failed project referred to by its
-internal codename is the same. Give it a clause or take it out.
+internal codename is the same: give it an explanatory clause or take it out.
+In contrast, standard engineering domain acronyms and architectural terms (e.g. PID,
+I2C, ResNet, TensorRT, MAE, HSV) are expected technical vocabulary and must be used.
 
 **Say where a number came from when it is not a filing.** *"Press research, not an audited
 company disclosure"* on the slide costs six words and converts the sharpest question in
@@ -500,12 +502,35 @@ existed to produce. Anything beyond the list is decoration a projector cannot us
   document for a public one before the deck leaves the machine, and say in the notes why.
 - Simplest path first. A working page beats a perfect plan.
 
-## Prose
+## Prose and Technical Register
 
-Run `stop-slop` and `no-ai-slop` over every visible string, and keep the result that way
-when editing. In slide copy specifically: **no em dashes** (they survive fine in code
-comments), no banned vocabulary, and no sentence that would not be said out loud in front
-of the room.
+Slide copy must match the audience and domain: **engineering, technical, and academic presentations require a rigorous, professional, and mathematically exact register**, not colloquial conversational speech or over-simplified lay explanations.
+
+### 1. Academic & Engineering Tone
+A technical presentation is evaluated by professors, domain experts, and technical peers. The prose must be concise, dense with information, and linguistically precise:
+- **Use established domain terminology**: Control theory, robotics kinematics, perception algorithms, and systems engineering have precise standard vocabulary. Never replace established technical terms with colloquial approximations:
+  - Use *Obstacle detection & distance-gated stop*, never *Stop in front of a cup*.
+  - Use *Obstacle circumvention maneuver*, never *Drive around the cup*.
+  - Use *5 of 9 completed lane re-entries*, never *5 came back*.
+  - Use *Underdamped lateral oscillation / limit-cycle steering instability*, never *A growing swing*.
+  - Use *Session-disjoint train/validation split (prevents temporal data leakage)*, never *The split that keeps the numbers honest*.
+  - Use *Automated incremental empirical distance calibration ($d = 405 / \sqrt{A}$)*, never *Backs away in pulses and learns cm*.
+  - Use *Tri-modal recovery architecture (historical path undo, angular sweep, translational search)*, never *Searches in small steps with motors off*.
+  - Use *Feedforward curvature compensation*, never *A steady turn for the curve*.
+- **Never colloquialise technical mechanisms**: Explaining an engineering mechanism does not mean talking down to the audience or speaking like a casual blog post. Avoid conversational filler, chatty phrasing (*"here is what happened"*, *"honest numbers"*), and folk metaphors.
+- **Precision over storytelling**: Technical slides are not fireside chats. Describe inputs, states, algorithms, failure modes, and quantitative tolerances directly.
+- **Objective failure reporting**: Frame anomalies technically (e.g. *OOM crash & GStreamer camera buffer stall*, *Open-loop yaw overshoot (≈ 130 deg vs. 45 deg nominal) due to uncalibrated angular rate*, *Sensor occlusion during close-range proximity*).
+
+### 2. Distinguish AI Slop from Engineering Precision
+Eliminating "AI slop" means stripping out empty promotional fluff, generic corporate buzzwords, and dramatic staging:
+- **Banned AI fluff**: *delve, foster, leverage, utilize, facilitate, empower, streamline, robust, cutting-edge, paradigm shift, game changer, tapestry, realm, beacon, multifaceted, meticulous, intricate, paramount, transformative, elevate, embark, supercharge, harness, ever-evolving*.
+- **Mandatory engineering vocabulary**: Terms such as *deterministic, stochastic, covariance, gain scheduling, derivative damping, latency, bandwidth, hysteresis, occlusion, threshold, convergence, serialization, regression, classification, telemetry, MAE, infimum, fail-safe* are essential technical tools, NOT buzzwords. Never delete or soften them.
+
+### 3. Syntax, Formatting, and Punctuation
+- **No em dashes (—) or en dashes (–) in slide copy**: Strictly forbidden in visible HTML text (verified by static check scripts). Use standard ASCII hyphens `-`, colons `:`, slashes `/`, or parentheses `(...)`.
+- **Information density**: State the physical/algorithmic fact first, followed by the specific measurement, failure case, or code citation.
+- **Numbers carry context**: Every metric carries its unit, sample size, or test run (e.g. *14 of 18 completed runs*, *MAE = 0.022*, *35 to 40 cm stopping headway*).
+- **Technical acronyms vs. proper nouns**: Obscure internal codenames require explanation or removal, but standard domain acronyms (PID, I2C, ResNet, TensorRT, MAE, HSV) are standard currency and expected by technical evaluators.
 
 ## The static pass
 
