@@ -84,7 +84,7 @@ Then, in document mode only, the appendix: the complete source of the seven driv
 
 ## The weekly update, in order
 
-Most weeks only the first four steps change anything.
+Most weeks only the first five steps change anything.
 
 1. **Roadmap** (`<div class="cards">`): when a week is demonstrated, move its card from `card locked` to
    `card open`, give it an id, and wire it in the script next to `card-w1`. Set the state line and its dot
@@ -94,14 +94,29 @@ Most weeks only the first four steps change anything.
    label to three words.
 3. **Last week** (slide 2, `.week`): four `.wday` blocks, oldest first. Class `good`, `bad` or `now` colors
    the top rule. One date line, one headline, one sentence. If a week had five events, cut the weakest.
-4. **Failures** (slide 18, `.chains`): one `.chain` per failure, three boxes: `c-sym` what we saw, `c-why` the
+4. **What changed since last week** (every week, two of them, no exceptions): one change in the approach
+   and one in the code. Each is written as **what it was, what it is now, and why it moved**: we changed the
+   approach, we fixed a fault, or we improved something that already worked. A week with no change in the
+   code is a week we cannot show, so if nothing comes to mind, read the week's commits and `DECISIONS.md`
+   again: the change is there, it just was not written down.
+
+   | | The approach one | The code one |
+   | :--- | :--- | :--- |
+   | What it was | how we solved it before | the function or constant as it stood |
+   | What it is now | what we do instead | what it does now |
+   | Why | the run, the number or the failure that forced it | the same, with the file and line |
+
+   Week 2 had both: the cup's distance moved from the model's guess to the band's measured size (approach),
+   and the swerve's marks moved from the lane tape to the cup itself (code, `decision.py update_avoidance`).
+   Reuse the `.chain` boxes of the failure slide, or give it its own slide when the two are large.
+5. **Failures** (slide 18, `.chains`): one `.chain` per failure, three boxes: `c-sym` what we saw, `c-why` the
    cause, `c-fix` the fix. Use `c-open` instead of `c-fix` while the cause is unknown, and say so out loud.
-5. **Next** (slide 19, `.steps`): one `.step` per step with its pass condition. Add `block` to the step that
+6. **Next** (slide 19, `.steps`): one `.step` per step with its pass condition. Add `block` to the step that
    blocks other tasks.
-6. **Code slides** (5 to 13): run `build_appendix.py`, then `check.py week2.html --fix`. Moved lines
+7. **Code slides** (5 to 13): run `build_appendix.py`, then `check.py week2.html --fix`. Moved lines
    are renumbered for you; the few whose code really changed are listed, and those are the only ones to
    read and rewrite by hand. This is a weekly job, not an occasional one: the code moves every week.
-7. **Numbers**: only if a new run happened. Sources are listed below.
+8. **Numbers**: only if a new run happened. Sources are listed below.
 
 ## Where every number comes from
 
