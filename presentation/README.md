@@ -9,6 +9,9 @@ Open it in a browser, present from it, print it to PDF. It is committed, so a `g
 | `week1.html`, `week1.pdf` | The 2 November deck (Week 1), presented last time and kept for the record |
 | `index_v3.html`, `index_v2.html`, `index.html` | Legacy filenames, kept for reference |
 
+**[`SPEAKING.md`](SPEAKING.md) is what to say**, slide by slide, with the four-step story of the program at
+the top. The slides carry the evidence; that file carries the words. Read it before presenting, not during.
+
 Rhythm and course rules: [`WEEKLY.md`](../WEEKLY.md). Look: [`design/THEME.md`](../design/THEME.md), locked.
 
 ## The structure the professor asked for
@@ -108,7 +111,11 @@ claims more than the logs do, and anything measured in a test script says so.
 
 ## Code slides
 
-A code slide is the real file on the left and notes on the right, and **every note is anchored to a line
+A code slide starts with one plain sentence saying **what the file is responsible for** (`p class="role"`),
+because a listing without that is a wall of lines. The four files have one job each, named the same way every
+time: `drive.py` is the loop, `perception.py` the eyes, `decision.py` the brain, `control.py` the hands.
+
+Below it, the real file on the left and notes on the right, and **every note is anchored to a line
 number**. The gutter prints the file's own numbering, so the excerpt proves its position and a jump in the
 numbers shows plainly where lines were left out. A note that cannot name a line is a note about nothing;
 rewrite it until it can.
