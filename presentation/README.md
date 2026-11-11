@@ -9,6 +9,9 @@ Open it in a browser, present from it, print it to PDF. It is committed, so a `g
 | `week1.html`, `week1.pdf` | The 2 November deck (Week 1), presented last time and kept for the record |
 | `index_v3.html`, `index_v2.html`, `index.html` | Legacy filenames, kept for reference |
 
+**[`BRIEF.md`](BRIEF.md) is the answer to "what have you done"**: the argument in six parts, with the
+numbers, the failures and their causes. Read it the evening before.
+
 **[`SPEAKING.md`](SPEAKING.md) is what to say**, slide by slide, with the four-step story of the program at
 the top. The slides carry the evidence; that file carries the words. Read it before presenting, not during.
 
