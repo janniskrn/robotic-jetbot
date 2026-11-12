@@ -5,6 +5,20 @@ LINE2), `PLAN.md` section 6 step S1, `notebooks/mini_av/STATE_MACHINE.md`.
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
+## Update 2026-11-11 (SIT1: where the robot is, professor's "broader picture")
+
+- `situation.py` (committed as work in progress, not used by driving yet): traces the tape over the whole floor part
+  of the image, near and far, pairs two lines into a lane; zone (in lane, on a line, lane to the left/right, line ahead,
+  one line only, no lane), lane center, lane direction. Check: 98 % of 984 recorded frames with a sure, aligned lane read
+  "in lane". Team review of 100 JPEG frames: 82 right (pass 90); most misses were faint far lines.
+- Resolution test (3 spots, `usb/images/situation_res_test/compare.jpg`): 448 or 616 pixels add little; the JPEG
+  compression of our recordings hides the faint far lines. The robot itself works on uncompressed frames, so it
+  should do better live than the review showed (only 3 spots, to confirm).
+- Proposed, no go yet: (1) keep 224; (2) draw the lines and zone live in `05_camera_check.ipynb` so the team checks it
+  on the track; (3) save test recordings as PNG; then step 2, the short memory, and the `REJOIN` state.
+- New: `05_camera_check.ipynb` (live camera next to the spot pictures). Tools: `usb/logs/session_tools_2026-11-11/`.
+- Still open from before: the team reported the start from `04_drive.ipynb` did not work; not analysed yet.
+
 ## Where we are (commit `092b97d`, all pushed; only the widget ID in `04_drive.ipynb` is left uncommitted on purpose)
 
 - **Cup distance:** from the red band's size, cm = 405 / sqrt(pixels) (`OBST9`), learned with `cup_learn.py` in 5 places.
