@@ -352,7 +352,7 @@ body.doc .doconly{display:block}
 <!-- ════════ ROADMAP ════════ -->
 <div class="roadmap" id="roadmap">
   <div class="rm-head">
-    <div class="rm-eyebrow">Mini autonomous vehicle · team A · 9 November</div>
+    <div class="rm-eyebrow">Mini autonomous vehicle · team A · 17 November</div>
     <h1>Week 3: the robot estimates where it is relative to the lane.</h1>
     <p>Six weeks, eight tasks. Open week 1 for the architecture, the source code of every main part, the results and the plan. Open week 3 for what changed since the last demonstration.</p>
   </div>
@@ -1542,11 +1542,11 @@ body.doc .doconly{display:block}
 <span class="ln on">87</span>    return seen[&#39;zone&#39;] == &#39;in lane&#39; and abs(seen[&#39;center&#39;]) &lt;= IN_LANE_CENTER</pre>
         <div class="cf">find_lane.py · found() and confirmed() · lines 164 to 172</div>
 <pre><span class="ln">164</span>def found(self, test, percept):
-<span class="ln on">166</span>    return (test(percept) and tape_close(self.frame)) or in_lane(percept, self.frame)
+<span class="ln on">166</span>    return (test(percept) and tape_close(self.frame)) or in_lane(...
 <span class="ln">168</span>def confirmed(self, test, percept):
 <span class="ln">170</span>    if not self.found(test, percept):
 <span class="ln">171</span>        return False
-<span class="ln on">172</span>    return all(self.found(test, self.observe_next()) for _ in range(CONFIRM_FRAMES))</pre>
+<span class="ln on">172</span>    return all(self.found(test, self.observe_next()) for _ in...</pre>
       </div>
       <ol class="notes">
         <li><span class="nn">84</span><span><b>Lane model gate at 0.6.</b> The learned model must see a lane; the script then measures where it lies.</span></li>
@@ -1579,7 +1579,7 @@ body.doc .doconly{display:block}
     </div>
     <div class="spacer"></div>
     <p>Review errors were mostly faint far boundaries, 1 to 2 px wide. The robot runs on uncompressed frames: the next check is live, on the track.</p>
-    <p class="src">Review sheets usb/images/situation_check_2026-11-11; resolution test usb/images/situation_res_test (spots 1 to 3, 224, 448, 616 px). Frames left to right: run line1_1, recovery 9 Nov stop 11, resolution test spot 3.</p>
+    <p class="src">Frames left to right: run line1_1, recovery of 9 Nov, resolution test spot 3.</p>
   </div></div>
 </section>
 
