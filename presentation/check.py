@@ -232,7 +232,7 @@ def main():
     if checker.bad:
         fail('closing tag with no opener: %s' % ', '.join('%s (line %d)' % t for t in checker.bad))
 
-    slides = len(re.findall(r'<section>', page))
+    slides = len(re.findall(r'<section[ >]', page))
     eyebrows = len(re.findall(r'class="eyebrow"', page))
     if eyebrows > max(1, slides // 3):
         fail('%d eyebrows on %d slides: at most one per three' % (eyebrows, slides))
