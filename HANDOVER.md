@@ -5,6 +5,18 @@ LINE2), `PLAN.md` section 6 step S1, `notebooks/mini_av/STATE_MACHINE.md`.
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
+## Update 2026-11-16 (robot charging, camera-free work)
+
+- The team's `04_drive.ipynb` runs of 2026-11-10 were fine as a program (newest code, all swerves came back); they
+  looked broken because the line recovery searched 25-40 s after lane losses in curves, rejecting the lane (two-line
+  check fails in curves). Fix `SIT2`: the recovery also accepts `situation.py` reading 'in lane' near the center
+  (offline: 13 of 18 recorded recoveries would find the lane instead of 6). The undo worked twice on the track (about 2 s).
+- `05_camera_check.ipynb` now shows the found lines and the zone live (`SIT3`). JPEG hides the faint far lines even at
+  quality 100, so recovery stops are saved as PNG; drive recordings stay JPEG.
+- Next with the robot: the team checks the zone live by moving the robot around the track; then a drive run to see the
+  new recovery acceptance. Open: two lines both leaning the same way (robot at a sharp angle to the lane) are not
+  paired (spot 2 of the resolution test); step 2, the short memory, and the `REJOIN` state.
+
 ## Update 2026-11-11 (SIT1: where the robot is, professor's "broader picture")
 
 - `situation.py` (committed as work in progress, not used by driving yet): traces the tape over the whole floor part
