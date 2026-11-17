@@ -25,6 +25,7 @@ import config
 import lane_mask
 from control import turn_speed
 from decision import band_cm, lane_found
+import situation
 from recorder import DATASET_ROOT
 from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
 
@@ -54,7 +55,10 @@ BOTTOM_ROW = 0.93     # fraction of the image height from which tape counts as a
 WARMUP_FRAMES = 5     # model calls with the motors off (the first call took up to 1.1 s)
 FOUND = ('undo', 'sweep', 'search', 'search_any')  # results of run() with the lane found
 KEPT_DIRECTION = ('undo', 'sweep', 'search')       # those with the robot still driving the same way along the lane
-STOP_COLUMNS = ['stop', 'stage', 'heading', 'lane_visible', 'lane_x', 'lane_aligned', 'tape_row', 'tape_close']
+IN_LANE_CENTER = 0.7  # the lane-position measurement (situation.py) counts the lane as found when it reads 'in lane' with
+                      # the lane center this close to the nose: 13 of 18 recorded recoveries would have found the lane
+                      # (6 with the older rules alone); further off, the robot stood at an angle at the border (SIT2)
+STOP_COLUMNS = ['stop', 'stage', 'heading', 'lane_visible', 'lane_x', 'lane_aligned', 'tape_row', 'tape_close', 'zone']
 
 
 class StopRecovery(Exception):
@@ -71,6 +75,16 @@ def lane_back(percept):
     """True if the lane is seen again after the undo: the driving direction is known, so the two-line check (which a
     curve can fail) is not needed"""
     return percept['lane_visible'] >= UNDO_SURE and abs(percept['lane_x']) < config.TURN_IN_CENTERED
+
+
+def in_lane(percept, frame):
+    """True if the lane-position measurement sees the robot in the lane near its center and the lane model sees the
+    lane. The older rules need both lines one lane width apart at one row, which curves fail (notebook runs of
+    2026-11-10: rejected at lane model 0.90 and 0.94, then 25-40 s of search)"""
+    if percept['lane_visible'] < UNDO_SURE:
+        return False
+    seen = situation.situation(frame)
+    return seen['zone'] == 'in lane' and abs(seen['center']) <= IN_LANE_CENTER
 
 
 def tape_close(frame):
@@ -133,7 +147,7 @@ class FindLane(object):
         self.rows.append(dict(stop=self.stops, stage=self.stage, heading=self.heading,
                               lane_visible=round(percept['lane_visible'], 3), lane_x=round(percept['lane_x'], 3),
                               lane_aligned=int(percept['lane_aligned']), tape_row=lane_mask.tape_row(self.frame),
-                              tape_close=int(tape_close(self.frame))))
+                              tape_close=int(tape_close(self.frame)), zone=situation.situation(self.frame)['zone']))
         self.stops += 1
         return percept
 
@@ -146,11 +160,15 @@ class FindLane(object):
         self.heading -= direction
         return self.look()
 
+    def found(self, test, percept):
+        """True if the lane is here: the older test with tape close ahead, or the lane-position measurement"""
+        return (test(percept) and tape_close(self.frame)) or in_lane(percept, self.frame)
+
     def confirmed(self, test, percept):
-        """True if the test holds for this look and the next CONFIRM_FRAMES frames"""
-        if not (test(percept) and tape_close(self.frame)):
+        """True if the lane is found in this look and the next CONFIRM_FRAMES frames"""
+        if not self.found(test, percept):
             return False
-        return all(test(self.observe_next()) and tape_close(self.frame) for _ in range(CONFIRM_FRAMES))
+        return all(self.found(test, self.observe_next()) for _ in range(CONFIRM_FRAMES))
 
     def cup_blocks(self, percept):
         return any(band_cm(band) <= CUP_STOP_CM and abs(band[0]) < CUP_STOP_X for band in percept['cup_bands'])
