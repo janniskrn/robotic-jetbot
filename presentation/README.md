@@ -5,7 +5,8 @@ Open it in a browser, present from it, print it to PDF. It is committed, so a `g
 
 | File | What it is |
 | :--- | :--- |
-| `week2.html` | **The current deck (Week 2, 9 Nov).** Follows the professor's presentation guideline: architecture, source code, explanation, results, next plan |
+| `week3.html` | **The current deck (Week 3, 17 Nov).** Same structure as week 2, 25 slides: adds the two changes against last week (slide 4), the localization code (`situation.py`, slide 9), the recovery acceptance code (`find_lane.py`, slide 15) and the localization results (slide 22). No PDF yet: the robot's Chromium 87 cannot render `cqw` units; print it from the laptop |
+| `week2.html`, `week2.pdf` | The 10 November deck (Week 2), kept for the record |
 | `week1.html`, `week1.pdf` | The 2 November deck (Week 1), presented last time and kept for the record |
 | `index_v3.html`, `index_v2.html`, `index.html` | Legacy filenames, kept for reference |
 
