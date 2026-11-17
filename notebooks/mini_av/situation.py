@@ -185,6 +185,33 @@ def lane_pair(lines):
     return best
 
 
+def picture(bgr):
+    """The camera picture, twice as large, with what situation() finds drawn on it, for the team to check: yellow =
+    lines running away (cyan: only far), green = tape across the view, red = the two lines taken as the lane, red dot =
+    the lane center at the nose, pink triangle = the nose; the zone written at the top"""
+    seen = situation(bgr)
+    scale = 2
+    image = cv2.resize(bgr, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+    height = bgr.shape[0]
+    for line in seen['lines']:
+        color = (0, 230, 255) if line['bottom'] >= NEAR_TOP * height else (255, 255, 0)
+        for row, x in line['points']:
+            cv2.circle(image, (int(x * scale), int(row * scale)), 3, color, -1)
+    for line in seen['across']:
+        for column, row in line['points']:
+            cv2.circle(image, (int(column * scale), int(row * scale)), 3, (0, 255, 0), -1)
+    for line in seen['pair'] or ():
+        top, bottom = line['top'], height - 1
+        cv2.line(image, (int(x_at(line, top) * scale), int(top * scale)),
+                 (int(x_at(line, bottom) * scale), int(bottom * scale)), (0, 0, 255), 2)
+    if seen['center'] is not None:
+        cv2.circle(image, (int((seen['center'] + 1) * bgr.shape[1] / 2.0 * scale), height * scale - 6), 6, (0, 0, 255), -1)
+    cv2.drawMarker(image, (NOSE_X * scale, height * scale - 6), (255, 0, 255), cv2.MARKER_TRIANGLE_UP, 16, 3)
+    cv2.rectangle(image, (0, 0), (image.shape[1], 26), (255, 255, 255), -1)
+    cv2.putText(image, seen['zone'], (6, 19), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+    return image
+
+
 def situation(bgr):
     """Returns a dict: zone, center, heading (see the module text), lines, across and pair (for pictures)"""
     height = bgr.shape[0]

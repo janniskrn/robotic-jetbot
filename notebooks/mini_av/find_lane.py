@@ -11,7 +11,7 @@
        a lane more than about 130 degrees from the heading at the start of the search is the wrong way along it and only
        counts in the last round. No forward pulse with a cup close ahead: that heading is skipped.
 
-Saves every stop and a stops.csv to usb/images/datasets/<time>_find_lane. Run inside the container.
+Saves every stop (PNG) and a stops.csv to usb/images/datasets/<time>_find_lane. Run inside the container.
 """
 
 import csv
@@ -143,7 +143,8 @@ class FindLane(object):
         self.frame = wait_for_new_frame(self.camera, self.camera.value)
         for _ in range(4):  # the obstacle and curve models run on every second frame
             percept = self.observe_next()
-        cv2.imwrite(os.path.join(self.out, 'frame_%05d.jpg' % self.stops), self.frame)
+        # PNG: JPEG loses the faint far tape that situation.py uses (even at quality 100; check 2026-11-16)
+        cv2.imwrite(os.path.join(self.out, 'frame_%05d.png' % self.stops), self.frame)
         self.rows.append(dict(stop=self.stops, stage=self.stage, heading=self.heading,
                               lane_visible=round(percept['lane_visible'], 3), lane_x=round(percept['lane_x'], 3),
                               lane_aligned=int(percept['lane_aligned']), tape_row=lane_mask.tape_row(self.frame),
