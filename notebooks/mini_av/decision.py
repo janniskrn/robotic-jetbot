@@ -1,22 +1,14 @@
-"""Decision: the state machine (Task 6). Which state the robot is in, from what perception sees.
+"""Decision: the state machine (Task 6). Picks the robot's state from what perception sees.
 
-States (names from PROJECT_GUIDE_1.md), highest priority first; the full table with entry condition, action,
-exit condition and priority, plus the diagram, is in STATE_MACHINE.md and must stay in step with this file.
-    HALT                lane lost, recovery timeout, a turn of the swerve that does not reach its camera mark in time
-                        (battery and camera stops are in drive.py): the run ends
-    OBSTACLE_AVOIDANCE  a cup is close ahead in the lane: swerve to the inside of the oval in AVOID_PHASES (stop, turn
-                        90 degrees, curve around the cup, turn back onto the lane; control.avoid), the turns and the
-                        curve each ended by a camera mark; a turn back that went past the lane turns the other way
-                        (TURN_BACK)
-    LINE_RECOVERY       the lane is lost: the robot finds it again in small steps (find_lane.py), then follows it
-    ROAD_RECOVERY       after the swerve: steer on the lane until it is seen near the center and aligned for a few steps;
-                        a cup still close ahead starts a new swerve
-    STOP                required stop: with stop_only, brake, back up if the cup is too close, wait until it is gone
-    SLOW_DOWN           sharp curve ahead, or a cup in the lane within about 60 cm: lane following with the speed
-                        capped
+States, highest priority first (table and diagram: STATE_MACHINE.md, keep it in step with this file):
+    HALT                the run ends (no lane at the start, recovery failed, a cup in the way of the swerve)
+    OBSTACLE_AVOIDANCE  a cup close ahead: swerve around it on the inside of the oval (AVOID_PHASES)
+    LINE_RECOVERY       the lane is lost: find_lane.py looks for it, drive.py runs it
+    ROAD_RECOVERY       after the swerve: steer onto the lane until it is centered and aligned
+    STOP                stop_only mode: wait in front of the cup until it is gone
+    SLOW_DOWN           sharp curve or a cup ahead: lane following with the speed capped
     ROAD_FOLLOWING      normal lane following
-Planned, not coded until their perception exists: TURN_LEFT / TURN_RIGHT (intersection + sign), PARKING,
-STOP for a STOP sign.
+Planned: TURN_LEFT / TURN_RIGHT (intersection + sign), PARKING, STOP for a STOP sign.
 """
 
 import math
@@ -32,40 +24,48 @@ STOP = 'STOP'
 HALT = 'HALT'
 FOLLOWING = (ROAD_FOLLOWING, SLOW_DOWN)  # the states that follow the lane with the normal controller
 AVOID_PHASES = ('brake', 'turn_out', 'arc', 'turn_in')  # the swerve (AVOID3), in this order
-TURN_BACK = 'turn_back'  # extra swerve phase after turn_in: it went past the lane, turn the other way (TURN1)
-STOP_PHASES = ('brake', 'back', 'wait')  # standing in front of a cup: back only when it is too close, once
+TURN_BACK = 'turn_back'  # extra phase: turn_in went past the lane, turn the other way (TURN1)
+STOP_PHASES = ('brake', 'back', 'wait')  # standing in front of a cup: back up once if it is too close
+PHASE_LIMITS = {'brake': config.AVOID_BRAKE, 'turn_out': config.TURN_OUT_MAX, 'arc': config.ARC_MAX,
+                'turn_in': config.TURN_IN_MAX, TURN_BACK: config.TURN_BACK_MAX}  # seconds before the lane counts as lost
+
+
+# --- what the camera shows, as yes/no tests (HYBRID: the models recognize, the color masks measure) ---
+
+def sees_lane(percept):
+    return percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD
 
 
 def band_cm(band):
-    """Distance in cm to a red band (x, row, pixels), from its size in the image (OBST9). A band cut off by the lower
-    image edge counts as 0: it looks small, but the cup is right in front of the robot"""
+    """Distance in cm to a red band (x, row, pixels) from its size (OBST9). Cut off by the image edge: 0, right in front"""
     return 0.0 if band[1] >= config.BAND_CUT_ROW else config.CUP_SIZE_CM / math.sqrt(band[2])
 
 
 def cup_ahead(percept):
-    """The nearest red band (x, row, pixels) in the robot's way, or None: about where the lane is, or straight in front of
-    the robot (a close cup hides the lane). A band beside the lane, or a second cup behind the first, does not count
-    (HYBRID: the cup mask measures, the lane model says where the lane is)"""
-    lane_seen = percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD
+    """The nearest red band in the robot's way (in the lane, or straight ahead: a close cup hides the lane), or None"""
     for band in percept['cup_bands']:  # nearest first
-        if abs(band[0]) < config.CUP_DEAD_AHEAD or (lane_seen and abs(band[0] - percept['lane_x']) < config.CUP_IN_LANE):
+        if abs(band[0]) < config.CUP_DEAD_AHEAD or (sees_lane(percept)
+                                                     and abs(band[0] - percept['lane_x']) < config.CUP_IN_LANE):
             return band
     return None
 
 
 def cup_close(percept):
-    """True if the obstacle model sees a cup and the cup mask measures the nearest one in the way at or closer than
-    the trigger distance. The model's own row was up to 28 rows off with people behind the cup (S1d1)"""
+    """True if the obstacle model sees a cup and the nearest one in the way is within the trigger distance"""
     cup = cup_ahead(percept)
     return (percept['cup_visible'] >= config.OBSTACLE_VISIBLE_THRESHOLD
             and cup is not None and band_cm(cup) <= config.OBSTACLE_CM)
 
 
 def cup_near(percept):
-    """True if the nearest cup in the way is within the approach distance. The cup mask alone: at 50-70 cm the obstacle
-    model finds only 71-88 % of the cups (OBST8), and slowing down for nothing is harmless"""
+    """True if a cup in the way is within the approach distance (cup mask alone: the model misses far cups, OBST8)"""
     cup = cup_ahead(percept)
     return cup is not None and band_cm(cup) <= config.APPROACH_CM
+
+
+def cup_gone(percept):
+    """True if no red band is within the clear distance anywhere (the cup can hide the lane, so no lane needed)"""
+    return all(band_cm(band) > config.OBSTACLE_CLEAR_CM for band in percept['cup_bands'])
 
 
 def near_band(percept):
@@ -75,95 +75,84 @@ def near_band(percept):
 
 
 def cup_left_view(last_x, band, toward):
-    """True if the cup was last seen near the image edge away from the turn and is gone now: the robot has turned
-    about 70-85 degrees (it turns on a little after). Refers to the cup, so it works in curves too (AVOID4)"""
+    """True if the cup was last seen at the image edge away from the turn and is gone now: about 70-85 degrees turned"""
     return band is None and last_x is not None and -toward * last_x >= config.CUP_EDGE
 
 
 def cup_beside_curve(band, toward):
-    """True if the cup is in view on the side the curve bends to (or in front): the curve would close in front of the
-    cup, so the robot drives straight past it first (AVOID4; the runs that hit the cup saw it come back into view)"""
+    """True if the cup is in view on the side the curve bends to (or in front): drive straight past it first"""
     return band is not None and -toward * band[0] > -0.1
 
 
 def cup_in_the_way(band):
-    """True if a band is very close in the middle of the image during the curve: stop rather than hit it (a second cup,
-    or the curve went wrong)"""
+    """True if a band is very close in the middle of the image during the curve: stop rather than hit it"""
     return band is not None and band_cm(band) <= config.ARC_STOP_CM and abs(band[0]) < config.ARC_STOP_X
 
 
-def cup_gone(percept):
-    """True if no red band is within the clear distance anywhere: standing in front of the cup, it can hide the lane,
-    so this must not need the lane"""
-    return all(band_cm(band) > config.OBSTACLE_CLEAR_CM for band in percept['cup_bands'])
-
-
 def reached_horizontal(angle, direction, early):
-    """True if a turn (direction -1 left, +1 right) has brought the lane edge ahead to within `early` degrees before
-    horizontal (lane_mask.tape_angle): turning left its angle rises toward 0, turning right it falls. A window, not
-    a limit: a lane line leaning the other way (+39 degrees at one start) must not end a left turn"""
+    """True if a turn (direction -1 left, +1 right) brought the lane edge ahead to within `early` degrees before
+    horizontal. A window, not a limit: a line leaning the other way must not end the turn"""
     return angle is not None and 0 <= direction * angle <= early
 
 
 def edge_left_view(last, angle, direction):
-    """True if the lane edge, last seen within TURN_LOST degrees of horizontal, has left the image: it is gone, or the
-    largest piece is now another, steeper one. The robot then stands close to the edge, which is horizontal below the
-    camera's view (run avoid3_ccw_1)"""
+    """True if the lane edge, last seen close to horizontal, has left the image (gone, or another steeper piece now)"""
     return (reached_horizontal(last, direction, config.TURN_LOST)
             and (angle is None or direction * angle > direction * last + config.TURN_JUMP))
 
 
 def lane_found(percept, centered=config.RECOVER_CENTERED):
-    """True if the lane is seen within `centered` of the middle and the robot points along it. lane_x alone was near 0
-    when the robot stood crosswise to the lane (run avoid_ccw_1); the lane mask's two-line check rejects that"""
-    return (percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD and percept['lane_aligned']
-            and abs(percept['lane_x']) < centered)
+    """True if the lane is seen within `centered` of the middle and the robot points along it (two-line check)"""
+    return sees_lane(percept) and percept['lane_aligned'] and abs(percept['lane_x']) < centered
+
+
+def lane_near(percept):
+    """True if the lane model is sure and sees the lane near the middle, without the two-line check (curves fail it)"""
+    return percept['lane_visible'] >= config.TURN_BACK_SURE and abs(percept['lane_x']) < config.TURN_IN_CENTERED
 
 
 def bends_our_way(percept, direction):
-    """True if the curve model sees the lane bend the way the robot drives the oval (DIR1): a lane seen in a curve is
-    then the robot's lane, taken the right way. The two-line check fails in curves (run 2026-11-19_05-21-50: the turn
-    back spun 2 s on a sure, centered lane in the sharp curve)"""
+    """True if the curve model sees the lane bend the way the robot drives the oval (DIR1): it is our lane"""
     probs, turn = percept['curve_probs'], percept['curve_dir']
     return (direction is not None and probs[1] + probs[2] >= 0.5 and abs(turn) >= config.DIRECTION_MIN_DIR
             and (turn > 0) == (direction == 'cw'))
 
 
-def lane_near(percept):
-    """True if the lane model is sure and sees the lane near the middle, without the two-line check (curves fail it).
-    Only where the robot turns toward the lane along its driving direction (TURN_BACK)"""
-    return (percept['lane_visible'] >= config.TURN_BACK_SURE
-            and abs(percept['lane_x']) < config.TURN_IN_CENTERED)
+def count(frames, condition):
+    """Steps in a row with the condition true"""
+    return frames + 1 if condition else 0
 
 
 class Decision(object):
     def __init__(self, stop_only=False, pass_side=None, line_recovery=False):
         """stop_only: wait in front of a cup (STOP) instead of avoiding it.
-        pass_side: 'left' or 'right' to fix the side; None takes the inside of the oval from the driving direction.
+        pass_side: 'left' or 'right' to fix the side; None takes the inside of the oval.
         line_recovery: find a lost lane again (LINE_RECOVERY) instead of ending the run (HALT)."""
         self.line_recovery = line_recovery
         self.stop_only = stop_only
         self.fixed_side = pass_side
         self.state = ROAD_FOLLOWING
         self.state_since = 0.0
-        self.lost_since = None
-        self.lane_seen = False
-        self.close_frames = 0     # control steps in a row with a close cup (in the lane, unless stop_only)
-        self.clear_frames = 0     # control steps in a row with the cup gone (STOP)
-        self.centered_frames = 0  # control steps in a row with the lane found (ROAD_RECOVERY)
+        self.lost_since = None    # time the lane was last lost (short gaps are bridged)
+        self.lane_seen = False    # the lane was seen at least once
+        self.close_frames = 0     # steps in a row with a close cup
+        self.clear_frames = 0     # steps in a row with the cup gone (STOP)
+        self.centered_frames = 0  # steps in a row with the lane found (ROAD_RECOVERY)
+        self.direction = None     # 'cw' or 'ccw', from the first sharp curve, kept for the run (DIR1)
+        self.sharp_steps = 0      # steps in a row with a sharp curve the same way: + right, - left
+        # the swerve
         self.avoid_phase = AVOID_PHASES[0]
         self.phase_since = 0.0
-        self.edge_angle = None    # last tape angle seen in the turn out
+        self.edge_angle = None    # last tape angle seen
         self.turn_cup_x = None    # last x of the cup in the turn out
-        self.go_straight = False  # the curve is paused: the cup is in view on the side it bends to, or it took long
+        self.go_straight = False  # the curve is paused ('pass'): the cup is beside it, or it took long
         self.tape_under = False   # the lane's border has been under the robot's nose during the curve
-        self.turn_lane_at = None  # last time the lane was seen during the turn back (turn_in)
         self.arc_turned = 0.0     # seconds the curve has actually curved (ARC_TURN_MIN)
         self.arc_last = 0.0       # time of the last step in the curve
+        self.turn_lane_at = None  # last time the lane was seen in turn_in
+        # the stop (stop_only)
         self.stop_phase = STOP_PHASES[0]
         self.backed = False       # backed up once in this stop
-        self.direction = None     # 'cw' or 'ccw' from the first sharp curve, kept for the whole run (DIR1)
-        self.sharp_steps = 0      # steps in a row with a sharp curve the same way: + right, - left
 
     def pass_side(self):
         """Side to pass a cup on: the inside of the oval (PASS), left until the direction is known"""
@@ -171,20 +160,8 @@ class Decision(object):
             return self.fixed_side
         return 'right' if self.direction == 'cw' else 'left'
 
-    def learn_direction(self, percept):
-        """Sets the driving direction at the first sharp curve: the track is an oval, so all its curves bend the same
-        way, right = clockwise. Afterwards it is kept, also through LINE_RECOVERY"""
-        turn = percept['curve_dir']
-        if percept['curve_probs'][2] < config.DIRECTION_SHARP or abs(turn) < config.DIRECTION_MIN_DIR:
-            self.sharp_steps = 0
-            return
-        sign = 1 if turn > 0 else -1
-        self.sharp_steps = self.sharp_steps + sign if self.sharp_steps * sign >= 0 else sign
-        if abs(self.sharp_steps) >= config.DIRECTION_FRAMES:
-            self.direction = 'cw' if sign > 0 else 'ccw'
-
     def avoid_action(self):
-        """What the wheels do in this swerve phase: the phase, or 'pass' while the curve is paused for the cup"""
+        """What the wheels do in this swerve phase: the phase, or 'pass' while the curve is paused"""
         return 'pass' if self.avoid_phase == 'arc' and self.go_straight else self.avoid_phase
 
     def enter(self, state, now):
@@ -200,16 +177,72 @@ class Decision(object):
         """The lane is lost: find it again, or end the run"""
         self.enter(LINE_RECOVERY if self.line_recovery else HALT, now)
 
-    def line_recovery_done(self, found, now, kept_direction=False):
-        """Called by drive.py when the search has ended. The driving direction is kept (DIR1), so kept_direction is
-        not used any more"""
+    def line_recovery_done(self, found, now):
+        """Called by drive.py when the search has ended. The driving direction is kept"""
         self.enter(ROAD_FOLLOWING if found else HALT, now)
         self.lost_since, self.close_frames = None, 0
 
+    def update(self, percept, now):
+        """Returns the state for this frame"""
+        if self.state == OBSTACLE_AVOIDANCE:
+            self.update_avoidance(percept, now)
+        elif self.state == ROAD_RECOVERY:
+            self.update_recovery(percept, now)
+        elif self.state not in (HALT, LINE_RECOVERY):  # those two: drive.py runs the search and reports back
+            self.update_driving(percept, now)
+        return self.state
+
+    # --- ROAD_FOLLOWING, SLOW_DOWN, STOP ---
+
+    def update_driving(self, percept, now):
+        self.close_frames = count(self.close_frames, cup_close(percept))
+        if self.stop_only:
+            self.update_stop_only(percept, now)
+            if self.state == STOP:
+                return
+        elif self.close_frames >= config.OBSTACLE_FRAMES:
+            self.enter(OBSTACLE_AVOIDANCE, now)
+            return
+        p_sharp, near = percept['curve_probs'][2], cup_near(percept)
+        if self.state == ROAD_FOLLOWING and (p_sharp > config.SLOW_DOWN_ENTER or near):
+            self.enter(SLOW_DOWN, now)
+        elif self.state == SLOW_DOWN and p_sharp < config.SLOW_DOWN_EXIT and not near:
+            self.enter(ROAD_FOLLOWING, now)
+        if self.direction is None:
+            self.learn_direction(percept)
+        if sees_lane(percept):
+            self.lost_since, self.lane_seen = None, True
+        elif not self.lane_seen:
+            self.enter(HALT, now)  # never start without seeing the lane
+        elif self.lost_since is None:
+            self.lost_since = now
+        elif now - self.lost_since >= config.LANE_LOST_TIMEOUT:  # a short gap keeps the last steering
+            self.lane_gone(now)
+
+    def learn_direction(self, percept):
+        """Sets the driving direction at the first sharp curve: on an oval all curves bend the same way, right = cw"""
+        turn = percept['curve_dir']
+        if percept['curve_probs'][2] < config.DIRECTION_SHARP or abs(turn) < config.DIRECTION_MIN_DIR:
+            self.sharp_steps = 0
+            return
+        sign = 1 if turn > 0 else -1
+        self.sharp_steps = self.sharp_steps + sign if self.sharp_steps * sign >= 0 else sign
+        if abs(self.sharp_steps) >= config.DIRECTION_FRAMES:
+            self.direction = 'cw' if sign > 0 else 'ccw'
+
+    def update_stop_only(self, percept, now):
+        """Stops for a close cup, drives on once it is gone and the lane is in sight (a hand can hide both)"""
+        self.clear_frames = count(self.clear_frames, cup_gone(percept) and sees_lane(percept))
+        if self.state == STOP and self.clear_frames >= config.OBSTACLE_CLEAR_FRAMES:
+            self.enter(ROAD_FOLLOWING, now)
+        elif self.state != STOP and self.close_frames >= config.OBSTACLE_FRAMES:
+            self.enter(STOP, now)
+        if self.state == STOP:
+            self.update_stop(percept, now)
+            self.lost_since = None  # standing still is not losing the lane
+
     def update_stop(self, percept, now):
-        """Standing in front of the cup: a short reverse pulse against coasting, then wait; if the cup turns out to
-        be closer than BACKUP_CM (the camera shows the robot's position late), back up once until it is further than
-        BACKUP_TARGET_CM. The nearest band anywhere: close in front, the cup can hide the lane"""
+        """Brake pulse, then wait; if the cup is closer than BACKUP_CM, back up once to BACKUP_TARGET_CM"""
         bands = percept['cup_bands']
         cm = band_cm(bands[0]) if bands else float('inf')
         elapsed = now - self.phase_since
@@ -220,129 +253,87 @@ class Decision(object):
         elif self.stop_phase == 'back' and (cm > config.BACKUP_TARGET_CM or elapsed >= config.BACKUP_MAX):
             self.stop_phase, self.phase_since = 'wait', now
 
+    # --- ROAD_RECOVERY ---
+
+    def update_recovery(self, percept, now):
+        self.close_frames = count(self.close_frames, cup_close(percept))
+        if self.close_frames >= config.OBSTACLE_FRAMES:  # the swerve did not get past the cup: swerve again (RECOV2)
+            self.enter(OBSTACLE_AVOIDANCE, now)
+            return
+        self.centered_frames = count(self.centered_frames, lane_found(percept))
+        if self.centered_frames >= config.RECOVER_FRAMES:
+            self.lost_since, self.close_frames = None, 0
+            self.enter(ROAD_FOLLOWING, now)
+        elif now - self.state_since > config.RECOVER_TIMEOUT:
+            self.lane_gone(now)
+
+    # --- OBSTACLE_AVOIDANCE: each phase ends on a camera mark (no encoders), or after its time limit ---
+
     def update_avoidance(self, percept, now):
-        """Moves through the swerve phases. Passing on the left: stand still briefly; turn left until the cup has left
-        the image on the right (without a cup in view: until the lane edge looks horizontal or leaves the image near
-        horizontal), about 90 degrees; curve right, straight on while the cup is in view on that side, until the edge
-        ahead looks horizontal again or leaves the image, or the lane is found (inside the lane, crossing it); turn left
-        until the lane is found again, now along it. Passing on the right
-        mirrored. The marks come from the color masks (HYBRID). A phase that takes too long: HALT"""
-        elapsed = now - self.phase_since
-        toward = -1 if self.pass_side() == 'left' else 1  # turn direction toward the pass side (-1 left)
-        angle = percept['tape_angle']
-        band = near_band(percept)
-        if self.avoid_phase == 'brake':
-            done, limit = elapsed >= config.AVOID_BRAKE, config.AVOID_BRAKE
-        elif self.avoid_phase == 'turn_out':
-            done = cup_left_view(self.turn_cup_x, band, toward) or (band is None and (
-                reached_horizontal(angle, toward, config.TURN_EARLY) or edge_left_view(self.edge_angle, angle, toward)))
-            limit = config.TURN_OUT_MAX
-            self.edge_angle = angle
-            if band is not None:
-                self.turn_cup_x = band[0]
-        elif self.avoid_phase == 'arc':  # the lane edge is horizontal ahead at its start: ARC_MIN
-            if cup_in_the_way(band):
-                self.enter(HALT, now)
-                return
-            if not self.go_straight:  # the wheels curved since the last step
-                self.arc_turned += now - self.arc_last
-            self.arc_last = now
-            turned = self.arc_turned >= config.ARC_TURN_MIN  # about 90 degrees back: a line ahead can be the robot's lane
-            self.go_straight = cup_beside_curve(band, toward) or (turned and elapsed >= config.ARC_STRAIGHT_AFTER)
-            under = percept['tape_row'] >= config.TAPE_UNDER_ROW
-            self.tape_under = self.tape_under or (under and elapsed >= config.ARC_MIN)  # at the start it is the old lane
-            crossed = self.tape_under and percept['tape_row'] < config.TAPE_PAST_ROW
-            # the lane found means inside the lane; without it, the edge ahead looks horizontal or leaves the image close
-            # to the lane (run avoid4_1: last seen at +17, then the far border was reached, avoid4_2)
-            done = turned and (crossed or lane_found(percept, config.TURN_IN_CENTERED)
-                               or reached_horizontal(angle, -toward, config.ARC_EARLY)
-                               or edge_left_view(self.edge_angle, angle, -toward))
-            limit = config.ARC_MAX
-            self.edge_angle = angle
-        elif self.avoid_phase == 'turn_in':  # the curve ends at the lane's edge: ROAD_RECOVERY brings the robot to the center
-            if percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD:
-                self.turn_lane_at = now
-            elif (self.turn_lane_at is not None and elapsed >= config.TURN_IN_MIN
-                  and now - self.turn_lane_at >= config.TURN_PAST):
-                self.avoid_phase, self.phase_since = TURN_BACK, now  # turned past the lane: turn the other way
-                return
-            done = elapsed >= config.TURN_IN_MIN and (lane_found(percept, config.TURN_IN_CENTERED)
-                                                      or (lane_near(percept) and bends_our_way(percept, self.direction)))
-            limit = config.TURN_IN_MAX
-        else:  # TURN_BACK: the lane is just behind the turn, so the first lane near the middle is the right one
-            done = lane_near(percept)
-            limit = config.TURN_BACK_MAX
-        if done and self.avoid_phase in (AVOID_PHASES[-1], TURN_BACK):
+        """Passing on the left (right is mirrored): stand still; turn left about 90 degrees; curve right around the cup
+        until about 90 degrees back and facing the lane; turn left until the lane is found, along it"""
+        phase, elapsed = self.avoid_phase, now - self.phase_since
+        toward = -1 if self.pass_side() == 'left' else 1  # turn direction toward the pass side
+        done = {'brake': self.brake_done, 'turn_out': self.turn_out_done, 'arc': self.arc_done,
+                'turn_in': self.turn_in_done, TURN_BACK: self.turn_back_done}[phase](percept, now, elapsed, toward)
+        if self.state != OBSTACLE_AVOIDANCE or self.avoid_phase != phase:  # the phase itself switched (HALT, TURN_BACK)
+            return
+        if done and phase in ('turn_in', TURN_BACK):
             self.centered_frames = self.close_frames = 0  # the cup that started this swerve does not count again
             self.enter(ROAD_RECOVERY, now)
         elif done:
-            self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(self.avoid_phase) + 1]
+            self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(phase) + 1]
             self.phase_since = self.arc_last = now
             self.arc_turned = 0.0
-        elif elapsed >= limit:
+        elif elapsed >= PHASE_LIMITS[phase]:
             self.lane_gone(now)  # a stall, or the mark was not seen: do not drive on blind
 
-    def update(self, percept, now):
-        """Returns the state for this frame"""
-        if self.state in (HALT, LINE_RECOVERY):  # drive.py runs the search and reports back
-            return self.state
-        if self.state == OBSTACLE_AVOIDANCE:  # the lane is not asked until the swerve is done
-            self.update_avoidance(percept, now)
-            return self.state
-        if self.state == ROAD_RECOVERY:
-            # a cup still close ahead: the curve did not get past it. Swerve again instead of driving into it (run
-            # 2026-11-17_05-22-28 knocked a cup over); offline this fired in all 5 recoveries with a cup within 40 cm
-            self.close_frames = self.close_frames + 1 if cup_close(percept) else 0
-            if self.close_frames >= config.OBSTACLE_FRAMES:
-                self.enter(OBSTACLE_AVOIDANCE, now)
-                return self.state
-            self.centered_frames = self.centered_frames + 1 if lane_found(percept) else 0
-            if self.centered_frames >= config.RECOVER_FRAMES:  # a distant or crosswise lane does not count
-                self.lost_since = None
-                self.close_frames = 0
-                self.enter(ROAD_FOLLOWING, now)
-            elif now - self.state_since > config.RECOVER_TIMEOUT:
-                self.lane_gone(now)
-            return self.state
+    def brake_done(self, percept, now, elapsed, toward):
+        return elapsed >= config.AVOID_BRAKE
 
-        close = cup_close(percept)
-        self.close_frames = self.close_frames + 1 if close else 0
-        if self.stop_only:
-            # drive on only with the lane in sight: a hand measuring in front of the camera hid the cup and the lane,
-            # and the robot drove on blind (run stop_s1d2_2)
-            clear = cup_gone(percept) and percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD
-            self.clear_frames = self.clear_frames + 1 if clear else 0
-            if self.state == STOP and self.clear_frames >= config.OBSTACLE_CLEAR_FRAMES:
-                self.enter(ROAD_FOLLOWING, now)
-            elif self.state != STOP and self.close_frames >= config.OBSTACLE_FRAMES:
-                self.enter(STOP, now)
-            if self.state == STOP:
-                self.update_stop(percept, now)
-                self.lost_since = None  # standing still is not losing the lane
-                return STOP
-        elif self.close_frames >= config.OBSTACLE_FRAMES:
-            self.enter(OBSTACLE_AVOIDANCE, now)
-            return self.state
+    def turn_out_done(self, percept, now, elapsed, toward):
+        """The cup has left the image sideways, or without a cup: the lane edge looks horizontal or has left the image"""
+        angle, band = percept['tape_angle'], near_band(percept)
+        done = cup_left_view(self.turn_cup_x, band, toward) or (band is None and (
+            reached_horizontal(angle, toward, config.TURN_EARLY) or edge_left_view(self.edge_angle, angle, toward)))
+        self.edge_angle = angle
+        if band is not None:
+            self.turn_cup_x = band[0]
+        return done
 
-        # following the lane: ROAD_FOLLOWING or SLOW_DOWN (sharp curve, or a cup ahead: less rolling on after a stop)
-        p_sharp = percept['curve_probs'][2]
-        near = cup_near(percept)
-        if self.state == ROAD_FOLLOWING and (p_sharp > config.SLOW_DOWN_ENTER or near):
-            self.enter(SLOW_DOWN, now)
-        elif self.state == SLOW_DOWN and p_sharp < config.SLOW_DOWN_EXIT and not near:
-            self.enter(ROAD_FOLLOWING, now)
-        if self.direction is None:
-            self.learn_direction(percept)
-        if percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD:
-            self.lost_since = None
-            self.lane_seen = True
-            return self.state
-        if not self.lane_seen:
-            self.enter(HALT, now)  # never start without seeing the lane (the grace time is only for short gaps)
-            return HALT
-        if self.lost_since is None:
-            self.lost_since = now
-        # a short gap (one or two bad frames) keeps following on the last steering
-        if now - self.lost_since >= config.LANE_LOST_TIMEOUT:
-            self.lane_gone(now)
-        return self.state
+    def arc_done(self, percept, now, elapsed, toward):
+        """Only after about 90 degrees of curve (ARC1: before that a line ahead is another one): the lane's border was
+        crossed, the lane is found, or the edge ahead looks horizontal or has left the image"""
+        angle, band = percept['tape_angle'], near_band(percept)
+        if cup_in_the_way(band):
+            self.enter(HALT, now)
+            return False
+        if not self.go_straight:  # the wheels curved since the last step
+            self.arc_turned += now - self.arc_last
+        self.arc_last = now
+        turned = self.arc_turned >= config.ARC_TURN_MIN
+        self.go_straight = cup_beside_curve(band, toward) or (turned and elapsed >= config.ARC_STRAIGHT_AFTER)
+        under = percept['tape_row'] >= config.TAPE_UNDER_ROW
+        self.tape_under = self.tape_under or (under and elapsed >= config.ARC_MIN)  # at the start it is the old lane
+        crossed = self.tape_under and percept['tape_row'] < config.TAPE_PAST_ROW
+        done = turned and (crossed or lane_found(percept, config.TURN_IN_CENTERED)
+                           or reached_horizontal(angle, -toward, config.ARC_EARLY)
+                           or edge_left_view(self.edge_angle, angle, -toward))
+        self.edge_angle = angle
+        return done
+
+    def turn_in_done(self, percept, now, elapsed, toward):
+        """The lane is found along it, or seen sure and bending our way (TURN2). Lost again after it was seen: the
+        robot turned past it and turns the other way (TURN_BACK)"""
+        if sees_lane(percept):
+            self.turn_lane_at = now
+        elif (self.turn_lane_at is not None and elapsed >= config.TURN_IN_MIN
+              and now - self.turn_lane_at >= config.TURN_PAST):
+            self.avoid_phase, self.phase_since = TURN_BACK, now
+            return False
+        return elapsed >= config.TURN_IN_MIN and (lane_found(percept, config.TURN_IN_CENTERED)
+                                                  or (lane_near(percept) and bends_our_way(percept, self.direction)))
+
+    def turn_back_done(self, percept, now, elapsed, toward):
+        """The lane is just behind the turn, so the first lane near the middle is the right one"""
+        return lane_near(percept)

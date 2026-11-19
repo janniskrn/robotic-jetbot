@@ -13,7 +13,10 @@ import torch
 import config
 import cup_mask
 import lane_mask
+from safety import wait_for_new_frame
 from vision import CURVE_CLASSES, build_model, preprocess, split_curve_probs
+
+WARMUP_FRAMES = 5  # model calls with the motors off before driving: the first call took up to 1.1 s
 
 
 def load(task, allow_trt=True):
@@ -47,6 +50,14 @@ class Perception(object):
         self.frame_count = 0
         self.curve_model_probs = [1.0, 0.0, 0.0, 0.0, 0.0]  # straight until the curve model says otherwise
         self.cup = [-10.0, 0.0, 0.0]  # obstacle model output (visible logit, row, x): no cup until it says otherwise
+
+    def warm_up(self, camera):
+        """Runs the models on a few frames with the motors off. Returns the last frame"""
+        frame = wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
+        for _ in range(WARMUP_FRAMES):
+            frame = wait_for_new_frame(camera, frame)
+            self.observe(frame)
+        return frame
 
     @torch.no_grad()
     def observe(self, frame):

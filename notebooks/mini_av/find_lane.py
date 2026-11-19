@@ -2,14 +2,11 @@
 
     python3 find_lane.py     # the full search alone, for a robot put down off the lane
 
-    1. undo: drive the last 1.5 s of wheel commands backwards. The lane was seen about 15 cm before it was lost (all 8
-       losses up to 2026-11-08) and the robot keeps its driving direction. Only right after following, at most twice in
-       a row.
+    1. undo: drive the last 1.5 s of wheel commands backwards (only right after following, at most twice in a row).
     2. sweep: turn about 100 degrees to each side, first toward where the lane should be.
-    3. search, in small steps with the motors off between them: turn one full turn looking for the lane; not found: turn
-       the shorter way to the nearest tape and drive across it, into the lane, then the next round. Right after following,
-       a lane more than about 130 degrees from the heading at the start of the search is the wrong way along it and only
-       counts in the last round. No forward pulse with a cup close ahead: that heading is skipped.
+    3. search, in small steps with the motors off between them: one full turn looking for the lane; not found: turn to
+       the nearest tape and drive across it, then the next round. Right after following, a lane facing the wrong way
+       only counts in the last round. Never a forward pulse toward a close cup.
 
 Saves every stop (PNG) and a stops.csv to usb/images/datasets/<time>_find_lane. Run inside the container.
 """
@@ -30,8 +27,7 @@ from recorder import DATASET_ROOT
 from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
 
 UNDO_SECONDS = 1.5    # seconds of wheel commands driven backwards (1.0 fell short when the lane was left in a wide turn)
-UNDO_SURE = 0.6       # lane model value that counts as the lane back after the undo: 0.63 was the lane, one small turn
-                      # later it read 0.97 (undo test 2026-11-09)
+UNDO_SURE = 0.6       # lane model value that counts as the lane back after the undo
 UNDO_TRIES = 2        # undos in a row before the robot looks around instead: the same curve may lose the lane again
 UNDO_RESET = 5.0      # seconds after an undo from which the count of undos starts anew
 TURN_PULSE = 0.15     # seconds of one turn pulse (kick plus a little)
@@ -52,12 +48,8 @@ SURE_LANE = 0.9       # lane model value that counts as standing well in the lan
 TAPE_SLACK = 8        # image rows above the scan's lowest tape that still count as the heading of the nearest tape
 NUDGES = 4            # extra turn pulses to reach that heading (the pulses are uneven)
 BOTTOM_ROW = 0.93     # fraction of the image height from which tape counts as at the robot's nose
-WARMUP_FRAMES = 5     # model calls with the motors off (the first call took up to 1.1 s)
-FOUND = ('undo', 'sweep', 'search', 'search_any')  # results of run() with the lane found
-KEPT_DIRECTION = ('undo', 'sweep', 'search')       # those with the robot still driving the same way along the lane
-IN_LANE_CENTER = 0.7  # the lane-position measurement (situation.py) counts the lane as found when it reads 'in lane' with
-                      # the lane center this close to the nose: 13 of 18 recorded recoveries would have found the lane
-                      # (6 with the older rules alone); further off, the robot stood at an angle at the border (SIT2)
+FOUND = ('undo', 'sweep', 'search', 'search_any')  # results of run() with the lane found ('search_any': any way)
+IN_LANE_CENTER = 0.7  # situation.py 'in lane' with the lane center this close to the nose counts as found (SIT2)
 STOP_COLUMNS = ['stop', 'stage', 'heading', 'lane_visible', 'lane_x', 'lane_aligned', 'tape_row', 'tape_close', 'zone']
 
 
@@ -66,21 +58,18 @@ class StopRecovery(Exception):
 
 
 def on_lane(percept):
-    """True if the robot stands well in the lane, pointing along it: at the border lane_found held, but the lane
-    model then fell below 0.5 at the start of the drive (run avoid4_4)"""
+    """True if the robot stands well in the lane, pointing along it (lane_found alone held at the border)"""
     return lane_found(percept) and percept['lane_visible'] >= SURE_LANE
 
 
 def lane_back(percept):
-    """True if the lane is seen again after the undo: the driving direction is known, so the two-line check (which a
-    curve can fail) is not needed"""
+    """True if the lane is seen again after the undo (the direction is known: no two-line check, curves fail it)"""
     return percept['lane_visible'] >= UNDO_SURE and abs(percept['lane_x']) < config.TURN_IN_CENTERED
 
 
 def in_lane(percept, frame):
-    """True if the lane-position measurement sees the robot in the lane near its center and the lane model sees the
-    lane. The older rules need both lines one lane width apart at one row, which curves fail (notebook runs of
-    2026-11-10: rejected at lane model 0.90 and 0.94, then 25-40 s of search)"""
+    """True if situation.py sees the robot in the lane near its center and the lane model sees the lane (works in
+    curves, where the two-line check fails)"""
     if percept['lane_visible'] < UNDO_SURE:
         return False
     seen = situation.situation(frame)
@@ -88,7 +77,7 @@ def in_lane(percept, frame):
 
 
 def tape_close(frame):
-    """True if tape crosses the image's lower part: a distant lane also reads as found (run avoid4_5, known since v3_ccw_3)"""
+    """True if tape crosses the image's lower part (a distant lane also reads as found)"""
     return len(lane_mask.line_centers(lane_mask.blue_mask(frame), NEAR_ROW)) >= 1
 
 
@@ -133,6 +122,7 @@ class FindLane(object):
             self.robot.stop()
 
     def observe_next(self):
+        """The models on the next frame (shown in the cockpit)"""
         self.frame = wait_for_new_frame(self.camera, self.frame)
         percept = self.perception.observe(self.frame)
         if self.on_frame is not None:
@@ -176,6 +166,7 @@ class FindLane(object):
         return all(self.found(test, self.observe_next()) for _ in range(CONFIRM_FRAMES))
 
     def cup_blocks(self, percept):
+        """True if a cup is close in the middle of the image: no forward pulse"""
         return any(band_cm(band) <= CUP_STOP_CM and abs(band[0]) < CUP_STOP_X for band in percept['cup_bands'])
 
     def undo(self, history):
@@ -303,10 +294,7 @@ def main():
     watchdog = MotorWatchdog(robot)
     finder = FindLane(perception, robot, camera, watchdog, battery)
     try:
-        frame = wait_for_new_frame(camera, camera.value, timeout=2.0)
-        for _ in range(WARMUP_FRAMES):
-            frame = wait_for_new_frame(camera, frame)
-            perception.observe(frame)
+        perception.warm_up(camera)
         watchdog.start()
         result = finder.run()
     except KeyboardInterrupt:

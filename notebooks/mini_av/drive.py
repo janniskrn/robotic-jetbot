@@ -5,7 +5,7 @@
     python3 drive.py --name nocurve --seconds 60 --no-curve  # our steering, baseline speed
     add --stop-only to wait in front of a cup instead of avoiding it, --pass-side left/right to fix the side
 
-Or from 04_drive.ipynb with start and stop buttons. Stop from a terminal: scripts/stop_robot.sh.
+Or from 04_drive.ipynb or the web cockpit (dashboard.py). Stop from a terminal: scripts/stop_robot.sh.
 """
 
 import argparse
@@ -20,26 +20,27 @@ from jetbot import Camera, Robot
 
 import config
 from control import Controller
-from find_lane import FOUND, KEPT_DIRECTION, FindLane, StopRecovery
-from decision import FOLLOWING, HALT, LINE_RECOVERY, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision, band_cm, cup_ahead
+from find_lane import FOUND, FindLane, StopRecovery
+from decision import (FOLLOWING, HALT, LINE_RECOVERY, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, SLOW_DOWN, STOP, Decision,
+                      band_cm, cup_ahead, sees_lane)
 from logger import RunLogger
 from perception import Perception
 from recorder import Recorder
 from safety import BatteryGuard, BatteryLow, CameraFrozen, MotorWatchdog, wait_for_new_frame
 
 
-UNDO_STEPS = 60    # recent wheel commands kept for the undo in LINE_RECOVERY: more than its 1 s at any loop time
-RECORD_HZ = 4.0  # camera frames saved per second as a dataset session, to see what went wrong and to retrain
-WARMUP_FRAMES = 5  # model calls with the motors off before driving (the first call took up to 1.1 s)
-STARTUP_TIMEOUT = 3.0  # seconds to wait (motors off) for the first sight of the lane: the camera's
-                       # exposure needs a moment after start, and the first frames can be too dark
+UNDO_STEPS = 60        # recent wheel commands kept for the undo in LINE_RECOVERY: more than its 1.5 s
+RECORD_HZ = 4.0        # camera frames saved per second as a dataset session
+STARTUP_TIMEOUT = 3.0  # seconds to wait (motors off) for the lane at the start: the exposure needs a moment
+
+
+class NoLaneAtStart(Exception):
+    """The lane was not visible when the run started: put the robot on the lane"""
 
 
 def start_frame_saver(recorder):
     """Saves frames in a background thread, so a slow USB write never blocks the control loop.
-
-    Put camera frames into the returned queue (full queue: the frame is skipped); put None to finish.
-    """
+    Put camera frames into the returned queue (full queue: the frame is skipped); put None to finish."""
     frames = queue.Queue(maxsize=8)
 
     def save():
@@ -54,17 +55,60 @@ def start_frame_saver(recorder):
     return frames, thread
 
 
-class NoLaneAtStart(Exception):
-    """The lane was not visible when the run started: put the robot on the lane"""
+def wait_for_lane(camera, perception, frame):
+    """Waits with the motors off until the lane is seen; NoLaneAtStart after STARTUP_TIMEOUT"""
+    waited = time.time()
+    while not sees_lane(perception.observe(frame)):
+        if time.time() - waited > STARTUP_TIMEOUT:
+            raise NoLaneAtStart()
+        frame = wait_for_new_frame(camera, frame)
+    return frame
+
+
+def wheel_command(state, percept, decision, controller, dt, now):
+    """(left, right) for this state, or None when the run ends (HALT)"""
+    if state in FOLLOWING or (state == ROAD_RECOVERY and sees_lane(percept)):
+        if not sees_lane(percept):  # short gap: lane_x is not trained on frames without a lane
+            return controller.hold(percept['curve_probs'], percept['curve_dir'], dt)
+        limit = config.SPEED_SHARP if state == SLOW_DOWN else None
+        return controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'], dt, limit)
+    if state == OBSTACLE_AVOIDANCE:
+        return controller.avoid(decision.avoid_action(), decision.pass_side(), now - decision.phase_since)
+    if state == ROAD_RECOVERY:
+        return controller.recover(decision.pass_side())
+    if state == STOP:  # brake, back up if too close, wait
+        return controller.stop(decision.stop_phase, now - decision.phase_since)
+    return None
+
+
+def halt_reason(previous_state, decision):
+    return {ROAD_RECOVERY: 'lane not found after avoiding',
+            OBSTACLE_AVOIDANCE: 'swerve %s did not reach its camera mark' % decision.avoid_phase
+            }.get(previous_state, 'lane lost')
+
+
+def step_values(t, dt, state, percept, decision, controller, left, right, volts):
+    """One line of steps.csv (logger.COLUMNS)"""
+    probs = percept['curve_probs']
+    ahead = cup_ahead(percept)  # the cup the decision looks at
+    return dict(time=t, dt=dt, mode=state, lane_visible=percept['lane_visible'], lane_x=percept['lane_x'],
+                p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2], curve_dir=percept['curve_dir'],
+                curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
+                left=left, right=right, battery_v=volts, inference_ms=percept['inference_ms'],
+                cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'],
+                lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
+                band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None,
+                band_cm=band_cm(ahead) if ahead else None, bands=len(percept['cup_bands']),
+                phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''))
 
 
 def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_only=False, pass_side=None, on_step=None,
         perception=None, camera=None):
     """Drives until the time is up, the lane is lost, a safety check fails or stop_event is set.
 
-    stop_only: wait in front of a cup instead of avoiding it; pass_side: 'left'/'right' or None (measured).
+    stop_only: wait in front of a cup instead of avoiding it; pass_side: 'left'/'right' or None (inside of the oval).
     on_step(frame, values): called after each logged step with the camera frame and the logged values (keep it cheap).
-    perception: an already loaded Perception (the dashboard shares its own: one copy of the models in memory).
+    perception: an already loaded Perception (the cockpit shares its own: one copy of the models in memory).
     camera: an open camera the caller owns; it stays open (Argus cannot reopen a camera in the same process).
 
     Returns the stop reason and the log folder. The camera frames go to a dataset session drive_<name>.
@@ -84,32 +128,23 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                            'stop_only': stop_only, 'pass_side': pass_side,
                            'battery_start_v': round(battery.volts, 2)})
     recorder = Recorder(period=1.0 / RECORD_HZ)
-    recorder.start('drive_' + name, {'mode': 'drive', 'curves_trusted': False, 'log': log.dir, 'baseline': baseline, 'use_curve': use_curve,
-                                     'frame_width': camera.width, 'frame_height': camera.height})
+    recorder.start('drive_' + name, {'mode': 'drive', 'curves_trusted': False, 'log': log.dir, 'baseline': baseline,
+                                     'use_curve': use_curve, 'frame_width': camera.width, 'frame_height': camera.height})
     frames, saver = start_frame_saver(recorder)
     watchdog = MotorWatchdog(robot)
     finder = FindLane(perception, robot, camera, watchdog, battery)
     reason = 'time up'
-    if on_step is not None:  # the search takes many seconds: the cockpit shows each frame it looks at
-        finder.on_frame = lambda seen, p: on_step(seen, dict(
-            time=time.time() - start, mode=LINE_RECOVERY, phase=finder.stage, lane_visible=p['lane_visible'],
-            lane_x=p['lane_x'], curve_class=p['curve_class'], cup_visible=p['cup_visible'], battery_v=battery.volts))
     try:
-        frame = wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
-        for _ in range(WARMUP_FRAMES):
-            frame = wait_for_new_frame(camera, frame)
-            perception.observe(frame)
-        # wait for the lane with the motors off instead of judging one unsettled frame
-        waited = time.time()
-        while perception.observe(frame)['lane_visible'] < config.LANE_VISIBLE_THRESHOLD:
-            if time.time() - waited > STARTUP_TIMEOUT:
-                raise NoLaneAtStart()
-            frame = wait_for_new_frame(camera, frame)
+        frame = wait_for_lane(camera, perception, perception.warm_up(camera))
         watchdog.start()
-        left = right = 0.0
         last_lane_x = 0.0
-        history = collections.deque(maxlen=UNDO_STEPS)  # (dt, left, right) of the recent control steps
+        history = collections.deque(maxlen=UNDO_STEPS)  # (dt, left, right) of the recent steps, for the undo
         start = last = last_saved = time.time()
+        if on_step is not None:  # the search takes many seconds: the cockpit shows each frame it looks at
+            finder.on_frame = lambda seen, p: on_step(seen, dict(
+                time=time.time() - start, mode=LINE_RECOVERY, phase=finder.stage, lane_visible=p['lane_visible'],
+                lane_x=p['lane_x'], curve_class=p['curve_class'], cup_visible=p['cup_visible'],
+                battery_v=battery.volts))
         while time.time() - start < seconds:
             if stop_event is not None and stop_event.is_set():
                 reason = 'stopped by hand'
@@ -125,74 +160,43 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                 except queue.Full:
                     pass
             previous_state, state = decision.state, decision.update(percept, now)
-            if state == LINE_RECOVERY:  # takes many seconds, in small steps with their own safety checks
+
+            if state == LINE_RECOVERY:  # many seconds, in small steps with their own safety checks
                 with watchdog.lock:
                     robot.stop()
+                followed = previous_state in FOLLOWING  # the lane is near: undo and sweep make sense
                 # where the lane should be: the way the curve bends, else where it was last seen
                 turn = percept['curve_dir'] if abs(percept['curve_dir']) >= config.FEEDFORWARD_MIN_DIR else last_lane_x
-                followed = previous_state in FOLLOWING  # the lane is near: undo and sweep make sense
-                result = finder.run(history if followed else (), (-1 if turn < 0 else 1) if followed else 0,
-                                    start + seconds, stop_event)
+                side = (-1 if turn < 0 else 1) if followed else 0
+                result = finder.run(history if followed else (), side, start + seconds, stop_event)
                 values = dict(time=now - start, dt=dt, mode=LINE_RECOVERY, phase=result)
                 log.step(**values)
                 if on_step is not None:
                     on_step(finder.frame, values)
-                last = time.time()
-                frame = finder.frame
-                decision.line_recovery_done(result in FOUND, last, result in KEPT_DIRECTION)
+                last, frame = time.time(), finder.frame
+                decision.line_recovery_done(result in FOUND, last)
                 controller.reset()
                 history.clear()
                 if result in FOUND:
                     continue
                 reason = 'lane not found by line recovery (%s)' % result
                 break
+
             if state != previous_state and state in (OBSTACLE_AVOIDANCE, STOP):
                 controller.reset()  # restart slowly afterwards, without old steering or damping memory
-            lane_seen = percept['lane_visible'] >= config.LANE_VISIBLE_THRESHOLD
-            if lane_seen:
+            if sees_lane(percept):
                 last_lane_x = percept['lane_x']
-            if state in FOLLOWING or (state == ROAD_RECOVERY and lane_seen):
-                if lane_seen:
-                    limit = config.SPEED_SHARP if state == SLOW_DOWN else None
-                    left, right = controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'],
-                                                    dt, speed_limit=limit)
-                else:  # short gap: steer without lane_x, which is not trained on frames without a lane
-                    left, right = controller.hold(percept['curve_probs'], percept['curve_dir'], dt)
-                with watchdog.lock:
-                    robot.set_motors(left, right)
-                watchdog.feed()
-            elif state in (OBSTACLE_AVOIDANCE, ROAD_RECOVERY):
-                if state == OBSTACLE_AVOIDANCE:
-                    left, right = controller.avoid(decision.avoid_action(), decision.pass_side(),
-                                                   now - decision.phase_since)
-                else:
-                    left, right = controller.recover(decision.pass_side())
-                with watchdog.lock:
-                    robot.set_motors(left, right)
-                watchdog.feed()
-            elif state == STOP:  # brake, back up if too close, wait; drive on (from slow) once the cup is gone
-                left, right = controller.stop(decision.stop_phase, now - decision.phase_since)
-                with watchdog.lock:
-                    robot.set_motors(left, right)
-                watchdog.feed()
-            else:
+            wheels = wheel_command(state, percept, decision, controller, dt, now)
+            if wheels is None:
                 robot.stop()
-                reason = {ROAD_RECOVERY: 'lane not found after avoiding',
-                          OBSTACLE_AVOIDANCE: 'swerve %s did not reach its camera mark' % decision.avoid_phase
-                          }.get(previous_state, 'lane lost')
+                reason = halt_reason(previous_state, decision)
                 left = right = 0.0
-            probs = percept['curve_probs']
-            ahead = cup_ahead(percept)  # the cup the decision looks at, for the log
-            values = dict(time=now - start, dt=dt, mode=state, lane_visible=percept['lane_visible'],
-                          lane_x=percept['lane_x'], p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2],
-                          curve_dir=percept['curve_dir'],
-                          curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
-                          left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
-                          cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'],
-                          lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
-                          band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None, band_cm=band_cm(ahead) if ahead else None,
-                          bands=len(percept['cup_bands']),
-                          phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''))
+            else:
+                left, right = wheels
+                with watchdog.lock:
+                    robot.set_motors(left, right)
+                watchdog.feed()
+            values = step_values(now - start, dt, state, percept, decision, controller, left, right, battery.check())
             log.step(**values)
             if on_step is not None:
                 on_step(frame, values)
