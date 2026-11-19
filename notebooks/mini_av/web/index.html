@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Cockpit</title>
+<style>
+  :root { --bg:#0d0f12; --panel:#171a1f; --line:#2a2f37; --text:#e6e9ee; --dim:#8a93a0;
+          --green:#2ecc71; --yellow:#f1c40f; --red:#e74c3c; --accent:#f1c40f; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px; background:var(--bg); color:var(--text);
+         font:14px/1.4 ui-monospace, Menlo, Consolas, monospace; }
+  h2 { margin:0 0 8px; font-size:12px; color:var(--dim); text-transform:uppercase;
+       letter-spacing:1px; font-weight:normal; }
+  .wrap { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
+  .cam { flex:1 1 420px; min-width:0; }
+  .cam img { display:block; width:100%; height:auto; background:#000; border:1px solid var(--line); }
+  .panel { flex:1 1 300px; max-width:420px; background:var(--panel); border:1px solid var(--line);
+           border-radius:6px; padding:12px; }
+  .section { border-top:1px solid var(--line); padding:10px 0; }
+  .section:first-child { border-top:0; padding-top:0; }
+  .badge { font-size:28px; font-weight:bold; padding:10px; text-align:center; border-radius:4px; color:#0d0f12; }
+  .phase { text-align:center; color:var(--dim); margin-top:4px; }
+  .grid { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; }
+  .grid span:nth-child(odd) { color:var(--dim); }
+  .num { text-align:right; }
+  .low { color:var(--red); font-weight:bold; }
+  .disc { color:var(--red); font-weight:bold; }
+  .bar-row { display:grid; grid-template-columns:90px 1fr 60px; gap:8px; align-items:center; margin:6px 0; }
+  .track { position:relative; height:12px; background:#0b0d10; border:1px solid var(--line); }
+  .signed::after { content:""; position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--dim); }
+  .fill { position:absolute; top:0; bottom:0; background:var(--green); }
+  .marker { position:absolute; top:-4px; bottom:-4px; width:4px; margin-left:-2px; background:var(--accent); }
+  .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  select, input { font:inherit; background:#0b0d10; color:var(--text); border:1px solid var(--line);
+                  border-radius:4px; padding:8px; }
+  input[type=number] { width:100px; }
+  button { font:inherit; font-weight:bold; border:0; border-radius:4px; padding:10px 16px;
+           color:#0d0f12; cursor:pointer; }
+  .start { background:var(--green); }
+  .stop { background:var(--red); width:100%; font-size:22px; padding:16px; margin-top:10px; }
+  #status { margin-top:8px; color:var(--dim); min-height:1.4em; word-break:break-word; }
+  .sm { width:100%; height:auto; display:block; }
+  .edge { fill:none; stroke:#3a4250; stroke-width:2; transition:stroke .3s; }
+  .edge.flash { stroke-dasharray:8 6; animation:run 1s linear; }
+  .node { opacity:.45; transition:opacity .3s; }
+  .node.on { opacity:1; animation:pulse 1.5s ease-in-out infinite; }
+  .node rect { fill:transparent; stroke:currentColor; stroke-width:2; transition:fill .3s; }
+  .node.on rect { fill:currentColor; }
+  .node text { fill:currentColor; font:12px ui-monospace, Menlo, Consolas, monospace; text-anchor:middle;
+               dominant-baseline:central; transition:fill .3s; }
+  .node.on text { fill:#0d0f12; }
+  @keyframes run { from { stroke-dashoffset:28; } to { stroke-dashoffset:0; } }
+  @keyframes pulse { 0%,100% { filter:drop-shadow(0 0 2px currentColor); } 50% { filter:drop-shadow(0 0 10px currentColor); } }
+  .hist { display:flex; gap:4px; margin-top:8px; overflow-x:auto; white-space:nowrap; }
+  .chip { flex:none; font-size:11px; font-weight:bold; padding:2px 6px; border-radius:3px; color:#0d0f12; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="cam">
+    <label><input type="checkbox" id="overlay" checked> overlay</label>
+    <img id="cam" alt="camera stream">
+    <div class="section">
+      <h2>state machine</h2>
+      <svg id="sm" class="sm" viewBox="0 0 680 410" role="img" aria-label="state machine"></svg>
+      <div id="hist" class="hist"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="section">
+      <div id="badge" class="badge">-</div>
+      <div id="phase" class="phase">-</div>
+    </div>
+
+    <div class="section grid">
+      <span>server</span><span id="server" class="num">-</span>
+      <span>run time s</span><span id="time" class="num">-</span>
+      <span>loop Hz</span><span id="hz" class="num">-</span>
+      <span>fps</span><span id="fps" class="num">-</span>
+      <span>inference ms</span><span id="inference" class="num">-</span>
+      <span>battery V</span><span id="battery" class="num">-</span>
+      <span>link</span><span id="conn" class="num">-</span>
+    </div>
+
+    <div class="section">
+      <div class="bar-row"><span>left</span><div class="track signed"><div id="left" class="fill"></div></div><span id="left-v" class="num">-</span></div>
+      <div class="bar-row"><span>right</span><div class="track signed"><div id="right" class="fill"></div></div><span id="right-v" class="num">-</span></div>
+      <div class="bar-row"><span>speed</span><div class="track signed"><div id="speed" class="fill"></div></div><span id="speed-v" class="num">-</span></div>
+      <div class="bar-row"><span>steering</span><div class="track signed"><div id="steering" class="fill"></div></div><span id="steering-v" class="num">-</span></div>
+      <div class="bar-row"><span>lane vis</span><div class="track"><div id="lane-vis" class="fill"></div></div><span id="lane-vis-v" class="num">-</span></div>
+      <div class="bar-row"><span>lane x</span><div class="track signed"><div id="lane-x" class="marker"></div></div><span id="lane-x-v" class="num">-</span></div>
+    </div>
+
+    <div class="section grid">
+      <span>curve class</span><span id="curve-class" class="num">-</span>
+      <span>curve dir</span><span id="curve-dir" class="num">-</span>
+      <span>p straight</span><span id="p-straight" class="num">-</span>
+      <span>p gentle</span><span id="p-gentle" class="num">-</span>
+      <span>p sharp</span><span id="p-sharp" class="num">-</span>
+      <span>lane aligned</span><span id="lane-aligned" class="num">-</span>
+      <span>cup visible</span><span id="cup-visible" class="num">-</span>
+      <span>cup band cm</span><span id="band-cm" class="num">-</span>
+    </div>
+
+    <div class="section">
+      <h2>control</h2>
+      <div class="controls">
+        <select id="mode">
+          <option value="adaptive">adaptive</option>
+        </select>
+        <input type="number" id="seconds" value="30" min="1" step="1">
+        <span>s</span>
+        <button class="start" id="start">Start</button>
+      </div>
+      <button class="stop" id="stop">STOP</button>
+      <div id="status"></div>
+      <div id="reason" class="phase">reason: -</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const POLL_MS = 200;
+  const RETRY_MS = 1000;
+  const LOW_BATTERY_V = 11.4;
+  const GRAY = '#7f8c8d';
+  const STATE_COLOR = {
+    ROAD_FOLLOWING: '#2ecc71',
+    SLOW_DOWN: '#f1c40f',
+    STOP: '#f1c40f',
+    OBSTACLE_AVOIDANCE: '#e67e22',
+    ROAD_RECOVERY: '#e67e22',
+    LINE_RECOVERY: '#e67e22',
+    HALT: '#e74c3c',
+    IDLE: GRAY,
+  };
+  const HISTORY_LEN = 8;
+  const FLASH_MS = 1000;
+  const NODE_W = 120, NODE_H = 44, PAIR_GAP = 6;   // SVG units (viewBox 680 x 410)
+  const CURVE_CTRL = { x: 340, y: 470 };           // HALT -> IDLE is routed below the diagram
+  // state: [short label, centre x, centre y]
+  const NODES = {
+    IDLE: ['IDLE', 70, 200],
+    ROAD_FOLLOWING: ['FOLLOW', 250, 200],
+    SLOW_DOWN: ['SLOW', 250, 100],
+    STOP: ['STOP', 440, 100],
+    OBSTACLE_AVOIDANCE: ['AVOID', 440, 200],
+    ROAD_RECOVERY: ['ROAD REC', 440, 300],
+    LINE_RECOVERY: ['LINE REC', 250, 300],
+    HALT: ['HALT', 610, 380],
+  };
+  // [from, to, curved]
+  const EDGES = [
+    ['IDLE', 'ROAD_FOLLOWING'], ['ROAD_FOLLOWING', 'SLOW_DOWN'], ['SLOW_DOWN', 'ROAD_FOLLOWING'],
+    ['ROAD_FOLLOWING', 'OBSTACLE_AVOIDANCE'], ['SLOW_DOWN', 'OBSTACLE_AVOIDANCE'],
+    ['OBSTACLE_AVOIDANCE', 'ROAD_RECOVERY'], ['ROAD_RECOVERY', 'ROAD_FOLLOWING'],
+    ['SLOW_DOWN', 'STOP'], ['STOP', 'SLOW_DOWN'],
+    ['ROAD_FOLLOWING', 'LINE_RECOVERY'], ['OBSTACLE_AVOIDANCE', 'LINE_RECOVERY'], ['ROAD_RECOVERY', 'LINE_RECOVERY'],
+    ['LINE_RECOVERY', 'ROAD_FOLLOWING'], ['LINE_RECOVERY', 'HALT'], ['HALT', 'IDLE', true],
+  ];
+  const stateLog = [];   // {state, t}: last states with the time they were entered
+  let lastState = null;
+
+  const $ = (id) => document.getElementById(id);
+  const put = (id, text) => { $(id).textContent = text; };
+  const fmt = (v, digits = 2) => (typeof v === 'number' && isFinite(v) ? v.toFixed(digits) : '-');
+  const yesNo = (v) => (v == null ? '-' : v ? 'yes' : 'no');
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  // Signed bar: fill grows from the centre towards the value (-1..1).
+  function setSigned(id, v) {
+    const x = typeof v === 'number' ? clamp(v, -1, 1) : 0;
+    $(id).style.left = (x < 0 ? 50 + x * 50 : 50) + '%';
+    $(id).style.width = Math.abs(x) * 50 + '%';
+  }
+
+  // Unsigned bar (0..1).
+  function setUnsigned(id, v) {
+    const x = typeof v === 'number' ? clamp(v, 0, 1) : 0;
+    $(id).style.width = x * 100 + '%';
+  }
+
+  // Lane marker on a -1..1 track.
+  function setLaneX(v) {
+    $('lane-x').style.display = typeof v === 'number' ? '' : 'none';
+    $('lane-x').style.left = (clamp(v ?? 0, -1, 1) + 1) * 50 + '%';
+  }
+
+  function setConnected(ok) {
+    put('conn', ok ? 'connected' : 'disconnected');
+    $('conn').className = ok ? 'num' : 'num disc';
+  }
+
+  // Point where the straight line from centre a towards point b leaves a's box.
+  function boxEdge(a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const s = Math.min(dx ? NODE_W / 2 / Math.abs(dx) : Infinity, dy ? NODE_H / 2 / Math.abs(dy) : Infinity);
+    return { x: a.x + dx * s, y: a.y + dy * s };
+  }
+  const centre = (name) => ({ x: NODES[name][1], y: NODES[name][2] });
+
+  function edgePath(from, to, curved) {
+    const a = centre(from), b = centre(to);
+    if (curved) {
+      const p = boxEdge(a, CURVE_CTRL), q = boxEdge(b, CURVE_CTRL);
+      return `M${p.x},${p.y} Q${CURVE_CTRL.x},${CURVE_CTRL.y} ${q.x},${q.y}`;
+    }
+    // Shift each direction sideways so A->B and B->A do not overlap.
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const nx = -(b.y - a.y) / len * PAIR_GAP, ny = (b.x - a.x) / len * PAIR_GAP;
+    const p = boxEdge(a, b), q = boxEdge(b, a);
+    return `M${p.x + nx},${p.y + ny} L${q.x + nx},${q.y + ny}`;
+  }
+
+  function drawStateMachine() {
+    const arrow = '<marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">' +
+                  '<path d="M0,0 L10,5 L0,10 z" fill="#5a6372"/></marker>';
+    const edges = EDGES.map(([a, b, curved]) =>
+      `<path id="e-${a}-${b}" class="edge" marker-end="url(#arrow)" d="${edgePath(a, b, curved)}"/>`).join('');
+    const nodes = Object.keys(NODES).map((name) => {
+      const [label, x, y] = NODES[name];
+      return `<g id="n-${name}" class="node" style="color:${STATE_COLOR[name]}" transform="translate(${x - NODE_W / 2},${y - NODE_H / 2})">` +
+             `<title>${name}</title><rect width="${NODE_W}" height="${NODE_H}" rx="10"/>` +
+             `<text x="${NODE_W / 2}" y="${NODE_H / 2}">${label}</text></g>`;
+    }).join('');
+    $('sm').innerHTML = `<defs>${arrow}</defs>${edges}${nodes}`;
+  }
+
+  // Flash the edge from -> to in the new state's colour, then it returns to dim.
+  function flashEdge(from, to) {
+    const el = $(`e-${from}-${to}`);
+    if (!el) return;
+    el.style.stroke = STATE_COLOR[to];
+    el.classList.remove('flash');
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add('flash');
+    setTimeout(() => { el.classList.remove('flash'); el.style.stroke = ''; }, FLASH_MS);
+  }
+
+  function renderHistory() {
+    const now = Date.now();
+    $('hist').innerHTML = stateLog.map((h, i) => {
+      const end = i + 1 < stateLog.length ? stateLog[i + 1].t : now;
+      return `<span class="chip" style="background:${STATE_COLOR[h.state]}">${NODES[h.state][0]} ${((end - h.t) / 1000).toFixed(1)}s</span>`;
+    }).join('');
+  }
+
+  function updateStateMachine(name) {
+    const known = Boolean(NODES[name]);
+    if (known && name !== lastState) {
+      if (lastState) flashEdge(lastState, name);
+      stateLog.push({ state: name, t: Date.now() });
+      if (stateLog.length > HISTORY_LEN) stateLog.shift();
+      lastState = name;
+    }
+    for (const n of Object.keys(NODES)) $('n-' + n).classList.toggle('on', known && n === name);
+    renderHistory();
+  }
+
+  function render(s) {
+    const v = s.values || {};
+    const name = v.mode || '-';
+    $('badge').textContent = name;
+    $('badge').style.background = STATE_COLOR[name] || GRAY;
+    updateStateMachine(name);
+    put('phase', v.phase ?? '-');
+
+    put('server', s.mode ?? '-');
+    put('time', fmt(v.time, 1));
+    put('hz', v.dt > 0 ? fmt(1 / v.dt, 1) : '-');
+    put('fps', fmt(s.fps, 1));
+    put('inference', fmt(v.inference_ms, 1));
+    put('battery', fmt(v.battery_v));
+    $('battery').classList.toggle('low', typeof v.battery_v === 'number' && v.battery_v < LOW_BATTERY_V);
+
+    for (const key of ['left', 'right', 'speed', 'steering']) {
+      setSigned(key, v[key]);
+      put(key + '-v', fmt(v[key]));
+    }
+    setUnsigned('lane-vis', v.lane_visible);
+    put('lane-vis-v', fmt(v.lane_visible));
+    setLaneX(v.lane_x);
+    put('lane-x-v', fmt(v.lane_x));
+
+    put('curve-class', v.curve_class ?? '-');
+    put('curve-dir', v.curve_dir ?? '-');
+    put('p-straight', fmt(v.p_straight));
+    put('p-gentle', fmt(v.p_gentle));
+    put('p-sharp', fmt(v.p_sharp));
+    put('lane-aligned', yesNo(v.lane_aligned));
+    put('cup-visible', yesNo(v.cup_visible));
+    put('band-cm', fmt(v.band_cm, 1));
+    put('reason', 'reason: ' + (s.last_reason ?? '-'));
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch('/state.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error(res.status);
+      render(await res.json());
+      setConnected(true);
+    } catch (e) {
+      setConnected(false);
+    }
+    setTimeout(poll, POLL_MS);
+  }
+
+  function setMessage(msg) { put('status', msg); }
+
+  async function send(path, body) {
+    try {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const label = res.status === 409 ? ' (busy)' : res.status === 400 ? ' (bad input)' : '';
+      setMessage(`${path}: HTTP ${res.status}${label} ${await res.text()}`.trim());
+    } catch (e) {
+      setMessage(`${path}: failed (${e.message})`);
+    }
+  }
+
+  function streamUrl() {
+    return `/stream.mjpg?overlay=${$('overlay').checked ? 1 : 0}&t=${Date.now()}`;
+  }
+  function setStream() { $('cam').src = streamUrl(); }
+
+  $('cam').onerror = () => setTimeout(setStream, RETRY_MS);
+  $('overlay').onchange = setStream;
+  $('start').onclick = () => send('/start', { mode: $('mode').value, seconds: Number($('seconds').value) });
+  $('stop').onclick = () => send('/stop');
+
+  drawStateMachine();
+  setStream();
+  poll();
+</script>
+</body>
+</html>

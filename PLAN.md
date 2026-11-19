@@ -278,6 +278,7 @@ step test from now on (slides).
 
 | Date | Change |
 | :--- | :--- |
+| 2026-11-18 | Web cockpit (`WEB1`): `scripts/dashboard.sh`, open http://192.168.0.174:8080. Tested in idle and two drive starts without a lane (motors off); not yet tested during a real drive (overlay CPU cost in the loop) |
 | 2026-10-26 | Draft 1 |
 | 2026-10-26 | Draft 2 after critical review (section 10) |
 | 2026-10-26 | S1 first run failed; principle HYBRID; S1a fixes |

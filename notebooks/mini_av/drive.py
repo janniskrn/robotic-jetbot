@@ -58,21 +58,28 @@ class NoLaneAtStart(Exception):
     """The lane was not visible when the run started: put the robot on the lane"""
 
 
-def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_only=False, pass_side=None):
+def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_only=False, pass_side=None, on_step=None,
+        perception=None, camera=None):
     """Drives until the time is up, the lane is lost, a safety check fails or stop_event is set.
 
     stop_only: wait in front of a cup instead of avoiding it; pass_side: 'left'/'right' or None (measured).
+    on_step(frame, values): called after each logged step with the camera frame and the logged values (keep it cheap).
+    perception: an already loaded Perception (the dashboard shares its own: one copy of the models in memory).
+    camera: an open camera the caller owns; it stays open (Argus cannot reopen a camera in the same process).
 
     Returns the stop reason and the log folder. The camera frames go to a dataset session drive_<name>.
     """
     battery = BatteryGuard()
     if not battery.start_ok():
         return 'battery %.2f V is too low: charge first' % battery.volts, None
-    perception = Perception(use_curve=use_curve and not baseline)
+    if perception is None:
+        perception = Perception(use_curve=use_curve and not baseline)
     controller = Controller(baseline=baseline, use_curve=use_curve)
     decision = Decision(stop_only=stop_only, pass_side=pass_side, line_recovery=not baseline)
     robot = Robot()
-    camera = Camera.instance()
+    own_camera = camera is None
+    if own_camera:
+        camera = Camera.instance()
     log = RunLogger(name, {'baseline': baseline, 'use_curve': use_curve, 'seconds': seconds,
                            'stop_only': stop_only, 'pass_side': pass_side,
                            'battery_start_v': round(battery.volts, 2)})
@@ -122,7 +129,10 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                 followed = previous_state in FOLLOWING  # the lane is near: undo and sweep make sense
                 result = finder.run(history if followed else (), (-1 if turn < 0 else 1) if followed else 0,
                                     start + seconds, stop_event)
-                log.step(time=now - start, dt=dt, mode=LINE_RECOVERY, phase=result)
+                values = dict(time=now - start, dt=dt, mode=LINE_RECOVERY, phase=result)
+                log.step(**values)
+                if on_step is not None:
+                    on_step(finder.frame, values)
                 last = time.time()
                 frame = finder.frame
                 decision.line_recovery_done(result in FOUND, last, result in KEPT_DIRECTION)
@@ -169,16 +179,19 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
                 left = right = 0.0
             probs = percept['curve_probs']
             ahead = cup_ahead(percept)  # the cup the decision looks at, for the log
-            log.step(time=now - start, dt=dt, mode=state, lane_visible=percept['lane_visible'],
-                     lane_x=percept['lane_x'], p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2],
-                     curve_dir=percept['curve_dir'],
-                     curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
-                     left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
-                     cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'],
-                     lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
-                     band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None, band_cm=band_cm(ahead) if ahead else None,
-                     bands=len(percept['cup_bands']),
-                     phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''))
+            values = dict(time=now - start, dt=dt, mode=state, lane_visible=percept['lane_visible'],
+                          lane_x=percept['lane_x'], p_straight=probs[0], p_gentle=probs[1], p_sharp=probs[2],
+                          curve_dir=percept['curve_dir'],
+                          curve_class=percept['curve_class'], steering=controller.steering, speed=controller.speed,
+                          left=left, right=right, battery_v=battery.check(), inference_ms=percept['inference_ms'],
+                          cup_visible=percept['cup_visible'], cup_row=percept['cup_row'], cup_x=percept['cup_x'],
+                          lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
+                          band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None, band_cm=band_cm(ahead) if ahead else None,
+                          bands=len(percept['cup_bands']),
+                          phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''))
+            log.step(**values)
+            if on_step is not None:
+                on_step(frame, values)
             history.append((dt, left, right))
             if state == HALT:
                 break
@@ -195,7 +208,8 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
     finally:
         watchdog.running = False
         robot.stop()
-        camera.stop()
+        if own_camera:
+            camera.stop()
         frames.put(None)
         saver.join(timeout=2.0)
         recorder.stop()
