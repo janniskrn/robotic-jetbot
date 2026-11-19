@@ -5,10 +5,9 @@ import time
 
 from battery import read_voltage
 
-MOTOR_TIMEOUT = 0.25  # seconds without a motor update before the watchdog stops the motors (the loop stalled up to 1.1 s)
-STALE_TIMEOUT = 0.5  # seconds without a new camera frame before the robot stops (the camera froze on 2026-09-20)
+MOTOR_TIMEOUT = 0.25  # seconds without a motor update before the watchdog stops the motors
+STALE_TIMEOUT = 0.5  # seconds without a new camera frame before the robot stops
 
-# On 2026-09-20 the Jetson lost power mid-session (voltage sag under motor load).
 MIN_START_VOLTAGE = 11.4  # volts at rest (about 50 %) needed to start driving
 MIN_RUN_VOLTAGE = 10.8    # volts under load; staying below this stops the run before the Jetson browns out
 LOW_VOLTAGE_TIME = 2.0    # seconds below MIN_RUN_VOLTAGE before stopping (short dips at start-up are normal)
@@ -25,10 +24,7 @@ class BatteryLow(Exception):
 
 def wait_for_new_frame(camera, old, timeout=STALE_TIMEOUT):
     """Returns a frame newer than old; raises CameraFrozen if none arrives in time.
-
-    The JetBot camera thread ends silently on a read error and camera.value then keeps the last
-    image forever, so every new frame is a new array object: the same object means no new frame.
-    """
+    A new frame is a new array object: the camera thread ends silently on an error and keeps the last one."""
     start = time.time()
     while camera.value is old:
         if time.time() - start > timeout:
@@ -63,10 +59,7 @@ class BatteryGuard(object):
 
 
 class MotorWatchdog(threading.Thread):
-    """Stops the motors when the control loop has not updated them for MOTOR_TIMEOUT seconds.
-
-    The loop can stall (first model call, a slow write): then the robot must wait, not drive blind.
-    """
+    """Stops the motors when the control loop has not updated them for MOTOR_TIMEOUT seconds"""
 
     def __init__(self, robot, timeout=MOTOR_TIMEOUT):
         threading.Thread.__init__(self, daemon=True)

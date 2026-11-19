@@ -16,15 +16,12 @@ import lane_mask
 from safety import wait_for_new_frame
 from vision import CURVE_CLASSES, build_model, preprocess, split_curve_probs
 
-WARMUP_FRAMES = 5  # model calls with the motors off before driving: the first call took up to 1.1 s
+WARMUP_FRAMES = 5  # model calls with the motors off before driving: the first call is slow
 
 
 def load(task, allow_trt=True):
     """Trained model for the task on the GPU in half precision, or None if it was not trained yet.
-
-    Uses the TensorRT version (03_convert_trt.py, about 6x faster) when it is newer than the trained
-    weights; an older one belongs to a previous training and is ignored.
-    """
+    Uses the TensorRT version (tools/convert_trt.py) when it is newer than the trained weights."""
     path = os.path.join(config.MODEL_DIR, task + '.pth')
     if not os.path.exists(path):
         return None
@@ -34,7 +31,7 @@ def load(task, allow_trt=True):
         engine = TRTModule()
         engine.load_state_dict(torch.load(trt_path))
         return engine
-    torch.backends.cudnn.benchmark = True  # PyTorch fallback: lets cuDNN pick the fastest kernels (66 -> 41 ms)
+    torch.backends.cudnn.benchmark = True  # PyTorch fallback: lets cuDNN pick the fastest kernels
     model = build_model(task)
     model.load_state_dict(torch.load(path, map_location='cpu'))
     return model.cuda().eval().half()
@@ -44,7 +41,7 @@ class Perception(object):
     def __init__(self, use_curve=True):
         self.lane_model = load('lane')
         if self.lane_model is None:
-            raise RuntimeError('no lane model: train it first with 03_train.py --task lane')
+            raise RuntimeError('no lane model: train it first with tools/train.py --task lane')
         self.curve_model = load('curve') if use_curve else None
         self.obstacle_model = load('obstacle')  # None until trained: then no cup is ever seen
         self.frame_count = 0
@@ -61,11 +58,8 @@ class Perception(object):
 
     @torch.no_grad()
     def observe(self, frame):
-        """Returns a dict: lane_visible (probability), lane_x (-1..1), curve_probs (straight, gentle, sharp),
-        curve_dir (-1 left .. 1 right), curve_class, cup_visible (probability), cup_row (lower edge of the cup's
-        band, 0 top .. 1 bottom), cup_x (-1..1), inference_ms;
-        from the color masks: lane_aligned (True/False), tape_angle (degrees, 0 = horizontal, None without a large
-        tape piece), tape_row (lowest row with tape 0..1, 0 without tape), cup_bands (every red band as (x -1..1, lower edge row 0..1, pixels), nearest first)"""
+        """Returns a dict with the model outputs (lane_*, curve_*, cup_*, inference_ms) and the color-mask
+        measurements (lane_aligned, tape_angle, tape_row, cup_bands: (x -1..1, lower edge row 0..1, pixels))"""
         start = time.time()
         image = preprocess(frame).unsqueeze(0).cuda().half()
         lane = self.lane_model(image)[0].float()
@@ -77,20 +71,20 @@ class Perception(object):
             self.cup = self.obstacle_model(image)[0].float().tolist()
         self.frame_count += 1
         curve_probs, curve_dir = split_curve_probs(self.curve_model_probs)
-        cup = self.cup
         height, width = frame.shape[:2]
+        mask = lane_mask.blue_mask(frame)
         return {
             'lane_visible': torch.sigmoid(lane[0]).item(),
             'lane_x': max(-1.0, min(1.0, lane[1].item())),
             'curve_probs': curve_probs,
             'curve_dir': curve_dir,
             'curve_class': CURVE_CLASSES[max(range(3), key=lambda i: curve_probs[i])],
-            'cup_visible': 1.0 / (1.0 + math.exp(-cup[0])),
-            'cup_row': cup[1],
-            'cup_x': cup[2],
-            'lane_aligned': lane_mask.lane_aligned(frame),
-            'tape_angle': lane_mask.tape_angle(frame),
-            'tape_row': lane_mask.tape_row(frame) / float(height),
+            'cup_visible': 1.0 / (1.0 + math.exp(-self.cup[0])),
+            'cup_row': self.cup[1],
+            'cup_x': self.cup[2],
+            'lane_aligned': lane_mask.lane_aligned(frame, mask),
+            'tape_angle': lane_mask.tape_angle(frame, mask),
+            'tape_row': lane_mask.tape_row(frame, mask) / float(height),
             'cup_bands': [(x / (width / 2.0) - 1.0, row / float(height), pixels)
                           for x, row, pixels in cup_mask.find_cups(frame)],
             'inference_ms': (time.time() - start) * 1000.0,

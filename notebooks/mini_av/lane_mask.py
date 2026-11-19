@@ -1,8 +1,7 @@
 """Classical detection of the blue-tape lane with a color mask.
 
-A helper for data collection and automatic pre-labels (D10). The driving program follows the lane with the
-learned lane model; it uses this only for geometry the model does not give (HYBRID): whether the robot is
-aligned with the lane (lane_aligned) and when a turn away from the lane reaches 90 degrees (tape_angle).
+A helper for data collection and pre-labels (D10). Driving uses it only for geometry the lane model does not
+give (HYBRID): lane_aligned and tape_angle.
 """
 
 import math
@@ -10,23 +9,23 @@ import math
 import cv2
 import numpy as np
 
-# Blue tape in OpenCV HSV (hue 0-180). Measured on the track: tape hue 105-114, floor saturation mostly below 80.
+# Blue tape in OpenCV HSV (hue 0-180)
 HUE_MIN = 95
 HUE_MAX = 125
 SAT_MIN = 70
 VAL_MIN = 60
 
-ROI_TOP = 0.45        # ignore everything above this fraction of the image height (furniture, blue couch)
+ROI_TOP = 0.45        # ignore everything above this fraction of the image height
 LOOKAHEAD_ROW = 0.65  # row, as a fraction of the height, where the lane center is measured
 BAND_HALF = 5         # rows above and below the lookahead row that are combined
 MIN_GAP = 12          # pixels between two tape pieces that make them separate lines
-LANE_WIDTH = 162      # lane width in pixels at the lookahead row, measured on a straight (224x224 image)
+LANE_WIDTH = 162      # lane width in pixels at the lookahead row (224x224 image)
 TAPE_ROW_PIXELS = 5   # blue pixels in an image row that count as tape in that row
 MAX_LINE_WIDTH = 50   # wider tape pieces are a line crossing the row sideways (sharp curve), not a lane edge
 NEAR_OFFSET = 0.15    # second, closer row used to see which way a single line leans
 ALIGNED_GAP = (0.6, 1.4)  # gap between the outer lines, as a fraction of LANE_WIDTH, for an aligned robot
-TAPE_MIN_PIXELS = 400     # smallest tape piece tape_angle measures (the near lane edge had 600-3500 while turning)
-TAPE_MIN_WIDTH = 100      # and its smallest width in pixels (a short far piece gives no reliable angle)
+TAPE_MIN_PIXELS = 400     # smallest tape piece tape_angle measures
+TAPE_MIN_WIDTH = 100      # and its smallest width in pixels
 
 
 def blue_mask(bgr):
@@ -37,9 +36,11 @@ def blue_mask(bgr):
     return mask
 
 
-def tape_row(bgr):
+def tape_row(bgr, mask=None):
     """Lowest image row with tape, 0 without tape: the lower, the nearer"""
-    rows = np.nonzero((blue_mask(bgr) > 0).sum(axis=1) >= TAPE_ROW_PIXELS)[0]
+    if mask is None:
+        mask = blue_mask(bgr)
+    rows = np.nonzero((mask > 0).sum(axis=1) >= TAPE_ROW_PIXELS)[0]
     return int(rows[-1]) if len(rows) else 0
 
 
@@ -54,27 +55,24 @@ def line_centers(mask, row_frac=LOOKAHEAD_ROW):
     return [float(piece.mean()) for piece in pieces if piece[-1] - piece[0] <= MAX_LINE_WIDTH]
 
 
-def lane_aligned(bgr):
+def lane_aligned(bgr, mask=None):
     """True if two tape lines about one lane width apart cross the lookahead row: the robot points along the lane.
-
-    A robot standing crosswise sees the tape run across the image: no narrow line pieces, so False, although
-    the lane model then reports lane_x near 0 (run avoid_ccw_1). On clean laps 378 of 379 centered frames pass.
-    """
-    lines = line_centers(blue_mask(bgr))
+    Standing crosswise, the tape runs across the image: no narrow line pieces, so False."""
+    if mask is None:
+        mask = blue_mask(bgr)
+    lines = line_centers(mask)
     if len(lines) < 2:
         return False
     gap = lines[-1] - lines[0]
     return ALIGNED_GAP[0] * LANE_WIDTH <= gap <= ALIGNED_GAP[1] * LANE_WIDTH
 
 
-def tape_angle(bgr):
-    """Angle in degrees of the largest tape piece, 0 = horizontal, or None if no large piece is seen.
-
-    Turning in place away from the lane, the near lane edge sweeps through horizontal when the robot stands
-    at 90 degrees to the lane (spin test, AVOID3). Only the largest piece: two lane lines together give a
-    meaningless average angle.
-    """
-    count, labels, stats, _ = cv2.connectedComponentsWithStats((blue_mask(bgr) > 0).astype(np.uint8))
+def tape_angle(bgr, mask=None):
+    """Angle in degrees of the largest tape piece, 0 = horizontal, or None if no large piece is seen (AVOID3).
+    Only the largest piece: two lane lines together give a meaningless average angle."""
+    if mask is None:
+        mask = blue_mask(bgr)
+    count, labels, stats, _ = cv2.connectedComponentsWithStats((mask > 0).astype(np.uint8))
     if count < 2:
         return None
     piece = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
@@ -86,11 +84,8 @@ def tape_angle(bgr):
 
 
 def is_left_line(mask, x, row_frac=LOOKAHEAD_ROW):
-    """True if the line at x leans like a left lane line ('/'), False if like a right one ('\\').
-
-    A left line is further right the further away it is; a right line the opposite.
-    Returns None if the line is not visible in the closer row.
-    """
+    """True if the line at x leans like a left lane line ('/'), False if like a right one ('\\'), None if the line
+    is not visible in the closer row"""
     near = line_centers(mask, min(row_frac + NEAR_OFFSET, 0.97))
     if not near:
         return None

@@ -1,16 +1,13 @@
 """Recording of camera frames into dataset sessions.
 
-One session = one folder with JPEG frames and a session.json describing how and
-where they were recorded. Labels are added later on the workstation.
-
-Images always go to the USB stick, never to the SD card (see STORAGE.md).
+One session = one folder with JPEG frames and a session.json. Images always go to the USB stick (STORAGE.md).
 """
 
 import json
 import os
 import time
 
-# Path inside the Jupyter container. On the robot itself this is /home/jetbot/usb/images/datasets.
+# Path inside the Jupyter container (on the robot: /home/jetbot/usb/images/datasets)
 DATASET_ROOT = '/workspace/usb/images/datasets'
 
 

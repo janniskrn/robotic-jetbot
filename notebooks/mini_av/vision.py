@@ -1,7 +1,4 @@
-"""Network and image preprocessing shared by training (03_train.py) and driving.
-
-One place for both, so the robot feeds the model exactly what it was trained on.
-"""
+"""Network and image preprocessing shared by training (tools/train.py) and driving."""
 
 import numpy as np
 import torch
@@ -14,8 +11,7 @@ STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 # obstacle = (cup_visible logit, cup_row, cup_x), see OBST2
 TASK_OUTPUTS = {'lane': 2, 'curve': 5, 'obstacle': 3}
 CURVE_CLASSES = ['straight', 'gentle', 'sharp']  # how sharp: what speed and feedforward size use
-# The curve model also says which way the curve bends (DATA2): the sign of lane_x was near 0 and flipped
-# in the sharp curve. Left = negative curve_value, the same sign convention as lane_x.
+# The curve model also says which way the curve bends (DATA2); left = negative curve_value, like lane_x
 CURVE_MODEL_CLASSES = ['straight', 'gentle_left', 'sharp_left', 'gentle_right', 'sharp_right']
 
 
@@ -27,12 +23,10 @@ def curve_model_class(curve_class, curve_value):
 
 
 def split_curve_probs(probs):
-    """Curve model probabilities -> ([p_straight, p_gentle, p_sharp], curve_dir).
-
-    curve_dir = p_right - p_left, from -1 (surely a left curve) to 1 (surely a right curve).
-    """
+    """Curve model probabilities -> ([p_straight, p_gentle, p_sharp], curve_dir), curve_dir = p_right - p_left"""
     straight, gentle_left, sharp_left, gentle_right, sharp_right = probs
-    return [straight, gentle_left + gentle_right, sharp_left + sharp_right], gentle_right + sharp_right - gentle_left - sharp_left
+    return ([straight, gentle_left + gentle_right, sharp_left + sharp_right],
+            gentle_right + sharp_right - gentle_left - sharp_left)
 
 
 def build_model(task, pretrained=False):

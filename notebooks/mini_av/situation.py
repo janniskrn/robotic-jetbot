@@ -1,18 +1,14 @@
-"""Where the robot is relative to the lane (SIT1): the "broader picture" the professor asked for.
+"""Where the robot is relative to the lane (SIT1): tape traced over the whole floor part of the image, near and far.
 
-Instead of one image row, the tape is traced over the whole floor part of the image, near and far. Each tape line
-becomes a chain of points: lines that run away from the robot are traced row by row, lines that run across the image
-column by column. Two lines that lean toward each other and are about one lane width apart are the two borders of a
-lane. From that:
+Tape lines become chains of points (rows for lines running away, columns for lines across the view); two lines
+leaning toward each other about one lane width apart are the two borders of a lane. Result:
 
     zone      'in lane', 'on a line', 'lane to the left', 'lane to the right', 'line ahead' (tape across the view),
               'one line only', 'no lane'
     center    lane center at the robot's nose, -1 (left image edge) .. 1 (right), None without a lane
     heading   which way the lane runs ahead, degrees in the image: positive = it bends off to the right of the robot
 
-Far tape looks pale (saturation about 16 against 70 near), so the masks here are looser than lane_mask's; a piece
-only counts if it is about as wide as tape at its distance, and a chain only if it forms a smooth line.
-A script measurement (HYBRID), no decisions here.
+Far tape looks pale, so the masks are looser than lane_mask's. A script measurement (HYBRID), no decisions here.
 """
 
 import math
@@ -22,39 +18,34 @@ import numpy as np
 
 import lane_mask
 
-FAR_TOP = 0.40       # tape counts from this fraction of the image height down. Higher (0.33) did not find the faint far
-                     # lines at the wall the team saw, and let the strip at the bottom of the wall in (check 2026-11-11)
+IMAGE_SIZE = 224     # all frames are 224 x 224
+FAR_TOP = 0.40       # tape counts from this fraction of the image height down
 NEAR_TOP = 0.55      # below: the near mask; above: the far mask
-FAR_ROW = int(NEAR_TOP * 224)  # the same as an image row
-FAR_SAT_MIN = 15     # saturation from which far tape counts (the background line read 16 in run line3_1)
-NEAR_SAT_MIN = 35    # and near tape: half the pixels of pale lines lay at 20-70, below lane_mask's 70; the bluish-gray floor
-                     # near a wall reached 34 (check 2026-11-11)
+FAR_ROW = NEAR_TOP * IMAGE_SIZE  # the same boundary as an image row
+FAR_SAT_MIN = 15     # saturation from which far tape counts
+NEAR_SAT_MIN = 35    # saturation from which near tape counts (lane_mask uses 70)
 STEP = 4             # pixels between two traced rows (or columns)
 LINK = 14            # pixels a line may move sideways per step and still be the same line
 MAX_SKIP = 4         # steps a line may be missing (far tape breaks into pieces)
 MAX_LEAN = 3.0       # a line traced by columns takes part in the pairing up to this many pixels sideways per row
-WALL_ABOVE = (5, 10)  # image rows above a line where the floor (or the wall) is looked at
-WALL_HUE = 90        # hue from which that looks like the wall: the floor is beige (hue 5-35)
-WALL_SAT = 40        # with a saturation below this (tape itself is far more saturated)
+WALL_ABOVE = (5, 10)  # image rows above a line that are checked for wall
+WALL_HUE = 90        # hue from which that looks like the wall (the floor is beige, hue 5-35)
+WALL_SAT = 40        # and a saturation below this
 SAME = 8             # pixels: a column point this close to a row point is the same tape
 MIN_POINTS = 6       # points a chain needs to count as a line
-MIN_POINTS_FAR = 4   # in the far band only: far tape breaks into pieces
-MAX_WIGGLE = 3.0     # pixels a line may bend from one point to the next, typically (median): tape bends smoothly, floor
-                     # marks scatter. Local, so that S-bends and U-turns of the tape pass (frames 48, 90 of the check)
-TAPE_SHARE = (0.025, 0.3)  # width of a tape piece as a share of the lane width at its row: narrower is a speck, wider
-                           # is tape running across the row (traced by columns instead). The fisheye lens squeezes tape
-                           # near the image edges: at 0.04 those lines were lost (check 2026-11-11)
-ACROSS_MAX = 0.12    # tape across the view is thin seen from above; the dark strip at the bottom of the wall (same color as
-                     # pale far tape) is 7-15 pixels tall (check 2026-11-11)
-NOSE_X = 112         # image column of the robot's nose (224 x 224 image)
+MIN_POINTS_FAR = 4   # the same in the far band only
+MAX_WIGGLE = 3.0     # median pixels a line may bend from one point to the next: tape is smooth, floor marks scatter
+TAPE_SHARE = (0.025, 0.3)  # width of a tape piece as a share of the lane width at its row: narrower is a speck,
+                           # wider is tape across the row
+ACROSS_MAX = 0.12    # the same widest share for tape traced by columns (thin seen from above)
+NOSE_X = 112         # image column of the robot's nose
 NOSE_ROW = 190       # from this row down, a line near the middle runs under the nose
 ON_LINE_X = 30       # pixels from NOSE_X within which that line is under the nose
-# Lane width in pixels by image row, centered in the lane (354 frames of runs line1_1, line2_1, avoid4_7); rows 74 and 80
-# continue the trend of rows 89-107 (no reliable measurement that close to the horizon)
+# Lane width in pixels by image row, centered in the lane
 WIDTH_ROWS = (74, 80, 89, 94, 98, 103, 107, 112, 123, 134, 145, 156, 168, 179)
 WIDTH_PX = (32, 42, 56, 64, 74, 89, 102, 110, 133, 158, 178, 192, 204, 212)
 NEAR_STEP = 20       # pixels: pairs whose nearer end lies within the same such step count as equally near
-PAIR_WIDTH = (0.5, 1.7)  # share of that width two lines may be apart to be one lane (at an angle the gap grows)
+PAIR_WIDTH = (0.5, 1.7)  # share of the lane width two lines may be apart to be one lane
 
 
 def lane_width(row):
@@ -62,20 +53,20 @@ def lane_width(row):
 
 
 def tape_mask(bgr):
-    """Tape on the floor part of the image: a looser threshold far away, where the thin tape looks pale"""
+    """Tape on the floor part of the image: a looser threshold far away"""
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
     near, far = [cv2.inRange(hsv, (lane_mask.HUE_MIN, saturation, lane_mask.VAL_MIN), (lane_mask.HUE_MAX, 255, 255))
                  for saturation in (NEAR_SAT_MIN, FAR_SAT_MIN)]
     height = bgr.shape[0]
     mask = near.copy()
-    mask[:int(NEAR_TOP * height)] = far[:int(NEAR_TOP * height)]
+    mask[:int(FAR_ROW)] = far[:int(FAR_ROW)]
     mask[:int(FAR_TOP * height)] = 0
     return mask > 0
 
 
 def pieces(values, rows, widest=TAPE_SHARE[1]):
-    """Centers of the runs of True in values whose length fits tape; rows: the image row of each value (one row
-    for a row, every row for a column); widest: largest length as a share of the lane width"""
+    """Centers of the runs of True in values whose length fits tape; rows: the image row of each value;
+    widest: largest length as a share of the lane width"""
     padded = np.concatenate(([False], values, [False]))
     edges = np.flatnonzero(padded[1:] != padded[:-1])
     found = []
@@ -83,7 +74,7 @@ def pieces(values, rows, widest=TAPE_SHARE[1]):
         middle = (start + end - 1) / 2.0
         row = rows[int(middle)]
         width = lane_width(row)
-        narrowest = 1 if row < FAR_ROW else TAPE_SHARE[0] * width  # far tape is 1-2 pixels thin
+        narrowest = 1 if row < int(FAR_ROW) else TAPE_SHARE[0] * width  # far tape is 1-2 pixels thin
         if narrowest <= end - start <= widest * width:
             found.append(middle)
     return found
@@ -96,36 +87,29 @@ def chains_of(lines_of_points, far_row):
     for position, values in lines_of_points:
         taken = set()
         for value in values:
-            best = None
-            for i, chain in enumerate(chains):
-                last_position, last_value = chain[-1]
-                steps = abs(last_position - position) // STEP
-                if i in taken or steps > MAX_SKIP + 1 or abs(value - last_value) > LINK * steps:
-                    continue
-                if best is None or abs(value - last_value) < abs(value - chains[best][-1][1]):
-                    best = i
-            if best is None:
-                chains.append([(position, value)])
-                taken.add(len(chains) - 1)
-            else:
+            fits = [i for i, chain in enumerate(chains) if i not in taken and
+                    abs(chain[-1][0] - position) // STEP <= MAX_SKIP + 1 and
+                    abs(value - chain[-1][1]) <= LINK * (abs(chain[-1][0] - position) // STEP)]
+            if fits:
+                best = min(fits, key=lambda i: abs(value - chains[i][-1][1]))
                 chains[best].append((position, value))
-                taken.add(best)
+            else:
+                chains.append([(position, value)])
+                best = len(chains) - 1
+            taken.add(best)
     return [chain for chain in chains if len(chain) >= (
         MIN_POINTS_FAR if all(far_row(point) for point in chain) else MIN_POINTS) and smooth(chain)]
 
 
 def smooth(chain):
-    """True if the line bends little from point to point, as tape does and floor specks do not. A piece cut by the
-    image edge gives one kink; the median ignores it"""
+    """True if the line bends little from point to point (the median ignores a kink at the image edge)"""
     values = np.array([value for _, value in chain], dtype=float)
     return np.median(np.abs(np.diff(values, 2))) <= MAX_WIGGLE
 
 
 def below_wall(chain, hsv):
     """True if the image just above a line across the view looks like the wall, not the floor: the dark strip at the
-    bottom of the wall has the color of pale far tape, but above real tape lies beige floor (hue 5-35), above the
-    strip the gray-blue wall (hue 100-150, saturation under 30; check 2026-11-11). Lines running away from the robot
-    are not checked: above them lies the line itself"""
+    bottom of the wall has the color of pale far tape"""
     above = []
     for column, row in chain:
         column, row = int(column), int(round(row))
@@ -146,10 +130,9 @@ def trace(bgr):
     by_row = [(row, pieces(mask[row], np.full(width, row)))
               for row in range(height - 3, int(FAR_TOP * height), -STEP)]
     by_column = [(column, pieces(mask[:, column], all_rows, ACROSS_MAX)) for column in range(2, width, STEP)]
-    far_from = NEAR_TOP * height
-    along = chains_of(by_row, lambda point: point[0] < far_from)
+    along = chains_of(by_row, lambda point: point[0] < FAR_ROW)
     near = set((int(row) // SAME, int(x) // SAME) for chain in along for row, x in chain)
-    across = [chain for chain in chains_of(by_column, lambda point: point[1] < far_from)  # only tape the rows did not
+    across = [chain for chain in chains_of(by_column, lambda point: point[1] < FAR_ROW)  # only tape the rows did not
               if sum((int(row) // SAME, int(column) // SAME) in near for column, row in chain) < len(chain) / 2.0  # find
               and not below_wall(chain, hsv)]
     return along, across
@@ -167,8 +150,7 @@ def x_at(line, row):
 
 
 def lane_pair(lines):
-    """The two lines (left, right) that best look like the borders of one lane, or None. The nearest such pair: a
-    far pair can fit the lane width by chance (another part of the track)"""
+    """The nearest two lines (left, right) that look like the borders of one lane, or None (a far pair can fit by chance)"""
     best, best_key = None, None
     for i, first in enumerate(lines):
         for second in lines[i + 1:]:
@@ -186,15 +168,14 @@ def lane_pair(lines):
 
 
 def picture(bgr):
-    """The camera picture, twice as large, with what situation() finds drawn on it, for the team to check: yellow =
-    lines running away (cyan: only far), green = tape across the view, red = the two lines taken as the lane, red dot =
-    the lane center at the nose, pink triangle = the nose; the zone written at the top"""
+    """The picture twice as large with situation() drawn on it: yellow = lines running away (cyan: only far), green =
+    tape across the view, red = the lane pair, red dot = lane center at the nose, pink triangle = the nose"""
     seen = situation(bgr)
     scale = 2
     image = cv2.resize(bgr, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
     height = bgr.shape[0]
     for line in seen['lines']:
-        color = (0, 230, 255) if line['bottom'] >= NEAR_TOP * height else (255, 255, 0)
+        color = (0, 230, 255) if line['bottom'] >= FAR_ROW else (255, 255, 0)
         for row, x in line['points']:
             cv2.circle(image, (int(x * scale), int(row * scale)), 3, color, -1)
     for line in seen['across']:

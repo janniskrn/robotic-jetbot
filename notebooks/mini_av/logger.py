@@ -18,8 +18,9 @@ class RunLogger(object):
         self.dir = os.path.join(config.LOG_ROOT, '%s_%s' % (time.strftime('%Y-%m-%d_%H-%M-%S'), name))
         os.makedirs(self.dir)
         constants = {k: v for k, v in vars(config).items() if k.isupper()}
+        self._info = dict(settings, name=name, config=constants)
         with open(os.path.join(self.dir, 'run.json'), 'w') as f:
-            json.dump(dict(settings, name=name, config=constants), f, indent=2, sort_keys=True)
+            json.dump(self._info, f, indent=2, sort_keys=True)
         self._file = open(os.path.join(self.dir, 'steps.csv'), 'w', buffering=1)  # line-buffered: survives a power loss
         self._writer = csv.DictWriter(self._file, fieldnames=COLUMNS)
         self._writer.writeheader()
@@ -29,8 +30,6 @@ class RunLogger(object):
 
     def close(self, reason):
         self._file.close()
-        with open(os.path.join(self.dir, 'run.json')) as f:
-            info = json.load(f)
-        info['stop_reason'] = reason
+        self._info['stop_reason'] = reason
         with open(os.path.join(self.dir, 'run.json'), 'w') as f:
-            json.dump(info, f, indent=2, sort_keys=True)
+            json.dump(self._info, f, indent=2, sort_keys=True)
