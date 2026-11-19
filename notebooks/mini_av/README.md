@@ -1,52 +1,49 @@
 # Mini Autonomous Vehicle (our code)
 
-Everything the team writes for the challenge lives here. The stock NVIDIA notebooks in the
-other `notebooks/` folders stay untouched and are used as building blocks only.
+Everything the team writes for the challenge lives here. The stock NVIDIA notebooks in the other `notebooks/`
+folders stay untouched and are used as building blocks only. Run everything inside the Jupyter container from this
+folder (`docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 ...`).
 
-## Layout
+## Driving program (this folder)
 
-Files are numbered in the order of the pipeline, not by week. A week is a deadline, not a
-component: the same recorder, model and control code is used again in later weeks, so week
-folders would mean moving or copying files every week.
+One loop: camera -> `perception` -> `decision` -> `control` -> motors. Perception, decision and control stay
+separate.
 
-| File | Purpose | Runs on |
-| :--- | :--- | :--- |
-| `recorder.py` | Saves camera frames into dataset sessions | Robot |
-| `01_record_dataset.ipynb` | Drive with the gamepad and record a session | Robot |
-| `lane_mask.py` | Classical blue-tape lane detection (color mask); data tool and pre-labels only | Robot, workstation |
-| `cup_mask.py` | Classical detection of the red-band obstacle cups (color mask); data tool and labels only | Robot, workstation |
-| `02_auto_label.py` | Labels recorded sessions with the color mask (`labels.csv`) and draws review sheets | Robot or workstation |
-| `vision.py` | Network and preprocessing shared by training and driving | Robot, workstation |
-| `03_train.py` | Trains one model (`--task lane` or `curve`) with whole sessions held out | Robot (never while driving) or Mac |
-| `03_convert_trt.py` | Converts a trained model to TensorRT (about 6x faster); run on the robot after every training | Robot (container) |
-| `02_manual_label.py` | Manual labeling on a computer with a screen (test only, see `MANUAL_TEST.md`) | Mac |
-| `config.py` | All tuning values of the driving program | Robot |
-| `safety.py` | Camera watchdog and battery guard, shared by every program that drives | Robot |
-| `perception.py` | Camera frame -> lane visible, lane position, curve probabilities and curve direction (models) | Robot |
-| `decision.py` | State machine (Task 6): ROAD_FOLLOWING, SLOW_DOWN, OBSTACLE_AVOIDANCE, ROAD_RECOVERY, STOP, HALT; table and diagram in `STATE_MACHINE.md` | Robot |
-| `calibrate_motion.py` | Drives one open-loop move to measure distances and angles for the timed avoidance | Robot (container) |
-| `control.py` | Smoothed PD steering, curve-based speed, rate limits, motor trim | Robot |
-| `logger.py` | One CSV row per control step plus run.json, in `usb/logs/` | Robot |
-| `drive.py` | Main loop: perception -> decision -> control -> motors (`--baseline`, `--no-curve`) | Robot (container) |
-| `04_drive.ipynb` | Start and stop buttons for `drive.py` | Robot (browser) |
-| `replay.py` | Runs the trained models over recorded sessions offline and compares them with the color mask per section and direction (DATA2); judge a model before driving | Robot (container) |
-| `analyze_runs.py` | Task 1 table (`results/week1/`) and graphs (`usb/images/results/week1/`) from run logs | Robot host |
-| `battery.py` | Battery voltage and charge estimate; run it before any motor session | Robot host, container, or `ssh` from a PC |
-| `auto_record.py` | Robot drives the lane itself with `lane_mask` and records a session plus `auto_labels.csv` | Robot (`python3 auto_record.py --name lap --seconds 60` in the container; `--cup-stop` shuttles between cups for obstacle data) |
+| File | Purpose |
+| :--- | :--- |
+| `drive.py` | Main loop with logging and safety (`--baseline`, `--no-curve`, `--stop-only`, `--pass-side`) |
+| `config.py` | All tuning values of the driving program |
+| `perception.py` | Camera frame -> what the models see, plus the color-mask measurements (HYBRID) |
+| `lane_mask.py`, `cup_mask.py` | Color masks: blue lane tape and the cups' red band |
+| `situation.py` | Where the robot stands relative to the lane (zone, center, heading), from the tape |
+| `vision.py` | Network and preprocessing shared by training and driving |
+| `decision.py` | The state machine (Task 6); table and diagram in `STATE_MACHINE.md` |
+| `find_lane.py` | LINE_RECOVERY: finds a lost lane again (undo, sweep, search) |
+| `control.py` | PD steering with curve feedforward, curve-based speed, the swerve's wheel commands |
+| `safety.py`, `battery.py` | Camera watchdog, motor watchdog, battery guard; `battery.py` alone prints the charge |
+| `logger.py`, `recorder.py` | Run logs (`usb/logs/`) and camera frames (`usb/images/datasets/`) |
+| `dashboard.py`, `web/` | Web cockpit on port 8080 (`scripts/dashboard.sh`) |
+| `01_record_dataset.ipynb` | Drive with the gamepad and record a session |
+| `04_drive.ipynb` | Start and stop buttons for `drive.py` |
+| `05_camera_check.ipynb` | Live view: place the robot, check `situation.py` |
 
-Planned next, same numbering: `02_label_dataset` (workstation), `03_train_*` (workstation or
-robot), `04_drive` plus the driving modules `config.py`, `perception.py`, `decision.py`,
-`control.py`, `logger.py`.
+## Tools (`tools/`)
 
-## Which task uses what
+Run from this folder, for example `python3 tools/train.py --task lane --val <session>`.
 
-| Week | Task | Files |
-| :--- | :--- | :--- |
-| 1 | Task 1 adaptive lane following | `01_record_dataset`, `02_label_dataset`, `03_train_lane`, `04_drive` |
-| 1 | Task 2 obstacle avoidance and recovery | same files, plus the obstacle model and the avoidance logic |
+| File | Purpose |
+| :--- | :--- |
+| `auto_label.py` | Labels recorded sessions with the color masks (`labels.csv`) and draws review sheets |
+| `train.py` | Trains one model (`--task lane`, `curve` or `obstacle`) with whole sessions held out |
+| `convert_trt.py` | Converts a trained model to TensorRT (about 6x faster); run on the robot after every training |
+| `replay.py` | Runs the models over recorded sessions offline and compares them with the color mask (DATA2) |
+| `analyze_runs.py` | Task 1 table (`results/week1/`) and graphs from run logs (on the host: needs matplotlib) |
+| `motion_test.py` | Swerve moves without a cup: `turn`, `swerve`, `arc` (the curve should turn about 90 degrees) |
+| `cup_learn.py` | Learns the cup distance from the red band's size by backing away from a cup (LEARN1) |
 
 ## Rules
 
 - Images and datasets only on the USB stick: `/workspace/usb/images/datasets/` (see `STORAGE.md`).
-- Model weights (`*.pth`) stay on the SD card.
-- Decisions behind this structure are in `DECISIONS.md`.
+- Model weights (`*.pth`) stay on the SD card in `models/`.
+- Offline checks of the decision and recovery logic: `python3 -B /home/jetbot/usb/logs/test_avoid.py <this folder>`
+  on the host.

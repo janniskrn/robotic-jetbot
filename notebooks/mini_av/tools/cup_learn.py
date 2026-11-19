@@ -1,7 +1,7 @@
 """Teaches the cup distances: the robot backs away from a cup in small pulses and measures after each one.
 
-    python3 cup_learn.py straight         # a label for the place; the robot starts touching the cup
-    python3 cup_learn.py straight 0       # last number: pulses at most; 0 measures once with the motors off
+    python3 tools/cup_learn.py straight         # a label for the place; the robot starts touching the cup
+    python3 tools/cup_learn.py straight 0       # last number: pulses at most; 0 measures once with the motors off
 
 At every stop (motors off) it saves one frame and one line of measurements: where the cup mask sees the band and what
 all models return on those frames. The distance comes from the band's size afterwards: 405 / sqrt(band pixels) cm
@@ -19,10 +19,11 @@ import sys
 import time
 
 import cv2
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the driving modules
 from jetbot import Camera, Robot
 
 import config
-import cup_mask
 from perception import Perception
 from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
 
@@ -34,7 +35,6 @@ MAX_PULSES = 30       # at most this many pulses per run
 FAR_ROW = 72          # band row above which the run ends (about a meter away)
 EDGE_X = 0.85         # the run ends when the band drifts this far toward the image edge
 LOST_STOPS = 3        # stops in a row without a band before the run ends
-WARMUP_FRAMES = 5     # model calls with the motors off (the first call took up to 1.1 s)
 COLUMNS = ['stop', 'band_row', 'band_x', 'band_pixels', 'bands', 'cup_visible', 'cup_row', 'cup_x', 'lane_visible',
            'lane_x', 'lane_aligned', 'tape_angle', 'p_straight', 'p_gentle', 'p_sharp', 'curve_dir', 'battery_v']
 
@@ -110,10 +110,7 @@ def main():
     rows = []
     result = 'all pulses done'
     try:
-        frame = wait_for_new_frame(camera, camera.value, timeout=2.0)
-        for _ in range(WARMUP_FRAMES):
-            frame = wait_for_new_frame(camera, frame)
-            perception.observe(frame)
+        frame = perception.warm_up(camera)
         watchdog.start()
         lost = 0
         seen_band = False

@@ -1,8 +1,8 @@
 """Trains one model from the labeled dataset sessions (D2: one model per task).
 
-    python3 03_train.py --task lane  --val <session name part> [--val ...]
-    python3 03_train.py --task curve --val <session name part>
-    python3 03_train.py --task obstacle --val <session name part>
+    python3 tools/train.py --task lane  --val <session name part> [--val ...]
+    python3 tools/train.py --task curve --val <session name part>
+    python3 tools/train.py --task obstacle --val <session name part>
 
 lane:  outputs lane_visible (yes/no) and lane_x; lane_x only counts on frames where the lane is visible.
 curve: straight / gentle / sharp, and left or right for a curve (vision.CURVE_MODEL_CLASSES); only frames
@@ -22,6 +22,7 @@ import glob
 import json
 import os
 import random
+import sys
 import time
 
 import cv2
@@ -29,10 +30,11 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the driving modules
+import config
+from recorder import DATASET_ROOT
 from vision import CURVE_MODEL_CLASSES, build_model, curve_model_class, preprocess
 
-DATASET_ROOT = '/workspace/usb/images/datasets'  # inside the Jupyter container
-MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')  # SD card, *.pth is not in git
 
 EPOCHS = 15
 BATCH_SIZE = 16
@@ -209,8 +211,8 @@ def main():
     dev = device()
     model = build_model(args.task, pretrained=True).to(dev)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    if not os.path.isdir(MODEL_DIR):
-        os.makedirs(MODEL_DIR)
+    if not os.path.isdir(config.MODEL_DIR):
+        os.makedirs(config.MODEL_DIR)
     best, history, start = None, [], time.time()
     for epoch in range(args.epochs):
         train_metrics = run_epoch(model, train, args.task, dev, optimizer)
@@ -223,13 +225,13 @@ def main():
         if best is None or score(args.task, val_metrics) < score(args.task, best['val']):
             best = history[-1]
             # legacy format so older PyTorch versions can load it as well
-            torch.save(model.state_dict(), os.path.join(MODEL_DIR, args.task + '.pth'),
+            torch.save(model.state_dict(), os.path.join(config.MODEL_DIR, args.task + '.pth'),
                        _use_new_zipfile_serialization=False)
     report = {'task': args.task, 'best_epoch': best['epoch'], 'best': best, 'history': history,
               'train_sessions': sorted(set(r[1] for r in train)), 'val_sessions': sorted(set(r[1] for r in val)),
               'train_frames': len(train), 'val_frames': len(val), 'minutes': (time.time() - start) / 60.0,
               'device': str(dev), 'epochs': args.epochs, 'batch_size': BATCH_SIZE, 'learning_rate': LEARNING_RATE}
-    with open(os.path.join(MODEL_DIR, args.task + '.json'), 'w') as f:
+    with open(os.path.join(config.MODEL_DIR, args.task + '.json'), 'w') as f:
         json.dump(report, f, indent=2)
     print('best epoch %d: %s' % (best['epoch'], json.dumps(best['val'])))
 

@@ -2,31 +2,31 @@
 the color mask, per section (straight / gentle / sharp / no lane) and per driving direction (DATA2).
 No motors, no training: judge a model change here before driving.
 
-    python3 replay.py <session name part> [...] [--per-frame]     # in the container
+    python3 tools/replay.py <session name part> [...] [--per-frame]     # in the container
 
 Main number: in curve frames, does the direction signal point to the inside of the oval? Its ground truth
 needs no hand labels: counterclockwise every curve turns left, clockwise every curve turns right. The
 driving direction is measured from the mask (sign of the bend over all curve frames), not the session name.
-Direction signals: the sign of lane_x (the old feedforward) and, for a 5-class curve model, its left/right.
+Direction signals: the sign of lane_x and the curve model's left/right.
 """
 
 import argparse
 import glob
-import importlib
 import os
+import sys
 
 import cv2
 import torch
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the driving modules
+import auto_label
 from perception import load
+from recorder import DATASET_ROOT
 from vision import preprocess, split_curve_probs
 
-DATASET_ROOT = '/workspace/usb/images/datasets'
-MIN_LANE_X = 0.05     # |lane_x| below which lane_x gives no direction (the old FEEDFORWARD_MIN_X)
+MIN_LANE_X = 0.05     # |lane_x| below which lane_x gives no direction
 MIN_CURVE_DIR = 0.2   # |p_right - p_left| below which the curve model gives no direction
 SECTIONS = ['straight', 'gentle', 'sharp', 'no lane']
-
-auto_label = importlib.import_module('02_auto_label')
 
 
 @torch.no_grad()
@@ -34,11 +34,7 @@ def model_outputs(lane_model, curve_model, bgr):
     """Raw per-frame outputs (no smoothing): lane_visible, lane_x, curve magnitude class, curve_dir"""
     image = preprocess(bgr).unsqueeze(0).cuda().half()
     lane = lane_model(image)[0].float()
-    probs = torch.softmax(curve_model(image)[0].float(), 0).tolist()
-    if len(probs) == 5:
-        magnitude, curve_dir = split_curve_probs(probs)
-    else:  # old 3-class model: straight, gentle, sharp, no direction
-        magnitude, curve_dir = probs, None
+    magnitude, curve_dir = split_curve_probs(torch.softmax(curve_model(image)[0].float(), 0).tolist())
     return {'lane_visible': torch.sigmoid(lane[0]).item(), 'lane_x': lane[1].item(),
             'curve_class': ['straight', 'gentle', 'sharp'][magnitude.index(max(magnitude))], 'curve_dir': curve_dir}
 
@@ -66,13 +62,13 @@ def replay_session(session_dir, lane_model, curve_model, per_frame):
             'x_error': abs(out['lane_x'] - label['lane_x']) if mask_visible else None,
             'class_right': out['curve_class'] == label['curve_class'] if label['curve_class'] else None,
             'dir_lane_x': direction_verdict(out['lane_x'], MIN_LANE_X, inside),
-            'dir_curve': direction_verdict(out['curve_dir'], MIN_CURVE_DIR, inside) if out['curve_dir'] is not None else '-',
+            'dir_curve': direction_verdict(out['curve_dir'], MIN_CURVE_DIR, inside),
         }
         results.append(result)
         if per_frame:
             print('%s %-8s mask x %6s  model vis %.2f x %+.3f %-8s dir %s  | lane_x dir %-5s curve dir %s' % (
                 label['frame'][6:11], result['section'], label['lane_x'], out['lane_visible'], out['lane_x'],
-                out['curve_class'], '-' if out['curve_dir'] is None else '%+.2f' % out['curve_dir'],
+                out['curve_class'], '%+.2f' % out['curve_dir'],
                 result['dir_lane_x'], result['dir_curve']))
     return inside, results
 
@@ -94,7 +90,7 @@ def print_table(title, results):
         classes = [r['class_right'] for r in rows if r['class_right'] is not None]
         dirs = ''
         for key in ('dir_lane_x', 'dir_curve'):
-            if section == 'straight' or rows[0][key] == '-':
+            if section == 'straight':
                 dirs += ' | %-23s' % '-'
             else:
                 dirs += ' | %-23s' % ('%s / %s' % (percent(sum(r[key] == 'right' for r in rows), len(rows)),

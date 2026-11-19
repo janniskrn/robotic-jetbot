@@ -1,6 +1,6 @@
 """Converts a trained model to TensorRT for fast driving (run on the robot, after every training).
 
-    python3 03_convert_trt.py --task lane
+    python3 tools/convert_trt.py --task lane
 
 Measured on the robot: lane model 66 ms per frame in PyTorch, 10.6 ms in TensorRT, same outputs.
 A TensorRT engine only runs on the GPU it was built on, so this step always runs on the robot.
@@ -9,14 +9,16 @@ Saves models/<task>_trt.pth; perception.py uses it when it is newer than models/
 
 import argparse
 import os
+import sys
 
 import torch
 from torch2trt import torch2trt
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the driving modules
+import config
 from perception import load
 
 MAX_DIFFERENCE = 0.05  # largest allowed output difference to PyTorch (measured: 0.002 and below)
-MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 
 
 def main():
@@ -30,7 +32,7 @@ def main():
         difference = (model(example).float() - engine(example).float()).abs().max().item()
     if difference > MAX_DIFFERENCE:
         raise SystemExit('conversion changed the outputs by %.4f: not saved' % difference)
-    torch.save(engine.state_dict(), os.path.join(MODEL_DIR, args.task + '_trt.pth'))
+    torch.save(engine.state_dict(), os.path.join(config.MODEL_DIR, args.task + '_trt.pth'))
     print('saved models/%s_trt.pth, largest output difference to PyTorch %.4f' % (args.task, difference))
 
 

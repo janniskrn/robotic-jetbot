@@ -84,7 +84,7 @@ ARC_STRAIGHT = 0.335       # both wheels while the cup is in view during the cur
 ARC_STOP_CM = 16.0         # a band this close in the middle of the image during the curve: stop
 ARC_STOP_X = 0.5           # |band x| below which that band counts as in the middle
 ARC_TURN_MIN = 3.0         # seconds of curving before the curve may end: about 90 degrees (ARC1, estimate; measure with
-                           # `calibrate_motion.py swerve_arc`)
+                           # `tools/motion_test.py arc`)
 ARC_MIN = 1.0              # seconds of curve before tape under the nose counts (at the start it is the old lane)
 ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends
 TAPE_UNDER_ROW = 215 / 224.0  # lowest tape at this row: the lane's border is under the robot's nose

@@ -20,7 +20,7 @@ For every frame of a session it writes labels.csv:
 It also draws review sheets (labels drawn on the frames) into usb/images/review/<session>/.
 
 Run from this folder, on the robot or on the workstation:
-    python3 02_auto_label.py /home/jetbot/usb/images/datasets/<session> [more sessions...]
+    python3 tools/auto_label.py /home/jetbot/usb/images/datasets/<session> [more sessions...]
 """
 
 import csv
@@ -32,6 +32,7 @@ import sys
 import cv2
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the driving modules
 from cup_mask import find_cup
 from lane_mask import LOOKAHEAD_ROW, LaneTracker, blue_mask, is_left_line, line_centers
 
