@@ -1,31 +1,32 @@
-# JetBot
+# JetBot Mini Autonomous Vehicle
 
-<!--[<img src="https://img.shields.io/discord/553852754058280961.svg">](https://discord.gg/Ady6NtF) -->
+Our team's code for the Mini Autonomous Vehicle Challenge (6-week course project, `guide/PROJECT_GUIDE_1.md`),
+built on the NVIDIA JetBot (Jetson Nano). The robot follows a taped lane with learned models, slows down in sharp
+curves, swerves around cups and finds the lane again, all through one explicit state machine.
 
-> Looking for a quick way to get started with JetBot?  Many third party kits are [now available](https://jetbot.org/master/third_party_kits.html)!
+## Where things are
 
-<img src="../..//wiki/images/jetson-jetbot-illustration_1600x1260.png" height="256">
+| Path | What |
+| :--- | :--- |
+| `notebooks/mini_av/` | Our driving program; `tools/` for labeling, training, tests and analysis (see its `README.md`) |
+| `notebooks/mini_av/STATE_MACHINE.md` | States, transitions and the diagram, in step with `decision.py` |
+| `PLAN.md` | Working plan and the current step |
+| `DECISIONS.md` | Every decision with its ID (the IDs in code comments point here) |
+| `HANDOVER.md` | Latest session handover |
+| `STORAGE.md` | Images and datasets on the USB stick, models on the SD card |
+| `guide/` | The course: project guides (PDF and Markdown), our analysis `GOAL.md`, weekly rhythm |
+| `presentation/`, `diagrams/`, `design/`, `results/` | Weekly presentations, diagrams, the look, result tables |
+| `scripts/` | `stop_robot.sh` (emergency stop), `dashboard.sh` (web cockpit), `restart_camera.sh`, camera setup |
+| `jetbot/`, `docker/`, `setup.py` | NVIDIA JetBot package and containers (upstream, used as is) |
+| `notebooks/` (other folders) | NVIDIA example notebooks (upstream, building blocks only) |
+| `archive/` | Old plans and notes |
 
-JetBot is an open-source robot platform for AI learning and experimentation.
-The original NVIDIA JetBot reference design is an NVIDIA-designed open-source
-robot based on NVIDIA Jetson Nano that is
+## Quick start (on the robot)
 
-* **Affordable** - Less than $150 add-on to Jetson Nano
-* **Educational** - Tutorials from basic motion to AI based collision avoidance
-* **Fun!** - Interactively programmed from your web browser
+```
+python3 ~/jetbot/notebooks/mini_av/battery.py      # do not drive below 11.4 V
+~/jetbot/scripts/dashboard.sh                      # web cockpit on http://<robot-ip>:8080
+~/jetbot/scripts/stop_robot.sh                     # emergency stop
+```
 
-Building and using JetBot gives the hands on experience needed to create entirely new AI projects.
-The broader JetBot ecosystem also includes compatible third party kits such as
-SparkFun JetBot, Waveshare JetBot, and other community or vendor variants.
-
-To get started, read the [JetBot documentation](https://jetbot.org).
-
-## Get involved
-
-We really appreciate any feedback related to JetBot, and also just enjoy seeing what you're working on!  There is a growing community of Jetson Nano and JetBot users.  It's easy to get involved involved...
-
-<!--* Join the [chat server](https://discord.gg/Ady6NtF)-->
-* Ask a question and discuss JetBot related topics on the [JetBot GitHub Discussions](https://github.com/NVIDIA-AI-IOT/jetbot/discussions)
-* Report a bug by [creating an issue](https://github.com/NVIDIA-AI-IOT/jetbot/issues)
-* Share your project or ask a question on the [Jetson Developer Forums](https://devtalk.nvidia.com/default/board/139/jetson-embedded-systems/)
-
+Based on [NVIDIA-AI-IOT/jetbot](https://github.com/NVIDIA-AI-IOT/jetbot) (MIT license, `LICENSE.md`).

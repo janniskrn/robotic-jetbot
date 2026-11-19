@@ -1,13 +1,13 @@
 # Goal: what the slides ask for
 
-Analysis of the three slide files in the repository root. The full text of Guide #1 is in `PROJECT_GUIDE_1.md`;
+Analysis of the three slide files in this folder. The full text of Guide #1 is in `PROJECT_GUIDE_1.md`;
 this file adds Guide #2 and the state machine example, and says what they mean for our code.
 The working plan toward this goal is `PLAN.md`.
 
 | Source | Content |
 | :--- | :--- |
-| `JetBot_Project_Guide_1 (Autonomous_Vehicle) (rev3).pdf` | Objective, coding policy, Tasks 1-8, schedule, deliverables |
-| `JetBot_Project_Guide_2 (StateMachine PseudoCode).pdf` | System and state diagram, pseudo code of the main loop, `update_state`, the models and the behaviors |
+| `Project_Guide_1.pdf` | Objective, coding policy, Tasks 1-8, schedule, deliverables |
+| `Project_Guide_2_StateMachine.pdf` | System and state diagram, pseudo code of the main loop, `update_state`, the models and the behaviors |
 | `State_Machine_Example.pdf` | How a state machine is written down: diagram plus present state / input / next state / output table |
 
 ## 1. Final goal

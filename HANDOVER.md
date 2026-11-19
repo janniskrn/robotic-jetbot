@@ -5,6 +5,18 @@ LINE2), `PLAN.md` section 6 step S1, `notebooks/mini_av/STATE_MACHINE.md`.
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
+## Update 2026-11-19, later (code review and refactor REF1-3, REPO1, FIX1)
+
+- Same driving behavior after the refactor (checked offline, see `DECISIONS.md` REF1/REF2), except `FIX1`: one
+  weak first frame no longer ends the run. Not driven yet after the refactor: drive once with the cockpit before
+  new changes.
+- New places: tools in `notebooks/mini_av/tools/` (`python3 tools/<name>.py` from `notebooks/mini_av`), the course
+  material in `guide/`, old plans in `archive/`, the video in `usb/videos/`. Map: `CLAUDE.md` section 6.1b.
+- The ARC1 angle check is now `tools/motion_test.py arc` (was `calibrate_motion.py swerve_arc`).
+- Older entries below name the old paths (`03_train.py`, `calibrate_motion.py`, `GOAL.md` at the root ...).
+- Open: the class diagram (`diagrams/mini_av_class_diagram.*`) shows the old classes; `presentation/README.md`
+  quotes the removed lane smoothing line of `control.py`.
+
 ## Update 2026-11-19 (first S1g track runs, fixes S1h, not driven yet)
 
 - New-code runs `2026-11-19_05-18..05-21` (cockpit): 7 of 9 swerves back to following; `turn_back` never fired.

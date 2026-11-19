@@ -16,7 +16,7 @@ numbers, the failures and their causes. Read it the evening before.
 **[`SPEAKING_week3.md`](SPEAKING_week3.md) is what to say on the Week 3 page.** **[`SPEAKING.md`](SPEAKING.md) is what to say**, slide by slide, with the four-step story of the program at
 the top. The slides carry the evidence; that file carries the words. Read it before presenting, not during.
 
-Rhythm and course rules: [`WEEKLY.md`](../WEEKLY.md). Look: [`design/THEME.md`](../design/THEME.md), locked.
+Rhythm and course rules: [`WEEKLY.md`](../guide/WEEKLY.md). Look: [`design/THEME.md`](../design/THEME.md), locked.
 
 ## The structure the professor asked for
 

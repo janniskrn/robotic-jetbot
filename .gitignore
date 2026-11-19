@@ -44,3 +44,7 @@ diagrams/*.browser-check.json
 diagrams/*.finalize.json
 diagrams/*.finalize-summary.json
 diagrams/*.delivery.json
+
+# Videos stay on the USB stick (usb/videos/), like images
+*.mp4
+*.mov

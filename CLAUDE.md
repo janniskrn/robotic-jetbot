@@ -73,8 +73,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **Never implement anything without explicit permission.**
 
-- The assignment is described in `PROJECT_GUIDE_1.md` (JetBot Project Guide #1, a 6-week project).
-- `GOAL.md` analyzes all slides (Guide #1, Guide #2 state machine and pseudo code, state machine example) and
+- The assignment is described in `guide/PROJECT_GUIDE_1.md` (JetBot Project Guide #1, a 6-week project).
+- `guide/GOAL.md` analyzes all slides (Guide #1, Guide #2 state machine and pseudo code, state machine example) and
   says what they mean for our code. `PLAN.md` is the working plan toward that goal: update it as work progresses.
 - Analysis, explanations, plans, and suggestions are fine. Writing or changing code or notebooks for a task needs the user's approval first.
 - Propose the approach, wait for a clear "go", then implement only what was approved.
@@ -97,11 +97,37 @@ Code style:
 - Short functions, clear names, a short comment where the "why" is not obvious. No clever tricks.
 - Follow best practices (clean structure, no magic numbers hidden in code: put tuning values as named constants at the top).
 - Keep perception, decision, and control clearly separated (required for the final program).
+- Comments say what and why in one line; the history of a value (runs, dates, counts) goes into `DECISIONS.md`,
+  and the comment keeps only its ID (for example `ARC1`).
+- Remove code that a decision switched off, instead of keeping it behind a zero constant.
+- A refactor keeps the behavior: check it with the offline checks and an old-vs-new replay on the logged runs.
 - For every change, be ready to explain: problem → design → code change → test → result.
+
+### 6.1b Where What Is
+
+| Path | What |
+| :--- | :--- |
+| `notebooks/mini_av/` | The driving program: `drive.py` (main loop) -> `perception.py` -> `decision.py` (state machine) -> `control.py`; `config.py` holds every tuning value; `find_lane.py` is LINE_RECOVERY; `lane_mask.py`, `cup_mask.py`, `situation.py` are the color-mask measurements |
+| `notebooks/mini_av/tools/` | Labeling, training, TensorRT, replay, run analysis, motion tests, cup survey; run as `python3 tools/<name>.py` from `notebooks/mini_av` |
+| `notebooks/mini_av/STATE_MACHINE.md` | State table and diagram; change it together with `decision.py` |
+| `notebooks/mini_av/dashboard.py`, `web/` | Web cockpit (port 8080, `scripts/dashboard.sh`) |
+| `PLAN.md`, `DECISIONS.md`, `HANDOVER.md`, `STORAGE.md` | Plan, decision log, latest handover, storage rules |
+| `guide/` | Course material: project guides, `GOAL.md`, `WEEKLY.md` |
+| `presentation/`, `diagrams/`, `design/`, `results/` | Presentations, diagrams, the look, result tables |
+| `scripts/` | `stop_robot.sh`, `dashboard.sh`, `restart_camera.sh`, `archify.sh`, camera setup |
+| `jetbot/`, `docker/`, other `notebooks/` folders | NVIDIA upstream: used as is, not changed |
+| `archive/` | Old plans; do not update |
+| `/home/jetbot/usb/` (not in git) | `images/datasets/` (camera frames), `logs/` (run logs, the offline check `test_avoid.py`), `videos/` |
+
+How to run and check (inside the container `jetbot_jupyter`, which sees the repository as `/workspace/jetbot`):
+- Drive: the web cockpit, `04_drive.ipynb`, or
+  `echo 'jetbot' | sudo -S -p '' docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 drive.py --name <name> --seconds 60`.
+- Offline checks (host, no robot needed): `python3 -B /home/jetbot/usb/logs/test_avoid.py <code folder>`; all must pass
+  before a driving change is proposed for the track.
 
 ### 6.2 The Plan (Milestones)
 
-Full details are in `PROJECT_GUIDE_1.md`. The order of work is `PLAN.md` section 6 (decision `ORDER`): do not
+Full details are in `guide/PROJECT_GUIDE_1.md`. The order of work is `PLAN.md` section 6 (decision `ORDER`): do not
 start a step that is not next there without the user's go.
 
 | Week | Task | Done when |

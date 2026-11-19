@@ -1,9 +1,9 @@
 # Plan: from today's robot to the final challenge
 
-Working plan toward `GOAL.md`. Update it as work progresses: tick steps, add results, move the "Now" marker.
+Working plan toward `guide/GOAL.md`. Update it as work progresses: tick steps, add results, move the "Now" marker.
 Decisions that come out of it go into `DECISIONS.md`. Every step follows CLAUDE.md 6.1 (propose, go, implement,
 test, approval, commit). The weekly course rhythm (Thursday upload, Tuesday presentation with a demo) is in
-`WEEKLY.md`.
+`guide/WEEKLY.md`.
 
 Version: 2026-10-26, draft 3 (no dates in the repo; order of section 6 approved, decision ORDER).
 
@@ -18,7 +18,7 @@ Version: 2026-10-26, draft 3 (no dates in the repo; order of section 6 approved,
 | M5 Parking | not started | nothing | parking space not taped yet |
 | M6 State machine | **partial** | `decision.py` with the guide's state names, `STATE_MACHINE.md` table + Mermaid (`SM1`) | structure differs from Guide #2 (section 2); TURN / PARKING / STOP-sign states missing |
 | M7 ACC | not started | speed is already `min(curve speed, steering speed)` | second JetBot, lead detection, lead program, gap control |
-| M8 Final + slides | not started | run logs, `analyze_runs.py`, experiment records in `DECISIONS.md` | videos, slides, data summary, ZIP |
+| M8 Final + slides | not started | run logs, `tools/analyze_runs.py`, experiment records in `DECISIONS.md` | videos, slides, data summary, ZIP |
 
 Only the signs and the second JetBot are bought or borrowed. **The intersection and the parking space are tape on
 the floor: the team can build them now (S0).**
@@ -48,8 +48,8 @@ check that decides a state change uses a script measurement whenever one exists.
 (S1).
 
 The same pipeline for every model, as for lane and cup: record sessions -> labels from a color mask or the session
-settings -> spot check on review sheets -> train (`03_train.py`, epoch picked by the error that matters) ->
-TensorRT -> `replay.py` before driving. Models only measure; every decision is a named constant and a branch in
+settings -> spot check on review sheets -> train (`tools/train.py`, epoch picked by the error that matters) ->
+TensorRT -> `tools/replay.py` before driving. Models only measure; every decision is a named constant and a branch in
 `update_state`.
 
 | Result | Network(s) | Outputs | Labels from | Used by |
@@ -190,7 +190,7 @@ step test from now on (slides).
       `turn_back`, no cup hit, no lap driven backwards, direction right in the run's log.
     - [ ] S1h (2026-11-19, user: analyse and fix) after the first S1g track runs: curve turns about 90 degrees before it
       may end (`ARC1`), turn back accepts a curved lane bending the driving way (`TURN2`), cockpit live during the
-      search (`WEB2`). 108 offline checks pass. Track: `calibrate_motion.py swerve_arc` (about 90 degrees?), then runs
+      search (`WEB2`). 108 offline checks pass. Track: `tools/motion_test.py arc` (about 90 degrees?), then runs
       with cups, one just before a curve.
     - [ ] S1d3 (track) the swerve from that fixed start on the straight, at its start, middle and end. Pass: 8 of 10
       back to following without touching the cup.
@@ -257,7 +257,7 @@ step test from now on (slides).
 
 **M8 Final**
 
-- [ ] **S17 Robustness:** new sessions in changed light and positions through `replay.py`; fix the weakest case.
+- [ ] **S17 Robustness:** new sessions in changed light and positions through `tools/replay.py`; fix the weakest case.
 - [ ] **S18 Slides** (one per member, `slop-prose` for text, V2-V4 figures), training/test data summary (why each
   dataset was added, what it fixed), graphs and tables, video, ZIP `StudentID_Name_mmddyyyy_DataMining.zip`.
 
@@ -287,6 +287,7 @@ step test from now on (slides).
 
 | Date | Change |
 | :--- | :--- |
+| 2026-11-19 | Code review: refactor `REF1`-`REF3`, repository structure `REPO1`, startup fix `FIX1` (offline checked, same behavior otherwise) |
 | 2026-11-19 | S1h `ARC1`, `TURN2`, `WEB2` (offline only) |
 | 2026-11-18 | S1g swerve fixes `DIR1`, `TURN1`, `RECOV2` (offline only) |
 | 2026-11-18 | Web cockpit (`WEB1`): `scripts/dashboard.sh`, open http://192.168.0.174:8080. Tested in idle and two drive starts without a lane (motors off); not yet tested during a real drive (overlay CPU cost in the loop) |
