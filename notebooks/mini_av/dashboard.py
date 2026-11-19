@@ -10,9 +10,11 @@ import http.server
 import json
 import os
 import signal
+import socket
 import socketserver
 import threading
 import time
+import traceback
 import urllib.parse
 
 import cv2
@@ -21,14 +23,19 @@ from jetbot import Camera
 
 import drive
 import situation
-from battery import read_voltage
+from battery import charge_percent, read_voltage
 from decision import cup_ahead, band_cm
 from perception import Perception
 from safety import CameraFrozen, wait_for_new_frame, STALE_TIMEOUT
 
 PORT = 8080
-STREAM_HZ = 5           # camera pictures per second sent to the browser
-JPEG_QUALITY = 80
+JPEG_QUALITY = 90
+# the overlay costs about 31 ms of CPU in the driving process, so it is drawn less often while driving
+OVERLAY_HZ_IDLE = 15    # overlay pictures per second when idle
+OVERLAY_HZ_DRIVING = 5  # overlay pictures per second while driving
+OVERLAY_POLL = 0.01     # seconds between checks whether an overlay picture is due
+STREAMER_WAIT = 1.0     # seconds the streamer waits for a camera frame before it checks for stop
+CLIENT_WAIT = 2.0       # seconds a stream waits for a new picture before it checks again
 BATTERY_PERIOD = 2.0    # seconds between battery readings in idle
 MAX_SECONDS = 600.0     # longest run the cockpit starts
 MODES = ('adaptive',)  # the shared Perception has the curve model loaded, as the adaptive mode needs
@@ -40,16 +47,22 @@ class Shared(object):
 
     def __init__(self):
         self.lock = threading.Lock()
+        self.cond = threading.Condition(self.lock)  # woken by each publish
         self.frame = None
+        self.seq = 0  # counts the published frames
         self.values = {}
         self.mode = 'IDLE'
         self.last_reason = None
         self.fps = 0.0
+        self.stream_fps = 0.0   # raw pictures encoded per second (set by the Streamer)
+        self.overlay_fps = 0.0  # overlay pictures encoded per second (set by the Streamer)
         self._count, self._since = 0, time.time()
 
     def publish(self, frame, values):
         with self.lock:
             self.frame, self.values = frame, values
+            self.seq += 1
+            self.cond.notify_all()
             self._count += 1
             now = time.time()
             if now - self._since >= 1.0:
@@ -63,7 +76,10 @@ class Shared(object):
 
     def snapshot(self):
         with self.lock:
-            return {'mode': self.mode, 'last_reason': self.last_reason, 'fps': self.fps, 'values': dict(self.values)}
+            volts = self.values.get('battery_v')
+            return {'mode': self.mode, 'last_reason': self.last_reason, 'fps': self.fps, 'stream_fps': self.stream_fps,
+                    'overlay_fps': self.overlay_fps, 'battery_pct': charge_percent(volts) if volts else None,
+                    'values': dict(self.values)}
 
 
 def idle_values(percept, volts):
@@ -93,6 +109,7 @@ class Cockpit(object):
 
     def __init__(self):
         self.shared = Shared()
+        self.streamer = Streamer(self.shared)
         self.camera = Camera.instance()  # opened once: Argus cannot reopen it in the same process
         self.perception = Perception(use_curve=True)  # loaded once: two copies of the models do not fit in memory
         self.lock = threading.Lock()
@@ -139,12 +156,109 @@ class Cockpit(object):
         if self.drive_thread is not None:
             self.drive_thread.join()  # drive.run stops the motors in its finally
         self.stop_idle()
+        self.streamer.stop()
         self.camera.stop()
 
 
-def jpeg(frame, overlay):
-    image = situation.picture(frame) if overlay else cv2.resize(frame, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+def encode(image):
     return cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])[1].tobytes()
+
+
+class Streamer(object):
+    """Encodes each new camera frame once, in one thread. The clients send these buffers, so none encodes its own copy."""
+
+    def __init__(self, shared):
+        self.shared = shared
+        self.cond = threading.Condition()  # guards the buffers and the overlay viewer count
+        self.raw_seq, self.raw_jpeg = 0, None
+        self.overlay_seq, self.overlay_jpeg = 0, None
+        self.overlay_viewers = 0
+        self.overlay_at = 0.0  # when the last overlay picture was made
+        self.rate_since, self.raw_count, self.overlay_count = time.time(), 0, 0
+        self.stop_event = threading.Event()
+        self.threads = [threading.Thread(target=self._run, daemon=True),
+                        threading.Thread(target=self._run_overlay, daemon=True)]
+
+    def start(self):
+        for thread in self.threads:
+            thread.start()
+
+    def stop(self):
+        self.stop_event.set()
+        for thread in self.threads:
+            thread.join()
+
+    def count_overlay_viewer(self, delta):
+        with self.cond:
+            self.overlay_viewers += delta
+
+    def wait_for_new(self, overlay, seen):
+        """Waits until the buffer's sequence number is above seen, or CLIENT_WAIT seconds pass. Returns (seq, jpeg)."""
+        with self.cond:
+            self.cond.wait_for(lambda: self._buffer(overlay)[0] > seen, timeout=CLIENT_WAIT)
+            return self._buffer(overlay)
+
+    def _buffer(self, overlay):
+        return (self.overlay_seq, self.overlay_jpeg) if overlay else (self.raw_seq, self.raw_jpeg)
+
+    def _run(self):
+        seen = 0
+        while not self.stop_event.is_set():
+            with self.shared.cond:
+                self.shared.cond.wait_for(lambda: self.shared.seq != seen, timeout=STREAMER_WAIT)
+                seq, frame = self.shared.seq, self.shared.frame
+            if seq != seen:
+                seen = seq
+                try:
+                    self._encode(frame)
+                except Exception:  # one bad frame must not freeze every stream
+                    traceback.print_exc()
+
+    def _encode(self, frame):
+        """The raw picture for every new frame: cheap (about 1 ms), so the raw stream runs at the camera rate."""
+        raw = encode(frame)
+        with self.cond:
+            self.raw_seq, self.raw_jpeg = self.raw_seq + 1, raw
+            self.cond.notify_all()
+        self._count_rates(time.time(), False)
+
+    def _run_overlay(self):
+        """The overlay in its own thread: it costs about 31 ms, so the raw stream never waits for it."""
+        drawn = 0
+        while not self.stop_event.is_set():
+            now = time.time()
+            seq, frame = self.shared.seq, self.shared.frame
+            if seq == drawn or frame is None or not self._overlay_due(now):
+                time.sleep(OVERLAY_POLL)
+                continue
+            drawn, self.overlay_at = seq, now
+            try:
+                overlay = encode(situation.picture(frame))
+            except Exception:  # one bad frame must not freeze the overlay stream
+                traceback.print_exc()
+                continue
+            with self.cond:
+                self.overlay_seq, self.overlay_jpeg = self.overlay_seq + 1, overlay
+                self.cond.notify_all()
+            self._count_rates(now, True)
+
+    def _overlay_due(self, now):
+        with self.cond:
+            watched = self.overlay_viewers > 0
+        hz = OVERLAY_HZ_DRIVING if self.shared.mode == 'DRIVING' else OVERLAY_HZ_IDLE
+        return watched and now - self.overlay_at >= 1.0 / hz
+
+    def _count_rates(self, now, overlay):
+        with self.cond:  # called from both threads
+            if overlay:
+                self.overlay_count += 1
+            else:
+                self.raw_count += 1
+            span = now - self.rate_since
+            if span >= 1.0:
+                self.shared.stream_fps = self.raw_count / span
+                self.shared.overlay_fps = self.overlay_count / span
+                self.raw_count, self.overlay_count, self.rate_since = 0, 0, now
 
 
 def parse_start(body):
@@ -162,11 +276,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass  # no per-request lines in the terminal
 
     def send_bytes(self, data, content_type, code=200):
-        self.send_response(code)
-        self.send_header('Content-Type', content_type)
-        self.send_header('Content-Length', str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.send_response(code)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # the browser closed the request before the answer
 
     def send_json(self, obj, code=200):
         self.send_bytes(json.dumps(obj, default=float).encode(), 'application/json', code)
@@ -185,20 +302,27 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_bytes(b'not found', 'text/plain', 404)
 
     def stream(self, overlay):
+        streamer = self.server.cockpit.streamer
         self.send_response(200)
         self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
         self.end_headers()
-        shared = self.server.cockpit.shared
+        if overlay:
+            streamer.count_overlay_viewer(1)
+        sent = 0
         try:
+            self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # send each picture at once
             while True:
-                frame = shared.frame
-                if frame is not None:
-                    data = jpeg(frame, overlay)
+                seq, data = streamer.wait_for_new(overlay, sent)
+                if seq > sent:
                     self.wfile.write(b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n' % len(data)
                                      + data + b'\r\n')
-                time.sleep(1.0 / STREAM_HZ)
+                    self.wfile.flush()
+                    sent = seq
         except (BrokenPipeError, ConnectionResetError):
             pass  # the browser closed the picture
+        finally:
+            if overlay:
+                streamer.count_overlay_viewer(-1)
 
     def do_POST(self):
         cockpit = self.server.cockpit
@@ -233,6 +357,7 @@ def main():
     server = Server(('0.0.0.0', PORT), Handler)
     server.cockpit = Cockpit()
     server.cockpit.start_idle()
+    server.cockpit.streamer.start()
     print('dashboard on port %d: open http://<robot-ip>:%d/' % (PORT, PORT), flush=True)
     try:
         server.serve_forever()
