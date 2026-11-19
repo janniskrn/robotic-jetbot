@@ -125,10 +125,12 @@ ARC_WHEELS = (0.36, 0.31)  # outer and inner wheel in the curve around the cup. 
 ARC_STRAIGHT = 0.335       # both wheels while the cup is in view during the curve: drive on past it (AVOID4)
 ARC_STOP_CM = 16.0         # a band this close in the middle of the image during the curve: stop
 ARC_STOP_X = 0.5           # |band x| below which that band counts as in the way
-ARC_LANE_MIN = 2.5         # seconds of curve before the lane found ends it: it first appeared 3.4-3.5 s in, inside the
-                           # lane and 0.8 s before the far border (runs avoid4_1, avoid4_2). Earlier it could be the lane
-                           # seen from the side, before the cup is passed
-ARC_MIN = 1.0              # seconds the curve lasts at least (it starts with the lane edge horizontal ahead)
+ARC_TURN_MIN = 3.0         # seconds of curving (straight 'pass' parts do not count) before anything may end the curve:
+                           # about 90 degrees, back to the driving direction (ARC1, user). Until then the robot still heads
+                           # away from its lane, so a line ahead is another line (the far side of a curve). Estimate from
+                           # 0.37 / 0.30 turning about 85 degrees in 2.85 s (S1c2); measure with
+                           # `calibrate_motion.py swerve_arc`, it should turn about 90 degrees
+ARC_MIN = 1.0              # seconds of curve before tape under the nose counts (at the start it is the old lane)
 ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends (facing the lane again):
                            # it turns slower than a spin in place, so it overshoots less
 TAPE_UNDER_ROW = 215 / 224.0  # the lane's border counts as under the robot's nose when the lowest tape in the image reaches
@@ -136,7 +138,8 @@ TAPE_UNDER_ROW = 215 / 224.0  # the lane's border counts as under the robot's no
 TAPE_PAST_ROW = 175 / 224.0   # and as crossed when the lowest tape is back above this row: the good curves ended right after
                               # that (18 of 19 recorded curves with a crossing, within 0.5 s); the curves that failed had not reached the tape yet
 ARC_STRAIGHT_AFTER = 3.5   # seconds after which the robot drives straight instead of curving, if the tape was not crossed:
-                           # started near a curve of the track, the curve would only circle on the open floor
+                           # started near a curve of the track, the curve would only circle on the open floor. Only once
+                           # ARC_TURN_MIN is reached
 ARC_MAX = 8.0              # seconds the curve may take in all before the lane counts as lost
 RECOVER_SPEED = 0.31       # forward speed while looking for the lane (the slowest that moves the robot)
 RECOVER_TURN = 0.04        # gentle turn toward the lane while it is not seen yet

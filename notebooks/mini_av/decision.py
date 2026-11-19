@@ -120,6 +120,15 @@ def lane_found(percept, centered=config.RECOVER_CENTERED):
             and abs(percept['lane_x']) < centered)
 
 
+def bends_our_way(percept, direction):
+    """True if the curve model sees the lane bend the way the robot drives the oval (DIR1): a lane seen in a curve is
+    then the robot's lane, taken the right way. The two-line check fails in curves (run 2026-11-19_05-21-50: the turn
+    back spun 2 s on a sure, centered lane in the sharp curve)"""
+    probs, turn = percept['curve_probs'], percept['curve_dir']
+    return (direction is not None and probs[1] + probs[2] >= 0.5 and abs(turn) >= config.DIRECTION_MIN_DIR
+            and (turn > 0) == (direction == 'cw'))
+
+
 def lane_near(percept):
     """True if the lane model is sure and sees the lane near the middle, without the two-line check (curves fail it).
     Only where the robot turns toward the lane along its driving direction (TURN_BACK)"""
@@ -149,6 +158,8 @@ class Decision(object):
         self.go_straight = False  # the curve is paused: the cup is in view on the side it bends to, or it took long
         self.tape_under = False   # the lane's border has been under the robot's nose during the curve
         self.turn_lane_at = None  # last time the lane was seen during the turn back (turn_in)
+        self.arc_turned = 0.0     # seconds the curve has actually curved (ARC_TURN_MIN)
+        self.arc_last = 0.0       # time of the last step in the curve
         self.stop_phase = STOP_PHASES[0]
         self.backed = False       # backed up once in this stop
         self.direction = None     # 'cw' or 'ccw' from the first sharp curve, kept for the whole run (DIR1)
@@ -233,16 +244,19 @@ class Decision(object):
             if cup_in_the_way(band):
                 self.enter(HALT, now)
                 return
-            self.go_straight = cup_beside_curve(band, toward) or elapsed >= config.ARC_STRAIGHT_AFTER
+            if not self.go_straight:  # the wheels curved since the last step
+                self.arc_turned += now - self.arc_last
+            self.arc_last = now
+            turned = self.arc_turned >= config.ARC_TURN_MIN  # about 90 degrees back: a line ahead can be the robot's lane
+            self.go_straight = cup_beside_curve(band, toward) or (turned and elapsed >= config.ARC_STRAIGHT_AFTER)
             under = percept['tape_row'] >= config.TAPE_UNDER_ROW
             self.tape_under = self.tape_under or (under and elapsed >= config.ARC_MIN)  # at the start it is the old lane
             crossed = self.tape_under and percept['tape_row'] < config.TAPE_PAST_ROW
             # the lane found means inside the lane; without it, the edge ahead looks horizontal or leaves the image close
             # to the lane (run avoid4_1: last seen at +17, then the far border was reached, avoid4_2)
-            done = (crossed
-                    or (elapsed >= config.ARC_LANE_MIN and lane_found(percept, config.TURN_IN_CENTERED))
-                    or (elapsed >= config.ARC_MIN and (reached_horizontal(angle, -toward, config.ARC_EARLY)
-                                                       or edge_left_view(self.edge_angle, angle, -toward))))
+            done = turned and (crossed or lane_found(percept, config.TURN_IN_CENTERED)
+                               or reached_horizontal(angle, -toward, config.ARC_EARLY)
+                               or edge_left_view(self.edge_angle, angle, -toward))
             limit = config.ARC_MAX
             self.edge_angle = angle
         elif self.avoid_phase == 'turn_in':  # the curve ends at the lane's edge: ROAD_RECOVERY brings the robot to the center
@@ -252,7 +266,8 @@ class Decision(object):
                   and now - self.turn_lane_at >= config.TURN_PAST):
                 self.avoid_phase, self.phase_since = TURN_BACK, now  # turned past the lane: turn the other way
                 return
-            done = elapsed >= config.TURN_IN_MIN and lane_found(percept, config.TURN_IN_CENTERED)
+            done = elapsed >= config.TURN_IN_MIN and (lane_found(percept, config.TURN_IN_CENTERED)
+                                                      or (lane_near(percept) and bends_our_way(percept, self.direction)))
             limit = config.TURN_IN_MAX
         else:  # TURN_BACK: the lane is just behind the turn, so the first lane near the middle is the right one
             done = lane_near(percept)
@@ -262,7 +277,8 @@ class Decision(object):
             self.enter(ROAD_RECOVERY, now)
         elif done:
             self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(self.avoid_phase) + 1]
-            self.phase_since = now
+            self.phase_since = self.arc_last = now
+            self.arc_turned = 0.0
         elif elapsed >= limit:
             self.lane_gone(now)  # a stall, or the mark was not seen: do not drive on blind
 

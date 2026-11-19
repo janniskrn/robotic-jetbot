@@ -5,6 +5,18 @@ LINE2), `PLAN.md` section 6 step S1, `notebooks/mini_av/STATE_MACHINE.md`.
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
+## Update 2026-11-19 (first S1g track runs, fixes S1h, not driven yet)
+
+- New-code runs `2026-11-19_05-18..05-21` (cockpit): 7 of 9 swerves back to following; `turn_back` never fired.
+  The team saw the robot take the line on the other side; two runs were stopped during a curve around a cup; one turn back spun 2.2 s on a sure,
+  centered but 'unaligned' lane in the sharp curve (`05-21-50`). The runs before 05-12 used the old code.
+- Fixes (user: analyse and fix): `ARC1` curve turns about 90 degrees (3.0 s of curving, estimate) before it may end;
+  `TURN2` turn back accepts a curved lane bending the driving way; `WEB2` cockpit live during `LINE_RECOVERY`.
+  Replays: `TURN2` ends the `05-21-50` turn back after 1.1 s. 108 offline checks.
+- First on the track: `calibrate_motion.py swerve_arc` (in the container), the team measures the angle; if not about
+  90 degrees, scale `ARC_TURN_MIN`. Then runs with cups. Each new program run needs a direction: a cup before the
+  first sharp curve is passed on the left.
+
 ## Update 2026-11-18 (swerve analysis and fixes, S1g, not driven yet)
 
 - Analysis of 48 recorded swerves (11-09 to 11-17): the swerve code did not change since 11-09; the failures are the

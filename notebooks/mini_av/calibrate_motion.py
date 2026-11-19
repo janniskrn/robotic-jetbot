@@ -5,6 +5,7 @@
     python3 calibrate_motion.py pivot_right
     python3 calibrate_motion.py arc_left    # 1.0 s curve to the left (outer wheel faster)
     python3 calibrate_motion.py arc_right
+    python3 calibrate_motion.py swerve_arc  # the swerve's curve (ARC_WHEELS) for ARC_TURN_MIN: should turn about 90 degrees
 
 A person measures the distance (cm) or angle (degrees) after each move. Run inside the container, robot on the floor.
 """
@@ -14,6 +15,7 @@ import time
 
 from jetbot import Robot
 
+import config
 from safety import BatteryGuard
 
 SPEED = 0.35        # wheel speed of the moves (driving speeds are 0.31-0.40)
@@ -24,6 +26,7 @@ MOVES = {           # name: (left wheel, right wheel, seconds)
     'pivot_right': (SPEED, -SPEED, 0.5),
     'arc_left': (SPEED - ARC_DIFF, SPEED + ARC_DIFF, 1.0),
     'arc_right': (SPEED + ARC_DIFF, SPEED - ARC_DIFF, 1.0),
+    'swerve_arc': (config.ARC_WHEELS[0], config.ARC_WHEELS[1], config.ARC_TURN_MIN),  # curves right
 }
 
 

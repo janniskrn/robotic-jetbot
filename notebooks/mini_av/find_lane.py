@@ -112,6 +112,7 @@ class FindLane(object):
         self.undos = 0
         self.last_undo = 0.0
         self.direction_known = False  # the heading at the start of the search is along the lane
+        self.on_frame = None  # on_frame(frame, percept) after each frame the models looked at (the cockpit shows the search)
 
     def check_run(self):
         """Ends the search when the run is over, like the driving loop would"""
@@ -133,7 +134,10 @@ class FindLane(object):
 
     def observe_next(self):
         self.frame = wait_for_new_frame(self.camera, self.frame)
-        return self.perception.observe(self.frame)
+        percept = self.perception.observe(self.frame)
+        if self.on_frame is not None:
+            self.on_frame(self.frame, percept)
+        return percept
 
     def look(self):
         """Stands still, then returns what the models see now (saves the frame and one line for stops.csv)"""

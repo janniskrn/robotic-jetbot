@@ -90,6 +90,10 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
     watchdog = MotorWatchdog(robot)
     finder = FindLane(perception, robot, camera, watchdog, battery)
     reason = 'time up'
+    if on_step is not None:  # the search takes many seconds: the cockpit shows each frame it looks at
+        finder.on_frame = lambda seen, p: on_step(seen, dict(
+            time=time.time() - start, mode=LINE_RECOVERY, phase=finder.stage, lane_visible=p['lane_visible'],
+            lane_x=p['lane_x'], curve_class=p['curve_class'], cup_visible=p['cup_visible'], battery_v=battery.volts))
     try:
         frame = wait_for_new_frame(camera, camera.value, timeout=2.0)  # is the camera alive at all?
         for _ in range(WARMUP_FRAMES):

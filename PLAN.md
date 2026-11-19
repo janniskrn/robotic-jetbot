@@ -188,6 +188,10 @@ step test from now on (slides).
       a cup still close ahead in `ROAD_RECOVERY` starts a new swerve (`RECOV2`). 99 offline checks pass; not driven yet.
       Track test: one run each way with cups, also a cup just before a curve. Pass: turn backs under 1 s or caught by
       `turn_back`, no cup hit, no lap driven backwards, direction right in the run's log.
+    - [ ] S1h (2026-11-19, user: analyse and fix) after the first S1g track runs: curve turns about 90 degrees before it
+      may end (`ARC1`), turn back accepts a curved lane bending the driving way (`TURN2`), cockpit live during the
+      search (`WEB2`). 108 offline checks pass. Track: `calibrate_motion.py swerve_arc` (about 90 degrees?), then runs
+      with cups, one just before a curve.
     - [ ] S1d3 (track) the swerve from that fixed start on the straight, at its start, middle and end. Pass: 8 of 10
       back to following without touching the cup.
     - [ ] S1d4 (offline, then track) turn out referred to the cup: turn until the cup band reaches the image edge
@@ -283,6 +287,7 @@ step test from now on (slides).
 
 | Date | Change |
 | :--- | :--- |
+| 2026-11-19 | S1h `ARC1`, `TURN2`, `WEB2` (offline only) |
 | 2026-11-18 | S1g swerve fixes `DIR1`, `TURN1`, `RECOV2` (offline only) |
 | 2026-11-18 | Web cockpit (`WEB1`): `scripts/dashboard.sh`, open http://192.168.0.174:8080. Tested in idle and two drive starts without a lane (motors off); not yet tested during a real drive (overlay CPU cost in the loop) |
 | 2026-10-26 | Draft 1 |
