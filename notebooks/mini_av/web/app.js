@@ -178,8 +178,10 @@ function watchLink() {
   renderHistory();
 }
 
+let events = null;
+
 function connectEvents() {
-  const events = new EventSource('/events');
+  events = new EventSource('/events');
   events.onopen = () => {
     setLink('live', 'live');
     if (wasDown) setStream();
@@ -216,7 +218,7 @@ async function send(path, body) {
 
 const stop = () => send('/stop');
 
-$('cam').onerror = () => setTimeout(setStream, RETRY_MS);
+$('cam').onerror = () => { if (!document.hidden) setTimeout(setStream, RETRY_MS); };
 $('overlay').onchange = setStream;
 $('start').onclick = () => send('/start', { mode: $('mode').value, seconds: Number($('seconds').value) });
 $('stop').onclick = stop;
@@ -225,6 +227,18 @@ document.addEventListener('keydown', (e) => {  // Esc always stops; Space stops 
   if (e.key === 'Escape' || (e.key === ' ' && !typing)) {
     e.preventDefault();
     stop();
+  }
+});
+
+// a hidden tab closes its two long connections: the browser allows few per host, and STOP must get through
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    events.close();
+    $('cam').removeAttribute('src');
+    setLink('down', 'paused (tab hidden)');
+  } else {
+    connectEvents();
+    setStream();
   }
 });
 

@@ -6,6 +6,8 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 CONTAINER=jetbot_jupyter
 EXIT_CAMERA_DEAD=3   # dashboard.py's exit code when the camera sends no frames (cockpit.EXIT_CAMERA_DEAD)
+LAST_RESET=/tmp/jetbot-cockpit-camera-reset   # time of the last camera reset (cleared by a reboot)
+RESET_EVERY=600      # seconds between camera resets at most: a reset also restarts Jupyter and its kernels
 
 as_root() {  # the service runs as root; by hand the robot's sudo password is used
     if [ "$(id -u)" = 0 ]; then "$@"; else echo 'jetbot' | sudo -S -p '' "$@"; fi
@@ -35,7 +37,14 @@ as_root docker exec "$CONTAINER" sh -c 'cd /workspace/jetbot/notebooks/mini_av &
 code=$?
 stop_motors
 if [ "$code" = "$EXIT_CAMERA_DEAD" ]; then
-    echo "camera dead: restarting the camera service and the container"
-    "$HERE/restart_camera.sh"
+    last=$(cat "$LAST_RESET" 2>/dev/null || echo 0)
+    if [ $(( $(date +%s) - last )) -ge "$RESET_EVERY" ]; then
+        echo "camera dead: restarting the camera service and the container"
+        date +%s > "$LAST_RESET"
+        "$HERE/restart_camera.sh"
+    else
+        echo "camera dead again soon after a reset: waiting 60 s (check the camera cable)"
+        sleep 60
+    fi
 fi
 exit "$code"

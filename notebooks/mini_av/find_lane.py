@@ -174,6 +174,7 @@ class FindLane(object):
         self.stage = 'undo'
         remaining = UNDO_SECONDS
         for dt, left, right in reversed(list(history)):
+            self.check_run()  # STOP works during the undo too
             if remaining <= 0.0:
                 break
             remaining -= dt

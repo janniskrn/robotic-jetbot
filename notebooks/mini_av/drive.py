@@ -218,7 +218,10 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
         robot.stop()
         if own_camera:
             camera.stop()
-        frames.put(None)
+        try:
+            frames.put(None, timeout=2.0)  # a stalled USB write must not hold up the end of the run
+        except queue.Full:
+            pass
         saver.join(timeout=2.0)
         recorder.stop()
         log.close(reason)

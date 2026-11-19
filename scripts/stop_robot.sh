@@ -6,3 +6,9 @@ echo 'jetbot' | sudo -S -p '' docker exec jetbot_jupyter pkill -INT -f '^python3
 sleep 1
 echo 'jetbot' | sudo -S -p '' docker exec jetbot_jupyter python3 -c 'from jetbot import Robot; Robot().stop()' >/dev/null 2>&1
 echo "motors stopped"
+# wait until the scripts have ended, so the camera is free (the cockpit service's ExecStop relies on this)
+for _ in $(seq 1 25); do
+    echo 'jetbot' | sudo -S -p '' docker exec jetbot_jupyter pgrep -f '^python3 (-u )?(tools/)?(drive|dashboard|find_lane|motion_test|cup_learn)[.]py' >/dev/null 2>&1 || exit 0
+    sleep 1
+done
+echo "a script is still running after 25 s"

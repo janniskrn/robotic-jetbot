@@ -3,7 +3,8 @@
 Everything the team writes for the challenge lives here. The stock NVIDIA notebooks in the other `notebooks/`
 folders stay untouched and are used as building blocks only. Run everything inside the Jupyter container from this
 folder (`docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 ...`). The cockpit service owns
-the camera: `sudo systemctl stop jetbot-cockpit` before a notebook or script uses it, `start` afterwards.
+the camera and about 2 GB of memory: `sudo systemctl stop jetbot-cockpit` before a notebook or script uses the camera,
+and before a training or TensorRT conversion; `start` afterwards. In idle it runs the models only while a page is open.
 
 ## Driving program (this folder)
 

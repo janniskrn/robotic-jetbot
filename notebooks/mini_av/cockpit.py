@@ -35,7 +35,12 @@ class Shared(object):
         self.mode = 'IDLE'
         self.last_reason = None
         self.fps = 0.0
+        self.viewers = 0  # open event streams: the idle loop runs the models only while someone watches
         self._count, self._since = 0, time.time()
+
+    def watch(self, delta):
+        with self.cond:
+            self.viewers += delta
 
     def publish(self, frame, values):
         """on_step of drive.run: the frame is not needed, the video comes straight from the camera"""
@@ -73,22 +78,29 @@ def idle_values(percept, volts):
 
 
 def idle_loop(shared, perception, camera, stop):
-    """Runs the perception with the motors off. A camera without frames for CAMERA_DEAD ends the process"""
-    frame = camera.value
-    volts, read_at = read_voltage(), time.time()
-    seen_at = time.time()
-    while not stop.is_set():
-        try:
-            frame = wait_for_new_frame(camera, frame)
-        except CameraFrozen:
-            if time.time() - seen_at > CAMERA_DEAD:
-                print('camera sends no frames: exit for a restart', flush=True)
-                os._exit(EXIT_CAMERA_DEAD)  # the motors are off in idle; the service resets the camera
-            continue
+    """Runs the perception with the motors off while someone watches. A camera without frames for CAMERA_DEAD,
+    or any error, ends the process: the service starts it again"""
+    try:
+        frame = camera.value
+        volts, read_at = read_voltage(), time.time()
         seen_at = time.time()
-        if seen_at - read_at >= BATTERY_PERIOD:
-            volts, read_at = read_voltage(), seen_at
-        shared.publish(frame, idle_values(perception.observe(frame), volts))
+        while not stop.is_set():
+            try:
+                frame = wait_for_new_frame(camera, frame)
+            except CameraFrozen:
+                if time.time() - seen_at > CAMERA_DEAD:
+                    print('camera sends no frames: exit for a restart', flush=True)
+                    os._exit(EXIT_CAMERA_DEAD)  # the motors are off in idle; the service resets the camera
+                continue
+            seen_at = time.time()
+            if shared.viewers == 0:
+                continue  # nobody watches: no models, only the camera check (saves CPU and GPU)
+            if seen_at - read_at >= BATTERY_PERIOD:
+                volts, read_at = read_voltage(), seen_at
+            shared.publish(frame, idle_values(perception.observe(frame), volts))
+    except Exception:
+        traceback.print_exc()
+        os._exit(1)
 
 
 def parse_start(body):
@@ -109,7 +121,12 @@ class Cockpit(object):
     def __init__(self):
         self.shared = Shared()
         self.perception = Perception(use_curve=True)  # loaded once: two copies of the models do not fit in memory
-        self.camera = Camera.instance()  # opened once (Argus cannot reopen it); after the models, which can fail
+        try:
+            self.camera = Camera.instance()  # opened once (Argus cannot reopen it); after the models, which can fail
+        except Exception:
+            traceback.print_exc()
+            print('camera does not open: exit for a restart', flush=True)
+            os._exit(EXIT_CAMERA_DEAD)
         self.streamer = Streamer(self.camera, lambda: self.shared.mode)
         self.lock = threading.Lock()
         self.idle, self.idle_stop = None, None
@@ -152,8 +169,9 @@ class Cockpit(object):
         except Exception:
             traceback.print_exc()
         finally:
-            self.shared.set_mode('IDLE', reason)
-            self.start_idle()
+            with self.lock:  # idle first: a start right after must find the idle loop to stop it
+                self.start_idle()
+                self.shared.set_mode('IDLE', reason)
 
     def stop_drive(self):
         if self.drive_stop is not None:

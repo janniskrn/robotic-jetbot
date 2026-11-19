@@ -169,6 +169,7 @@ Every week ends with a demonstration of that week's tasks.
 ## 9b. Driving Safety
 
 - Never run a training or any other heavy job while the robot drives: low memory froze the camera and the robot drove blind into a chair (2026-09-20, `DECISIONS.md`).
+- The cockpit service keeps the models in memory (about 2 GB): stop it (`sudo systemctl stop jetbot-cockpit`) before a training, a TensorRT conversion or a diagram render, and start it again afterwards.
 - Every program that drives the motors needs: battery guard, camera watchdog (stop after 0.5 s without a new frame), stop on Ctrl-C, motors stopped in `finally`.
 - Emergency stop: `~/jetbot/scripts/stop_robot.sh`. Stop driving scripts with Ctrl-C (`pkill -INT`), never with a plain kill.
 

@@ -15,7 +15,6 @@ ROI_TOP = 0.25     # ignore everything above this fraction of the image height
 MIN_PIXELS = 30    # smallest red blob that counts as a cup
 
 
-
 def red_mask(bgr):
     """Returns a 0/255 mask of red pixels below the ROI"""
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
