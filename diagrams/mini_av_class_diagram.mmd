@@ -1,209 +1,190 @@
 classDiagram
     direction TB
 
-    %% ==========================================
-    %% Enumerations & Value Objects
-    %% ==========================================
-    class DrivingState {
-        <<enumeration>>
-        +HALT : Priority 1
-        +OBSTACLE_AVOIDANCE : Priority 2
-        +LINE_RECOVERY : Priority 2
-        +ROAD_RECOVERY : Priority 2
-        +STOP : Priority 3
-        +SLOW_DOWN : Priority 4
-        +ROAD_FOLLOWING : Priority 5
-    }
-
-    class AvoidPhase {
-        <<enumeration>>
-        +brake : reverse pulse
-        +turn_out : spin to pass side
-        +arc : curve around obstacle
-        +pass : straight tangent
-        +turn_in : align to road
-    }
-
-    class StopPhase {
-        <<enumeration>>
-        +brake : reverse pulse
-        +back : reverse if close
-        +wait : motors off
-    }
-
-    class PerceptDict {
-        <<dataType>>
-        +lane_visible : float
-        +lane_x : float
-        +curve_probs : list~float~
-        +curve_dir : float
-        +curve_class : str
-        +cup_visible : float
-        +cup_row : float
-        +cup_x : float
-        +lane_aligned : bool
-        +tape_angle : float
-        +tape_row : float
-        +cup_bands : list~tuple~
-        +inference_ms : float
-    }
-
-    %% ==========================================
-    %% Hardware Abstraction Layer (jetbot)
-    %% ==========================================
     class Robot {
-        +i2c_bus : int = 1
-        +motor_driver : Any
+        +left_motor : Motor
+        +right_motor : Motor
+        +i2c_bus : int
+        #motor_driver : Adafruit_MotorHAT | QwiicScmd
         +set_motors(left_speed: float, right_speed: float) void
-        +forward(speed: float) void
+        +forward(speed: float, duration: float = None) void
         +backward(speed: float) void
-        +left(speed: float) void
-        +right(speed: float) void
+        +left(speed: float = 1.0) void
+        +right(speed: float = 1.0) void
         +stop() void
     }
 
     class Motor {
         +value : float
-        +alpha : float = 1.0
-        +beta : float = 0.0
+        +alpha : float
+        +beta : float
         -_channel : int
-        -_driver : Any
         -_write_value(value: float) void
         -_release() void
     }
 
     class CameraBase {
         <<abstract>>
-        +value : ndarray
-        +{static} instance() CameraBase
-        +widget() Image
+        +value : np.ndarray (BGR8)
+        +{static} instance(*args, **kwargs) CameraBase
+        +widget() ipywidgets.Image
+    }
+
+    class MotorWatchdog {
+        +timeout : float
+        +last_feed : float
+        +running : bool
+        +lock : threading.Lock
+        +feed() void
+        +run() void
+    }
+
+    class BatteryGuard {
+        +volts : float
+        -_last_read : float
+        -_low_since : float | None
+        +start_ok() bool
+        +check() float
     }
 
     class OpenCvGstCamera {
-        +cap : VideoCapture
+        #cap : cv2.VideoCapture
         +width : int
         +height : int
         +start() void
         +stop() void
     }
 
-    CameraBase <|-- OpenCvGstCamera : generalization
-    Robot *-- "2" Motor : composition
-
-    %% ==========================================
-    %% Safety & Guard Layer
-    %% ==========================================
-    class BatteryGuard {
-        +volts : float
-        -_last_read : float
-        -_low_since : float
-        +start_ok() bool
-        +check() float
-    }
-
-    class MotorWatchdog {
-        +timeout : float = 0.25
-        +last_feed : float
-        +running : bool
-        +lock : Lock
-        +feed() void
-        +run() void
-    }
-
-    MotorWatchdog o-- "1" Robot : monitors
-
-    %% ==========================================
-    %% Perception Layer
-    %% ==========================================
     class Perception {
         +lane_model : TRTModule
-        +curve_model : TRTModule
-        +obstacle_model : TRTModule
+        +curve_model : TRTModule | None
+        +obstacle_model : TRTModule | None
         +frame_count : int
-        +curve_model_probs : list~float~
-        +cup : list~float~
+        +curve_model_probs : list[float]
+        +cup : list[float]
+        +warm_up(camera: CameraBase) ndarray
         +observe(frame: ndarray) PerceptDict
     }
 
-    Perception ..> PerceptDict : produces
+    class PerceptDict {
+        <<dataType>>
+        +lane_visible : float (0..1)
+        +lane_x : float (-1..1)
+        +curve_probs : list[float]
+        +curve_dir : float (-1..1)
+        +curve_class : str
+        +cup_visible : float (0..1)
+        +cup_row : float
+        +cup_x : float
+        +lane_aligned : bool
+        +tape_angle : float | None
+        +tape_row : float (0..1)
+        +cup_bands : list[tuple]
+        +inference_ms : float (ms)
+    }
 
-    %% ==========================================
-    %% Decision Layer (State Machine)
-    %% ==========================================
+    class FindLane {
+        +heading : int
+        +stage : str
+        +direction_known : bool
+        +undos : int
+        +on_frame : Callable | None
+        +run(history, side: int, deadline: float, stop_event: Event) str
+        +undo(history) bool
+        +sweep(side: int) bool
+        +search_round(any_way: bool) str
+        +pulse(seconds: float, wheels: Callable) void
+        +observe_next() PerceptDict
+    }
+
     class Decision {
         +state : DrivingState
-        +avoid_phase : AvoidPhase
-        +stop_phase : StopPhase
+        +avoid_phase : str
+        +stop_phase : str
         +stop_only : bool
         +line_recovery : bool
-        +fixed_side : str
-        +curve_sum : float
-        +curve_weight : float
+        +fixed_side : str | None
+        +direction : str | None
+        +sharp_steps : int
+        +arc_turned : float
+        +turn_lane_at : float | None
         +update(percept: PerceptDict, now: float) DrivingState
+        +update_driving(percept: PerceptDict, now: float) void
+        +update_stop_only(percept: PerceptDict, now: float) void
+        +update_recovery(percept: PerceptDict, now: float) void
         +update_avoidance(percept: PerceptDict, now: float) void
-        +update_stop(percept: PerceptDict, now: float) void
+        +brake_done(percept, now, elapsed, toward) bool
+        +turn_out_done(percept, now, elapsed, toward) bool
+        +arc_done(percept, now, elapsed, toward) bool
+        +turn_in_done(percept, now, elapsed, toward) bool
+        +turn_back_done(percept, now, elapsed, toward) bool
         +lane_gone(now: float) void
-        +line_recovery_done(found: bool, now: float, kept_direction: bool) void
-        +pass_side() str
+        +line_recovery_done(found: bool, now: float) void
+        +pass_side() str ('left' | 'right')
         +avoid_action() str
         +enter(state: DrivingState, now: float) void
     }
 
-    Decision --> "1" DrivingState : maintains
-    Decision --> "1" AvoidPhase : executes
-    Decision --> "1" StopPhase : executes
-    Decision ..> PerceptDict : evaluates
+    class DrivingState {
+        <<enumeration>>
+        +HALT : 1 (motors off)
+        +OBSTACLE_AVOIDANCE : 2 (swerve)
+        +LINE_RECOVERY : 3 (find lane)
+        +ROAD_RECOVERY : 4 (re-center)
+        +STOP : 5 (stop_only: wait)
+        +SLOW_DOWN : 6 (sharp curve / cup ahead)
+        +ROAD_FOLLOWING : 7 (normal driving)
+    }
 
-    %% ==========================================
-    %% Control Layer
-    %% ==========================================
+    class AvoidPhase {
+        <<enumeration>>
+        +brake : reverse pulse
+        +turn_out : spin to the pass side
+        +arc : curve around the cup (pass: straight while paused)
+        +turn_in : spin back to the lane
+        +turn_back : extra: turn_in went past the lane, turn the other way
+    }
+
+    class StopPhase {
+        <<enumeration>>
+        +brake : reverse pulse
+        +back : back up once if too close
+        +wait : motors off until the cup is gone
+    }
+
     class Controller {
         +baseline : bool
         +use_curve : bool
         +lane_x : float
-        +d_lane_x : float
-        +integral : float
+        +d_lane_x : float | None
         +steering : float
         +speed : float
         +reset() void
-        +update(lane_x: float, curve_probs: list, curve_dir: float, dt: float, speed_limit: float) tuple~float,float~
-        +target_speed(curve_probs: list, lane_x: float) float
-        +curve_turn(curve_probs: list, curve_dir: float) float
-        +feedforward(curve_probs: list, curve_dir: float) float
-        +hold(curve_probs: list, curve_dir: float, dt: float) tuple~float,float~
+        +update(lane_x, curve_probs, curve_dir, dt, speed_limit=None) tuple~float,float~
+        +target_speed(curve_probs, lane_x) float
+        +curve_turn(curve_probs, curve_dir) float
+        +feedforward(curve_probs, curve_dir) float
+        +hold(curve_probs, curve_dir, dt) tuple~float,float~
         +avoid(phase: str, side: str, elapsed: float) tuple~float,float~
         +stop(phase: str, elapsed: float) tuple~float,float~
         +recover(side: str) tuple~float,float~
         +wheels() tuple~float,float~
     }
 
-    %% ==========================================
-    %% Off-Track Search & Recovery
-    %% ==========================================
-    class FindLane {
-        +heading : int
-        +stage : str
-        +direction_known : bool
-        +run(history: deque, side: int, deadline: float, stop_event: Event) str
-        +undo(history: deque) bool
-        +sweep(side: int) bool
-        +search_round(any_way: bool) str
-        +pulse(seconds: float, wheels: Callable) void
+    class Drive {
+        <<module>>
+        +run(name, seconds, baseline, use_curve, stop_event, stop_only, pass_side, on_step, perception, camera) tuple~str,str~
+        +wait_for_lane(camera, perception, frame) ndarray
+        +wheel_command(state, percept, decision, controller, dt, now) tuple~float,float~
+        +halt_reason(previous_state, decision) str
+        +step_values(t, dt, state, percept, decision, controller, left, right, volts) dict
+        +start_frame_saver(recorder) Queue
     }
 
-    FindLane o-- "1" Perception : queries
-    FindLane o-- "1" Robot : pulses
-    FindLane o-- "1" CameraBase : captures
-    FindLane o-- "1" MotorWatchdog : feeds
-    FindLane o-- "1" BatteryGuard : checks
-
-    %% ==========================================
-    %% Telemetry & Data Logging
-    %% ==========================================
     class RunLogger {
         +dir : str
         -_file : TextIO
-        -_writer : DictWriter
+        -_writer : csv.DictWriter
         +step(**values) void
         +close(reason: str) void
     }
@@ -211,9 +192,91 @@ classDiagram
     class Recorder {
         +period : float
         +root : str
-        +session_dir : str
+        +session_dir : str | None
         +count : int
         +start(name: str, metadata: dict) str
         +offer(jpeg_bytes: bytes) bool
         +stop() str
     }
+
+    class Handler {
+        +do_GET() void
+        +do_POST() void
+        +events() void
+        +video(overlay: bool) void
+        +send_json(obj, code=200) void
+    }
+
+    class Server {
+        +cockpit : Cockpit
+        +daemon_threads : bool
+        +allow_reuse_address : bool
+        +serve_forever() void
+    }
+
+    class Cockpit {
+        +shared : Shared
+        +perception : Perception
+        +camera : CameraBase
+        +streamer : Streamer
+        +lock : threading.Lock
+        +start() void
+        +start_idle() void
+        +stop_idle() void
+        +start_drive(mode: str, seconds: float) bool
+        +stop_drive() void
+        +state() dict
+        +shutdown() void
+        -_drive(mode, seconds, stop_event) void
+    }
+
+    class Shared {
+        +cond : threading.Condition
+        +seq : int
+        +values : dict
+        +mode : str ('IDLE' | 'DRIVING')
+        +last_reason : str | None
+        +fps : float
+        +publish(frame, values) void
+        +set_mode(mode: str, reason: str = None) void
+        +wait_newer(seen: int, timeout: float) bool
+    }
+
+    class Streamer {
+        +camera : CameraBase
+        +raw : Feed
+        +overlay : Feed
+        +stop_event : threading.Event
+        +start() void
+        +stop() void
+        +feed(overlay: bool) Feed
+    }
+
+    class Feed {
+        +seq : int
+        +jpeg : bytes | None
+        +viewers : int
+        +fps : float
+        +put(jpeg: bytes) void
+        +wait_newer(seen: int) bytes
+        +watch(delta: int) void
+        +watched() bool
+    }
+
+    Robot *-- Motor : owns 2 motors
+    CameraBase <|-- OpenCvGstCamera : subclasses
+    MotorWatchdog o-- Robot : monitors
+    Perception ..> PerceptDict : produces
+    Decision ..> DrivingState : switches
+    Decision ..> AvoidPhase : advances
+    Decision ..> StopPhase : advances
+    Decision ..> PerceptDict : evaluates
+    FindLane o-- Perception : observes via
+    FindLane o-- Robot : pulses
+    Drive ..> Controller : steers with
+    Drive ..> RunLogger : logs to
+    Cockpit *-- Shared : publishes to
+    Cockpit *-- Streamer : owns
+    Streamer *-- Feed : 2 feeds
+    Server o-- Cockpit : holds
+    Handler --> Server : served by
