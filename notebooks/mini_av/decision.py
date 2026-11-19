@@ -1,7 +1,7 @@
 """Decision: the state machine (Task 6). Picks the robot's state from what perception sees.
 
 States, highest priority first (table and diagram: STATE_MACHINE.md, keep it in step with this file):
-    HALT                the run ends (no lane at the start, recovery failed, a cup in the way of the swerve)
+    HALT                the run ends (recovery failed, a cup in the way of the swerve)
     OBSTACLE_AVOIDANCE  a cup close ahead: swerve around it on the inside of the oval (AVOID_PHASES)
     LINE_RECOVERY       the lane is lost: find_lane.py looks for it, drive.py runs it
     ROAD_RECOVERY       after the swerve: steer onto the lane until it is centered and aligned
@@ -134,7 +134,6 @@ class Decision(object):
         self.state = ROAD_FOLLOWING
         self.state_since = 0.0
         self.lost_since = None    # time the lane was last lost (short gaps are bridged)
-        self.lane_seen = False    # the lane was seen at least once
         self.close_frames = 0     # steps in a row with a close cup
         self.clear_frames = 0     # steps in a row with the cup gone (STOP)
         self.centered_frames = 0  # steps in a row with the lane found (ROAD_RECOVERY)
@@ -210,10 +209,9 @@ class Decision(object):
             self.enter(ROAD_FOLLOWING, now)
         if self.direction is None:
             self.learn_direction(percept)
+        # drive.py starts only with the lane in sight (FIX1: one weak first frame used to end the run here)
         if sees_lane(percept):
-            self.lost_since, self.lane_seen = None, True
-        elif not self.lane_seen:
-            self.enter(HALT, now)  # never start without seeing the lane
+            self.lost_since = None
         elif self.lost_since is None:
             self.lost_since = now
         elif now - self.lost_since >= config.LANE_LOST_TIMEOUT:  # a short gap keeps the last steering
