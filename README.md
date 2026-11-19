@@ -16,7 +16,7 @@ curves, swerves around cups and finds the lane again, all through one explicit s
 | `STORAGE.md` | Images and datasets on the USB stick, models on the SD card |
 | `guide/` | The course: project guides (PDF and Markdown), our analysis `GOAL.md`, weekly rhythm |
 | `presentation/`, `diagrams/`, `design/`, `results/` | Weekly presentations, diagrams, the look, result tables |
-| `scripts/` | `stop_robot.sh` (emergency stop), `dashboard.sh` (web cockpit), `restart_camera.sh`, camera setup |
+| `scripts/` | `stop_robot.sh` (emergency stop), the cockpit service (`jetbot-cockpit.service`, `dashboard.sh`), `restart_camera.sh`, camera setup |
 | `jetbot/`, `docker/`, `setup.py` | NVIDIA JetBot package and containers (upstream, used as is) |
 | `notebooks/` (other folders) | NVIDIA example notebooks (upstream, building blocks only) |
 | `archive/` | Old plans and notes |
@@ -25,7 +25,8 @@ curves, swerves around cups and finds the lane again, all through one explicit s
 
 ```
 python3 ~/jetbot/notebooks/mini_av/battery.py      # do not drive below 11.4 V
-~/jetbot/scripts/dashboard.sh                      # web cockpit on http://<robot-ip>:8080
+# web cockpit: always running at http://<robot-ip>:8080 (service jetbot-cockpit, starts at boot)
+sudo systemctl stop jetbot-cockpit                 # free the camera for a notebook; start: systemctl start
 ~/jetbot/scripts/stop_robot.sh                     # emergency stop
 ```
 

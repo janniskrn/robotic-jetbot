@@ -5,6 +5,13 @@ LINE2), `PLAN.md` section 6 step S1, `notebooks/mini_av/STATE_MACHINE.md`.
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
+## Update 2026-11-19, cockpit (WEB3, SVC1)
+
+- The cockpit is a systemd service (`jetbot-cockpit`): always on at `http://<robot-ip>:8080`, restarted after any exit.
+  It owns the camera: `sudo systemctl stop jetbot-cockpit` before notebooks 04/05 or a tool that uses the camera.
+- Live state by Server-Sent Events (`/events`), video straight from the camera (`/stream.mjpg`, `?overlay=1`).
+- Not driven yet with the new cockpit; a start without the lane in view returned 'no lane at start' as it should.
+
 ## Update 2026-11-19, later (code review and refactor REF1-3, REPO1, FIX1)
 
 - Same driving behavior after the refactor (checked offline, see `DECISIONS.md` REF1/REF2), except `FIX1`: one

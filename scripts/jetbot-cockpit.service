@@ -1,0 +1,20 @@
+# Web cockpit on port 8080: always running, restarted after any exit.
+# Install: scripts/install_cockpit_service.sh     Log: journalctl -u jetbot-cockpit -f
+# Stop for notebook work: sudo systemctl stop jetbot-cockpit   (start again: sudo systemctl start jetbot-cockpit)
+[Unit]
+Description=JetBot web cockpit (port 8080)
+Requires=docker.service
+After=docker.service nvargus-daemon.service network-online.target home-jetbot-usb.mount
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/home/jetbot/jetbot/scripts/dashboard.sh
+ExecStop=/home/jetbot/jetbot/scripts/stop_robot.sh
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

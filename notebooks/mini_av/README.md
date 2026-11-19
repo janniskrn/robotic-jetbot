@@ -2,7 +2,8 @@
 
 Everything the team writes for the challenge lives here. The stock NVIDIA notebooks in the other `notebooks/`
 folders stay untouched and are used as building blocks only. Run everything inside the Jupyter container from this
-folder (`docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 ...`).
+folder (`docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 ...`). The cockpit service owns
+the camera: `sudo systemctl stop jetbot-cockpit` before a notebook or script uses it, `start` afterwards.
 
 ## Driving program (this folder)
 
@@ -22,7 +23,9 @@ separate.
 | `control.py` | PD steering with curve feedforward, curve-based speed, the swerve's wheel commands |
 | `safety.py`, `battery.py` | Camera watchdog, motor watchdog, battery guard; `battery.py` alone prints the charge |
 | `logger.py`, `recorder.py` | Run logs (`usb/logs/`) and camera frames (`usb/images/datasets/`) |
-| `dashboard.py`, `web/` | Web cockpit on port 8080 (`scripts/dashboard.sh`) |
+| `dashboard.py` | Web cockpit on port 8080: page, live state (Server-Sent Events), video, start and stop |
+| `cockpit.py`, `streamer.py` | The cockpit's robot side (idle loop, runs of `drive.py`) and its MJPEG video |
+| `web/` | The cockpit page (`index.html`, `style.css`, `app.js`) |
 | `01_record_dataset.ipynb` | Drive with the gamepad and record a session |
 | `04_drive.ipynb` | Start and stop buttons for `drive.py` |
 | `05_camera_check.ipynb` | Live view: place the robot, check `situation.py` |

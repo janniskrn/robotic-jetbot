@@ -110,17 +110,17 @@ Code style:
 | `notebooks/mini_av/` | The driving program: `drive.py` (main loop) -> `perception.py` -> `decision.py` (state machine) -> `control.py`; `config.py` holds every tuning value; `find_lane.py` is LINE_RECOVERY; `lane_mask.py`, `cup_mask.py`, `situation.py` are the color-mask measurements |
 | `notebooks/mini_av/tools/` | Labeling, training, TensorRT, replay, run analysis, motion tests, cup survey; run as `python3 tools/<name>.py` from `notebooks/mini_av` |
 | `notebooks/mini_av/STATE_MACHINE.md` | State table and diagram; change it together with `decision.py` |
-| `notebooks/mini_av/dashboard.py`, `web/` | Web cockpit (port 8080, `scripts/dashboard.sh`) |
+| `notebooks/mini_av/dashboard.py`, `cockpit.py`, `streamer.py`, `web/` | Web cockpit on port 8080: HTTP server, robot side, MJPEG video, page. Runs always as the systemd service `jetbot-cockpit` (`scripts/jetbot-cockpit.service`, installed with `scripts/install_cockpit_service.sh`; log `journalctl -u jetbot-cockpit`); it owns the camera, so stop it (`sudo systemctl stop jetbot-cockpit`) before a notebook or script uses the camera, and start it again afterwards |
 | `PLAN.md`, `DECISIONS.md`, `HANDOVER.md`, `STORAGE.md` | Plan, decision log, latest handover, storage rules |
 | `guide/` | Course material: project guides, `GOAL.md`, `WEEKLY.md` |
 | `presentation/`, `diagrams/`, `design/`, `results/` | Presentations, diagrams, the look, result tables |
-| `scripts/` | `stop_robot.sh`, `dashboard.sh`, `restart_camera.sh`, `archify.sh`, camera setup |
+| `scripts/` | `stop_robot.sh` (the cockpit comes back idle after it), cockpit service files, `restart_camera.sh`, `archify.sh`, camera setup |
 | `jetbot/`, `docker/`, other `notebooks/` folders | NVIDIA upstream: used as is, not changed |
 | `archive/` | Old plans; do not update |
 | `/home/jetbot/usb/` (not in git) | `images/datasets/` (camera frames), `logs/` (run logs, the offline check `test_avoid.py`), `videos/` |
 
 How to run and check (inside the container `jetbot_jupyter`, which sees the repository as `/workspace/jetbot`):
-- Drive: the web cockpit, `04_drive.ipynb`, or
+- Drive: the web cockpit (always running), or with the service stopped `04_drive.ipynb` or
   `echo 'jetbot' | sudo -S -p '' docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 drive.py --name <name> --seconds 60`.
 - Offline checks (host, no robot needed): `python3 -B /home/jetbot/usb/logs/test_avoid.py <code folder>`; all must pass
   before a driving change is proposed for the track.

@@ -199,7 +199,7 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
             values = step_values(now - start, dt, state, percept, decision, controller, left, right, battery.check())
             log.step(**values)
             if on_step is not None:
-                on_step(frame, values)
+                on_step(frame, dict(values, direction=decision.direction, pass_side=decision.pass_side()))
             history.append((dt, left, right))
             if state == HALT:
                 break

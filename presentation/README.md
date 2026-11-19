@@ -153,9 +153,9 @@ rewrite it until it can.
 ```html
 <div class="codeslide">
   <div class="codesrc">
-    <div class="cf">control.py · update() and wheels() · lines 71 to 142, shortened</div>
-<pre><span class="ln on">71</span>self.lane_x += config.LANE_SMOOTHING * (lane_x - self.lane_x)
-<span class="ln">75</span>change = 0.0 if self.last_error is None else ...</pre>
+    <div class="cf">control.py · update() and wheels() · lines 61 to 131, shortened</div>
+<pre><span class="ln on">70</span>self.d_lane_x = lane_x if last is None else last + config.D_SMOOTHING * (lane_x - last)
+<span class="ln">71</span>change = 0.0 if last is None else (self.d_lane_x - last) / dt</pre>
   </div>
   <ol class="notes">
     <li><span class="nn">71</span><span><b>The claim in four words.</b> Then the evidence or the failure
