@@ -183,6 +183,11 @@ step test from now on (slides).
     - [ ] S1f (2026-11-09) swerve and `LINE_RECOVERY` on the track with 3 cups (`AVOID4`, `LINE1`, `LINE2`): swerves come back to
       the road in most runs (`HANDOVER.md`); next: the nudge when the turn back fails at the border, then full laps with
       cups for the pass rate. Recovery from open floor still unreliable.
+    - [ ] S1g (2026-11-18, user go) swerve fixes from the analysis of 48 recorded swerves (`HANDOVER.md`): driving direction
+      from the first sharp curve, kept all run (`DIR1`); turn back that went past the lane turns the other way (`TURN1`);
+      a cup still close ahead in `ROAD_RECOVERY` starts a new swerve (`RECOV2`). 99 offline checks pass; not driven yet.
+      Track test: one run each way with cups, also a cup just before a curve. Pass: turn backs under 1 s or caught by
+      `turn_back`, no cup hit, no lap driven backwards, direction right in the run's log.
     - [ ] S1d3 (track) the swerve from that fixed start on the straight, at its start, middle and end. Pass: 8 of 10
       back to following without touching the cup.
     - [ ] S1d4 (offline, then track) turn out referred to the cup: turn until the cup band reaches the image edge
@@ -278,6 +283,7 @@ step test from now on (slides).
 
 | Date | Change |
 | :--- | :--- |
+| 2026-11-18 | S1g swerve fixes `DIR1`, `TURN1`, `RECOV2` (offline only) |
 | 2026-11-18 | Web cockpit (`WEB1`): `scripts/dashboard.sh`, open http://192.168.0.174:8080. Tested in idle and two drive starts without a lane (motors off); not yet tested during a real drive (overlay CPU cost in the loop) |
 | 2026-10-26 | Draft 1 |
 | 2026-10-26 | Draft 2 after critical review (section 10) |

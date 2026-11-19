@@ -54,6 +54,12 @@ BASELINE_SPEED = 0.32
 LANE_LOST_TIMEOUT = 0.5  # seconds without a visible lane before the robot stops
 SLOW_DOWN_ENTER = 0.5    # p_sharp above which the state machine enters SLOW_DOWN (speed capped at SPEED_SHARP)
 SLOW_DOWN_EXIT = 0.3     # p_sharp below which it returns to ROAD_FOLLOWING (hysteresis)
+# Driving direction (DIR1): decided once per run at the first sharp curve and kept; the track is an oval, so all its
+# curves bend the same way: right = clockwise. Checked offline on the recorded runs: right in every run that could be checked
+DIRECTION_SHARP = 0.5    # p_sharp from which a step counts for the direction. Gentle curves do not count: a short false
+                         # 'gentle right' on a straight decided wrong (run 2026-11-03_04-51-54)
+DIRECTION_MIN_DIR = 0.5  # |curve_dir| from which the curve's direction is clear
+DIRECTION_FRAMES = 5     # control steps in a row with a sharp curve the same way
 OBSTACLE_VISIBLE_THRESHOLD = 0.5  # obstacle model probability above which a cup counts as seen
 # Cup distance from the size of the red band (cup mask, OBST9): distance in cm = CUP_SIZE_CM / sqrt(band pixels). Learned
 # 2026-11-08 by backing away from a cup in 5 places (cup_learn.py, LEARN1), scaled on the ruler photos of 2026-09-27.
@@ -102,6 +108,13 @@ TURN_IN_MAX = 2.2          # seconds the turn back may take (it took up to 1.9 s
                            # lane and would take it facing backwards (run 2026-11-03_04-52-58)
 TURN_IN_CENTERED = 0.4     # |lane_x| below which the turn back ends on an aligned lane. The curve ends at the lane's
                            # edge, so 0.15 was never met and the robot spun on; ROAD_RECOVERY then centers it (AVOID4)
+TURN_PAST = 0.5            # seconds without the lane after it was seen in the turn back (and after TURN_IN_MIN): the
+                           # robot has turned past the lane and turns the other way (TURN1). 14 of 48 recorded turn backs
+                           # spun on for 1.4-2.2 s and 11 of them failed (lane taken backwards, LINE_RECOVERY). Offline
+                           # this value caught 9 of the 14, with 1 false start in the 34 others (0.4: 4 false; 0.6: 7 caught)
+TURN_BACK_MAX = 1.5        # seconds the turn the other way may take before the lane counts as lost
+TURN_BACK_SURE = 0.6       # lane model value that ends the turn the other way, with the lane within TURN_IN_CENTERED.
+                           # No two-line check: it fails in curves, and the lane just behind the turn is the right one
 CUP_NEAR_CM = 50.0         # during a swerve only bands this close count: cups further back are
                            # not the one being passed
 CUP_EDGE = 0.6             # image x (0..1 toward the edge) the cup must have reached before it counts as having left

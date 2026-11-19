@@ -107,7 +107,8 @@ class Controller(object):
         """Returns (left, right) for a swerve phase (decision.AVOID_PHASES; the decision layer picks and ends it).
 
         brake: stand still; turn_out, turn_in: turn in place toward the pass side; arc: curve away from it, around
-        the cup; pass: straight on while the cup is in view during the curve (Decision.avoid_action).
+        the cup; pass: straight on while the cup is in view during the curve (Decision.avoid_action); turn_back:
+        turn in place away from the pass side, after the turn back went past the lane.
         side: 'left' or 'right', the pass side; elapsed: seconds since the phase started (the kick).
         """
         if phase == 'brake':
@@ -119,6 +120,8 @@ class Controller(object):
             outer, inner = config.ARC_WHEELS
             return (inner, outer) if toward > 0 else (outer, inner)
         spin = toward * turn_speed(elapsed)
+        if phase == 'turn_back':
+            spin = -spin
         return spin, -spin
 
     def stop(self, phase, elapsed):

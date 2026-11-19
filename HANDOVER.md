@@ -5,6 +5,24 @@ LINE2), `PLAN.md` section 6 step S1, `notebooks/mini_av/STATE_MACHINE.md`.
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
+## Update 2026-11-18 (swerve analysis and fixes, S1g, not driven yet)
+
+- Analysis of 48 recorded swerves (11-09 to 11-17): the swerve code did not change since 11-09; the failures are the
+  same kind as then. (1) The turn back spins past the lane in 14 of 48 (1.4-2.2 s), 11 of them failed: lane taken
+  backwards (`05-18-09`: swerved around the passed cup again) or `LINE_RECOVERY` after `TURN_IN_MAX` with a 30 s
+  search (the "lost lane during the swerve"). (2) The curve sometimes ends before the cup is passed; `ROAD_RECOVERY`
+  ignored cups and the robot hit it (`05-22-28` knocked it over, then followed a far line off the track). (3) The lane
+  losses in the sharp curve right after rejoining were 2 of 3 caused by (2).
+- Fixes (user go for all three, offline only, 99 checks in `usb/logs/test_avoid.py`): `DIR1` direction from the first
+  sharp curve, kept all run; `TURN1` turn the other way after going past the lane; `RECOV2` new swerve when a cup is
+  still close in `ROAD_RECOVERY`. Offline tools: `usb/logs/session_tools_2026-11-18/`.
+- Next on the track: one run each way with cups, also a cup just before a curve (PLAN S1g). Look at the `phase`
+  column for `turn_back`. The direction is not logged per step (drive.py unchanged); the turn-out wheel signs show
+  the pass side.
+- Seen, not fixed (no go yet): `05-23-54` stopped at once with "lane lost": the start waits for one frame with the
+  lane, but `Decision.lane_seen` stays False, so a weak next frame (0.46) halts. Two-line fix, probably the "start
+  from 04_drive did not work". The class diagram still shows `curve_sum`.
+
 ## Update 2026-11-16 (robot charging, camera-free work)
 
 - The team's `04_drive.ipynb` runs of 2026-11-10 were fine as a program (newest code, all swerves came back); they
