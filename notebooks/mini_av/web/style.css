@@ -54,6 +54,13 @@ input[type=number] { width:6em; }
 button { font:inherit; font-weight:bold; border:0; border-radius:4px; padding:0.6em 1em; color:var(--bg); cursor:pointer; }
 button:disabled { opacity:.4; cursor:default; }
 .start { background:var(--green); }
+.options { margin-top:0.5em; }
+.options[hidden] { display:none; }  /* .controls sets display, which would override the hidden attribute */
+input[type=text] { flex:1 1 10em; min-width:0; }
+.hint { font-size:0.85em; text-align:left; }
+.run { padding:0.25em 0; border-top:1px solid var(--line); }
+.run:first-child { border-top:0; }
+.run-result { color:var(--dim); word-break:break-word; }
 .stop { background:var(--red); width:100%; font-size:1.6em; padding:0.6em; margin-top:0.5em; }
 
 .edge { fill:none; stroke:#3a4250; stroke-width:2; }

@@ -6,6 +6,15 @@ DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), 
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
+## Update 2026-11-22, evening (COCK1, COCK2, SPEED1)
+
+- The cockpit is the entry point for every run and test (`COCK1`, CLAUDE.md 6.1c). It starts drive runs (adaptive,
+  baseline, no curve; seconds; cups avoid or stop; pass side; name), motion tests (`arc`, `turn`, `swerve`) and the cup
+  distance survey, and lists the last 10 jobs with result and folder (`COCK2`). The tools keep their command line.
+- Overlay: 30 fps in idle (was 15), 10 while driving (was 5); `situation()` 19 -> 7 ms with the same results (`SPEED1`).
+- Tested live with the motors off only. Not yet seen: a drive run, a motion test, a cup distance run with pulses, and
+  the overlay at 10 fps during a drive (watch the loop Hz in the cockpit: about 20).
+
 ## Start here (2026-11-22)
 
 - Everything is committed and pushed on `master`; no open branches or worktrees.
@@ -14,9 +23,8 @@ DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), 
   Server-Sent Events). Stop it before notebooks, tools that use the camera, training or TensorRT.
 - Not yet driven since 2026-11-19: the swerve fixes `ARC1`/`TURN2` (S1h), the refactor (`REF1`-`REF3`, same behavior
   offline) and the startup fix `FIX1`. Next on the track, with the user:
-  1. `sudo systemctl stop jetbot-cockpit`, then
-     `docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 tools/motion_test.py arc`: does the
-     curve turn about 90 degrees? If not, scale `ARC_TURN_MIN` (config.py). Start the service again.
+  1. Cockpit, job "motion test", `arc`: does the curve turn about 90 degrees? If not, scale `ARC_TURN_MIN`
+     (config.py).
   2. Cockpit runs with cups, one just before a curve; judge S1h (swerve comes back on its own lane).
 - Open choice for the user: the cockpit allows runs up to 600 s (`cockpit.MAX_SECONDS`); the review suggested 120 s.
 

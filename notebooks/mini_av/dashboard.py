@@ -9,7 +9,10 @@ Endpoints:
     /events         the state as Server-Sent Events, one per driving step (at most EVENT_HZ)
     /state.json     the state once
     /stream.mjpg    the camera as MJPEG, ?overlay=1 with the situation overlay
-    POST /start     {"mode": "adaptive", "seconds": 30};  POST /stop
+    POST /start     a job (cockpit.parse_start), for example
+                    {"job": "drive", "mode": "adaptive", "seconds": 30, "stop_only": false, "pass_side": "auto"},
+                    {"job": "motion_test", "test": "arc", "repeats": 1}, {"job": "cup_learn", "label": "straight"}
+    POST /stop      stops the job
 """
 
 import http.server
@@ -123,21 +126,21 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_json({'error': 'Content-Type must be application/json'}, 415)
                 return
             if self.path == '/stop':
-                cockpit.stop_drive()
+                cockpit.stop_job()
                 self.send_json({'ok': True})
             elif self.path == '/start':
                 try:
                     length = int(self.headers.get('Content-Length', 0))
                     if not 0 <= length <= MAX_BODY:
                         raise ValueError('body too large')
-                    mode, seconds = parse_start(json.loads(self.rfile.read(length).decode() or 'null'))
+                    job = parse_start(json.loads(self.rfile.read(length).decode() or 'null'))
                 except ValueError as error:  # bad JSON or bad values
                     self.send_json({'error': str(error)}, 400)
                     return
-                if cockpit.start_drive(mode, seconds):
+                if cockpit.start_job(*job):
                     self.send_json({'ok': True})
                 else:
-                    self.send_json({'error': 'already driving'}, 409)
+                    self.send_json({'error': 'a job is running: stop it first'}, 409)
             else:
                 self.send_bytes(b'not found', 'text/plain', 404)
         except OSError:

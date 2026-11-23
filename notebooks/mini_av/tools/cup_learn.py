@@ -9,10 +9,12 @@ all models return on those frames. The distance comes from the band's size after
 not a distance.
 
 Saves to usb/images/obstacle_survey/learn_<label>_<time>/ (stop_NN.jpg, stops.csv). Needs about 70 cm of free floor
-behind the robot. Run inside the container. Stop with Ctrl-C (scripts/stop_robot.sh).
+behind the robot. Start it from the cockpit (COCK1) and stop it there; the command line (inside the container)
+needs the cockpit service stopped, stop it with Ctrl-C (scripts/stop_robot.sh).
 """
 
 import csv
+import math
 import os
 import statistics
 import sys
@@ -25,7 +27,7 @@ from jetbot import Camera, Robot
 
 import config
 from perception import Perception
-from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
+from safety import BatteryGuard, BatteryLow, CameraFrozen, MotorWatchdog, wait_for_new_frame
 
 SURVEY_DIR = '/workspace/usb/images/obstacle_survey'
 PULSE_SECONDS = 0.2   # one pulse backwards at BACKUP_SPEED: a few cm
@@ -87,23 +89,29 @@ def pulse_back(robot, watchdog, camera, frame):
     return frame
 
 
-def show(row):
-    """Prints one stop"""
+def describe(row):
+    """One stop as a line of text"""
     band = 'no band' if row['band_row'] is None else 'band row %3.0f x %+.2f (%d px)' % (
         row['band_row'], row['band_x'], row['band_pixels'])
-    print('stop %2d: %-30s | model cup %.2f row %3.0f x %+.2f | lane %.2f x %+.2f' % (
-        row['stop'], band, row['cup_visible'], row['cup_row'], row['cup_x'], row['lane_visible'], row['lane_x']))
+    return 'stop %2d: %-30s | model cup %.2f row %3.0f x %+.2f | lane %.2f x %+.2f' % (
+        row['stop'], band, row['cup_visible'], row['cup_row'], row['cup_x'], row['lane_visible'], row['lane_x'])
 
 
-def main():
-    label = sys.argv[1]
-    pulses = int(sys.argv[2]) if len(sys.argv) > 2 else MAX_PULSES
+def run(label, pulses=MAX_PULSES, stop_event=None, on_step=None, perception=None, camera=None):
+    """Backs away from the cup until the band is lost or far, the pulses are done, a safety check fails or
+    stop_event is set. on_step(frame, values) after each stop; perception and camera as in drive.run (the cockpit
+    passes its own). Returns the result and the folder of the stops"""
     battery = BatteryGuard()
     if not battery.start_ok():
-        raise SystemExit('battery %.2f V is too low: charge first' % battery.volts)
-    perception = Perception()
+        return 'battery %.2f V is too low: charge first' % battery.volts, None
+    if perception is None:
+        perception = Perception()
+    else:
+        perception.use_curve_model(True)  # a shared Perception: the models of a run of its own
     robot = Robot()
-    camera = Camera.instance()
+    own_camera = camera is None
+    if own_camera:
+        camera = Camera.instance()
     watchdog = MotorWatchdog(robot)
     out = os.path.join(SURVEY_DIR, 'learn_%s_%s' % (label, time.strftime('%Y-%m-%d_%H-%M-%S')))
     os.makedirs(out)
@@ -115,6 +123,9 @@ def main():
         lost = 0
         seen_band = False
         for stop in range(pulses + 1):
+            if stop_event is not None and stop_event.is_set():
+                result = 'stopped by hand'
+                break
             if stop > 0:
                 frame = pulse_back(robot, watchdog, camera, frame)
             time.sleep(SETTLE_SECONDS)
@@ -122,7 +133,11 @@ def main():
             frame, row = measure(camera, frame, perception, stop, battery.check())
             rows.append(row)
             cv2.imwrite(os.path.join(out, 'stop_%02d.jpg' % stop), frame)
-            show(row)
+            if on_step is not None:
+                on_step(frame, dict(mode='CUP_LEARN', phase=describe(row), lane_visible=row['lane_visible'],
+                                    lane_x=row['lane_x'], cup_visible=row['cup_visible'], battery_v=row['battery_v'],
+                                    band_cm=None if row['band_pixels'] is None
+                                    else config.CUP_SIZE_CM / math.sqrt(row['band_pixels'])))
             seen_band = seen_band or row['band_row'] is not None  # touching the cup, the band can be below the view
             lost = lost + 1 if row['band_row'] is None and seen_band else 0
             if lost >= LOST_STOPS:
@@ -138,16 +153,28 @@ def main():
                 break
     except KeyboardInterrupt:
         result = 'stopped by hand'
+    except CameraFrozen:
+        result = 'camera frozen'
+    except BatteryLow as low:
+        result = str(low)
     finally:
         watchdog.running = False
         with watchdog.lock:
             robot.stop()
-        camera.stop()
+        if own_camera:
+            camera.stop()
     with open(os.path.join(out, 'stops.csv'), 'w') as f:
         writer = csv.DictWriter(f, COLUMNS)
         writer.writeheader()
         writer.writerows(rows)
-    print('%s: %d stops, saved in %s, battery %.2f V' % (result, len(rows), out, battery.volts))
+    return '%s: %d stops, battery %.2f V' % (result, len(rows), battery.volts), out
+
+
+def main():
+    label = sys.argv[1]
+    pulses = int(sys.argv[2]) if len(sys.argv) > 2 else MAX_PULSES
+    result, out = run(label, pulses, on_step=lambda frame, values: print(values['phase']))
+    print('%s, saved in %s' % (result, out))
 
 
 if __name__ == '__main__':

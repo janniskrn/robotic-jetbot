@@ -43,10 +43,19 @@ class Perception(object):
         if self.lane_model is None:
             raise RuntimeError('no lane model: train it first with tools/train.py --task lane')
         self.curve_model = load('curve') if use_curve else None
+        self.curve_on = self.curve_model is not None
         self.obstacle_model = load('obstacle')  # None until trained: then no cup is ever seen
         self.frame_count = 0
         self.curve_model_probs = [1.0, 0.0, 0.0, 0.0, 0.0]  # straight until the curve model says otherwise
         self.cup = [-10.0, 0.0, 0.0]  # obstacle model output (visible logit, row, x): no cup until it says otherwise
+
+    def use_curve_model(self, on):
+        """Switches a loaded curve model on or off: a shared Perception (cockpit) runs baseline and no-curve runs
+        without it, like their own. Off, the curve reads straight"""
+        on = on and self.curve_model is not None
+        if on != self.curve_on:
+            self.curve_on = on
+            self.curve_model_probs = [1.0, 0.0, 0.0, 0.0, 0.0]
 
     def warm_up(self, camera):
         """Runs the models on a few frames with the motors off. Returns the last frame"""
@@ -63,7 +72,7 @@ class Perception(object):
         start = time.time()
         image = preprocess(frame).unsqueeze(0).cuda().half()
         lane = self.lane_model(image)[0].float()
-        if self.curve_model is not None and self.frame_count % config.CURVE_EVERY == 0:
+        if self.curve_on and self.frame_count % config.CURVE_EVERY == 0:
             new = torch.softmax(self.curve_model(image)[0].float(), 0).tolist()
             self.curve_model_probs = [old + config.CURVE_SMOOTHING * (n - old)
                                       for old, n in zip(self.curve_model_probs, new)]

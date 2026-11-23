@@ -1,10 +1,14 @@
-"""The cockpit's robot side: one camera and one Perception, used by the idle loop or by a run of drive.py.
+"""The cockpit's robot side: one camera and one Perception, used by the idle loop or by one job (COCK1).
 
 Idle: the perception runs with the motors off, so the cockpit shows what the robot sees.
-Driving: drive.run owns the camera and the motors and reports every step through publish().
+A job (a drive.py run, a motion test, the cup distance survey) owns the camera and the motors while it runs and
+reports every step through publish(). The page shows the mode 'DRIVING' for all of them.
 """
 
+import collections
+import json
 import os
+import re
 import threading
 import time
 import traceback
@@ -17,12 +21,18 @@ from decision import band_cm, cup_ahead
 from perception import Perception
 from safety import CameraFrozen, wait_for_new_frame
 from streamer import Streamer
+from tools import cup_learn, motion_test
 
 BATTERY_PERIOD = 2.0      # seconds between battery readings in idle
 CAMERA_DEAD = 10.0        # seconds without a new frame in idle before the cockpit gives up (the service restarts it)
 EXIT_CAMERA_DEAD = 3      # exit code for a dead camera: scripts/dashboard.sh then resets the camera service
 MAX_SECONDS = 600.0       # longest run the cockpit starts
-MODES = ('adaptive',)     # the shared Perception has the curve model loaded, as the adaptive mode needs
+MAX_REPEATS = 10          # most repeats of a motion test
+RECENT_RUNS = 10          # jobs listed in the page's history
+NAME = re.compile(r'[A-Za-z0-9_-]{1,40}')  # run names and cup labels become folder names
+DRIVE_MODES = {'adaptive': {}, 'baseline': {'baseline': True}, 'nocurve': {'use_curve': False}}  # drive.py's flags
+PASS_SIDES = {'auto': None, 'left': 'left', 'right': 'right'}  # auto: the inside of the oval
+JOBS = {'drive': drive.run, 'motion_test': motion_test.run, 'cup_learn': cup_learn.run}
 
 
 class Shared(object):
@@ -103,20 +113,55 @@ def idle_loop(shared, perception, camera, stop):
         os._exit(1)
 
 
+def number(body, key, low, high, default=None, whole=False):
+    """body[key] (or default) as a number from low to high, or ValueError"""
+    value = body.get(key, default)
+    if (isinstance(value, bool) or not isinstance(value, (int, float)) or not low <= value <= high
+            or (whole and value != int(value))):
+        raise ValueError('%s must be a %s from %g to %g' % (key, 'whole number' if whole else 'number', low, high))
+    return int(value) if whole else float(value)
+
+
+def name(body, key, default=None):
+    """body[key] (or default) as a name for a folder, or ValueError"""
+    value = body.get(key, default)
+    if not isinstance(value, str) or not NAME.fullmatch(value):
+        raise ValueError('%s must be 1 to 40 letters, digits, - or _' % key)
+    return value
+
+
+def choice(body, key, options, default=None):
+    """body[key] (or default) if it is one of options, or ValueError"""
+    value = body.get(key, default)
+    if isinstance(value, (dict, list)) or value not in options:
+        raise ValueError('%s must be one of %s' % (key, ', '.join(json.dumps(option) for option in options)))
+    return value
+
+
 def parse_start(body):
-    """(mode, seconds) from the start request's JSON object, or ValueError"""
+    """(job, options, title) from the start request's JSON object, or ValueError. job: a key of JOBS; options: the
+    keyword arguments of its run(); title: the job in words, for the page"""
     if not isinstance(body, dict):
         raise ValueError('expected a JSON object')
-    mode, seconds = body.get('mode'), body.get('seconds')
-    if mode not in MODES:
-        raise ValueError('mode must be one of %s' % ', '.join(MODES))
-    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not 0 < seconds <= MAX_SECONDS:
-        raise ValueError('seconds must be a number from 0 to %d' % MAX_SECONDS)
-    return mode, float(seconds)
+    job = choice(body, 'job', JOBS, 'drive')
+    if job == 'drive':
+        mode, side = choice(body, 'mode', DRIVE_MODES), choice(body, 'pass_side', PASS_SIDES, 'auto')
+        stop_only, seconds = choice(body, 'stop_only', (False, True), False), number(body, 'seconds', 1, MAX_SECONDS)
+        options = dict(DRIVE_MODES[mode], name=name(body, 'name', mode), seconds=seconds, stop_only=stop_only,
+                       pass_side=PASS_SIDES[side])
+        return job, options, 'drive %s%s, %.0f s, cups: %s, pass %s' % (
+            mode, '' if options['name'] == mode else ' "%s"' % options['name'], seconds,
+            'stop' if stop_only else 'avoid', side)
+    if job == 'motion_test':
+        test, repeats = choice(body, 'test', motion_test.TESTS), number(body, 'repeats', 1, MAX_REPEATS, 1, True)
+        return job, dict(test=test, repeats=repeats), 'motion test %s x%d' % (test, repeats)
+    label = name(body, 'label')
+    pulses = number(body, 'pulses', 0, cup_learn.MAX_PULSES, cup_learn.MAX_PULSES, True)
+    return job, dict(label=label, pulses=pulses), 'cup distance %s, %d pulses' % (label, pulses)
 
 
 class Cockpit(object):
-    """Owns the idle loop and the driving thread: only one of them uses the camera's frames for the models"""
+    """Owns the idle loop and the job thread: only one of them uses the camera's frames for the models"""
 
     def __init__(self):
         self.shared = Shared()
@@ -130,7 +175,8 @@ class Cockpit(object):
         self.streamer = Streamer(self.camera, lambda: self.shared.mode)
         self.lock = threading.Lock()
         self.idle, self.idle_stop = None, None
-        self.drive_thread, self.drive_stop = None, None
+        self.job_thread, self.job_stop, self.job_title = None, None, None
+        self.runs = collections.deque(maxlen=RECENT_RUNS)  # the finished jobs, newest first
 
     def start(self):
         self.streamer.start()
@@ -148,49 +194,56 @@ class Cockpit(object):
             self.idle.join()
             self.idle = None
 
-    def start_drive(self, mode, seconds):
-        """False if a run is already going"""
+    def start_job(self, job, options, title):
+        """Starts JOBS[job](**options); False if a job is already running"""
         with self.lock:
             if self.shared.mode == 'DRIVING':
                 return False
             self.shared.set_mode('DRIVING')
-            self.drive_stop = threading.Event()
-            self.drive_thread = threading.Thread(target=self._drive, args=(mode, seconds, self.drive_stop),
-                                                 daemon=True)
+            self.job_stop, self.job_title = threading.Event(), title
+            self.job_thread = threading.Thread(target=self._run_job, args=(job, options, title, self.job_stop),
+                                               daemon=True)
         self.stop_idle()
-        self.drive_thread.start()
+        self.job_thread.start()
         return True
 
-    def _drive(self, mode, seconds, stop_event):
-        reason = 'drive crashed: see the cockpit log (journalctl -u jetbot-cockpit)'
+    def _run_job(self, job, options, title, stop_event):
+        reason, folder = '%s crashed: see the cockpit log (journalctl -u jetbot-cockpit)' % job, None
+        started = time.time()
         try:
-            reason, _ = drive.run(mode, seconds, stop_event=stop_event, on_step=self.shared.publish,
-                                  perception=self.perception, camera=self.camera)
+            reason, folder = JOBS[job](stop_event=stop_event, on_step=self.shared.publish, perception=self.perception,
+                                       camera=self.camera, **options)
         except Exception:
             traceback.print_exc()
         finally:
+            self.perception.use_curve_model(True)  # idle shows the curve model again
             with self.lock:  # idle first: a start right after must find the idle loop to stop it
+                self.runs.appendleft({'started': time.strftime('%H:%M:%S', time.localtime(started)), 'job': title,
+                                      'seconds': round(time.time() - started, 1), 'result': reason, 'folder': folder})
                 self.start_idle()
                 self.shared.set_mode('IDLE', reason)
 
-    def stop_drive(self):
-        if self.drive_stop is not None:
-            self.drive_stop.set()
+    def stop_job(self):
+        if self.job_stop is not None:
+            self.job_stop.set()
 
     def state(self):
         """Everything the web page shows, as one JSON-ready dict"""
         shared = self.shared
         with shared.cond:
             values, mode, reason, fps, seq = dict(shared.values), shared.mode, shared.last_reason, shared.fps, shared.seq
+        with self.lock:
+            runs, title = list(self.runs), self.job_title
         volts = values.get('battery_v')
-        return {'seq': seq, 'mode': mode, 'last_reason': reason, 'fps': fps,
+        return {'seq': seq, 'mode': mode, 'last_reason': reason, 'fps': fps, 'runs': runs,
+                'job': title if mode == 'DRIVING' else None,
                 'stream_fps': self.streamer.raw.fps, 'overlay_fps': self.streamer.overlay.fps,
                 'battery_pct': charge_percent(volts) if volts else None, 'values': values}
 
     def shutdown(self):
-        self.stop_drive()
-        if self.drive_thread is not None:
-            self.drive_thread.join()  # drive.run stops the motors in its finally
+        self.stop_job()
+        if self.job_thread is not None:
+            self.job_thread.join()  # every job stops the motors in its finally
         self.stop_idle()
         self.streamer.stop()
         self.camera.stop()

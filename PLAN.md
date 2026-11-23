@@ -190,7 +190,7 @@ step test from now on (slides).
       `turn_back`, no cup hit, no lap driven backwards, direction right in the run's log.
     - [ ] S1h (2026-11-19, user: analyse and fix) after the first S1g track runs: curve turns about 90 degrees before it
       may end (`ARC1`), turn back accepts a curved lane bending the driving way (`TURN2`), cockpit live during the
-      search (`WEB2`). 108 offline checks pass. Track: `tools/motion_test.py arc` (about 90 degrees?), then runs
+      search (`WEB2`). 108 offline checks pass. Track: cockpit, motion test `arc` (about 90 degrees?), then runs
       with cups, one just before a curve.
     - [ ] S1d3 (track) the swerve from that fixed start on the straight, at its start, middle and end. Pass: 8 of 10
       back to following without touching the cup.
@@ -287,6 +287,7 @@ step test from now on (slides).
 
 | Date | Change |
 | :--- | :--- |
+| 2026-11-22 | Cockpit as the entry point (`COCK1`): drive modes and options, motion tests, cup distance, run history (`COCK2`); overlay 30 fps in idle (`SPEED1`). Motion tests and the S1h track runs now start from the cockpit |
 | 2026-11-19 | Code review: refactor `REF1`-`REF3`, repository structure `REPO1`, startup fix `FIX1` (offline checked, same behavior otherwise) |
 | 2026-11-19 | S1h `ARC1`, `TURN2`, `WEB2` (offline only) |
 | 2026-11-18 | S1g swerve fixes `DIR1`, `TURN1`, `RECOV2` (offline only) |

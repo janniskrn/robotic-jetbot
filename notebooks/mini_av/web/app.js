@@ -10,6 +10,15 @@ const COLOR = { green: '#2ecc71', yellow: '#f1c40f', orange: '#e67e22', red: '#e
 const STATE_COLOR = {
   IDLE: COLOR.gray, ROAD_FOLLOWING: COLOR.green, SLOW_DOWN: COLOR.yellow, STOP: COLOR.yellow,
   OBSTACLE_AVOIDANCE: COLOR.orange, ROAD_RECOVERY: COLOR.orange, LINE_RECOVERY: COLOR.orange, HALT: COLOR.red,
+  MOTION_TEST: COLOR.yellow, CUP_LEARN: COLOR.yellow,
+};
+// what to set up before a job: by job, and by test for the motion tests
+const HINTS = {
+  drive: 'put the robot on the lane',
+  arc: 'open floor, about 1 m free ahead and to the right: measure the turned angle by hand (about 90 degrees)',
+  turn: 'on the lane: turns left until the edge looks horizontal, then back right until the lane is found',
+  swerve: 'on a straight with 1 m of lane ahead: turn out, curve, turn in',
+  cup_learn: 'the robot starts touching the cup and backs away (70 cm free behind it); 0 pulses: one look, motors off',
 };
 
 // State machine drawing (viewBox 720 x 420): state: [label, centre x, centre y]; edges as in STATE_MACHINE.md,
@@ -163,6 +172,29 @@ function render(s) {
   put('cam-fps', `${fmt($('overlay').checked ? s.overlay_fps : s.stream_fps, 0)} fps`);
   put('inference', fmt(v.inference_ms, 1));
   put('reason', 'last run: ' + (s.last_reason ?? '-'));
+  put('job-now', s.job ? 'running: ' + s.job : '');
+  renderRuns(s.runs || []);
+}
+
+// --- recent runs ---
+let shownRuns = '';
+function renderRuns(runs) {
+  const key = JSON.stringify(runs);
+  if (key === shownRuns) return;  // the state comes about 20 times a second, the list changes once per run
+  shownRuns = key;
+  const box = $('runs');
+  box.textContent = runs.length ? '' : '-';
+  for (const r of runs) {  // textContent only: names and results are not HTML
+    const row = document.createElement('div');
+    row.className = 'run';
+    const head = document.createElement('div');
+    head.textContent = `${r.started}  ${r.job}  ${fmt(r.seconds, 1)} s`;
+    const result = document.createElement('div');
+    result.className = 'run-result';
+    result.textContent = r.result + (r.folder ? `  (${r.folder.split('/').pop()})` : '');
+    row.append(head, result);
+    box.append(row);
+  }
 }
 
 // --- link: connected / stale / down ---
@@ -218,9 +250,30 @@ async function send(path, body) {
 
 const stop = () => send('/stop');
 
+// --- job choice ---
+function showOptions() {
+  const job = $('job').value;
+  for (const el of document.querySelectorAll('.options')) el.hidden = el.dataset.job !== job;
+  put('hint', HINTS[job === 'motion_test' ? $('test').value : job]);
+}
+
+function startBody() {  // the start request for the chosen job (cockpit.parse_start checks it)
+  const job = $('job').value;
+  if (job === 'drive') {
+    const body = { job, mode: $('mode').value, seconds: Number($('seconds').value),
+                   stop_only: $('cups').value === 'stop', pass_side: $('pass-side-choice').value };
+    if ($('name').value.trim()) body.name = $('name').value.trim();
+    return body;
+  }
+  if (job === 'motion_test') return { job, test: $('test').value, repeats: Number($('repeats').value) };
+  return { job, label: $('label').value.trim(), pulses: Number($('pulses').value) };
+}
+
 $('cam').onerror = () => { if (!document.hidden) setTimeout(setStream, RETRY_MS); };
 $('overlay').onchange = setStream;
-$('start').onclick = () => send('/start', { mode: $('mode').value, seconds: Number($('seconds').value) });
+$('start').onclick = () => send('/start', startBody());
+$('job').onchange = showOptions;
+$('test').onchange = showOptions;
 $('stop').onclick = stop;
 document.addEventListener('keydown', (e) => {  // Esc always stops; Space stops unless typing in a field
   const typing = ['INPUT', 'SELECT'].includes(document.activeElement.tagName);
@@ -243,6 +296,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 drawStateMachine();
+showOptions();
 setStream();
 connectEvents();
 setInterval(watchLink, 250);

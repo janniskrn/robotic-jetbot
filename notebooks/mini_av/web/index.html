@@ -37,12 +37,41 @@
 
     <div class="section">
       <div class="controls">
-        <select id="mode" aria-label="mode"><option value="adaptive">adaptive</option></select>
-        <input type="number" id="seconds" value="30" min="1" max="600" step="1" aria-label="seconds">
-        <span>s</span>
+        <select id="job" aria-label="job">
+          <option value="drive">drive</option>
+          <option value="motion_test">motion test</option>
+          <option value="cup_learn">cup distance</option>
+        </select>
         <button class="start" id="start">Start</button>
       </div>
+      <div class="controls options" data-job="drive">
+        <select id="mode" aria-label="mode">
+          <option value="adaptive">adaptive</option><option value="baseline">baseline</option>
+          <option value="nocurve">no curve</option>
+        </select>
+        <input type="number" id="seconds" value="30" min="1" max="600" step="1" aria-label="seconds"><span>s</span>
+        <select id="cups" aria-label="cups">
+          <option value="avoid">cups: avoid</option><option value="stop">cups: stop</option>
+        </select>
+        <select id="pass-side-choice" aria-label="pass side">
+          <option value="auto">pass: auto</option><option value="left">pass: left</option>
+          <option value="right">pass: right</option>
+        </select>
+        <input type="text" id="name" placeholder="name (default: mode)" maxlength="40" aria-label="run name">
+      </div>
+      <div class="controls options" data-job="motion_test" hidden>
+        <select id="test" aria-label="test">
+          <option value="arc">arc</option><option value="turn">turn</option><option value="swerve">swerve</option>
+        </select>
+        <input type="number" id="repeats" value="1" min="1" max="10" step="1" aria-label="repeats"><span>x</span>
+      </div>
+      <div class="controls options" data-job="cup_learn" hidden>
+        <input type="text" id="label" placeholder="place label, e.g. straight" maxlength="40" aria-label="place label">
+        <input type="number" id="pulses" value="30" min="0" max="30" step="1" aria-label="pulses"><span>pulses</span>
+      </div>
+      <div id="hint" class="sub hint"></div>
       <button class="stop" id="stop" title="Space or Esc">STOP</button>
+      <div id="job-now" class="sub"></div>
       <div id="status" class="sub"></div>
       <div id="reason" class="sub">last run: -</div>
     </div>
@@ -74,6 +103,11 @@
       <span>video / overlay fps</span><span id="stream-fps" class="num">-</span>
       <span>inference ms</span><span id="inference" class="num">-</span>
       <span>state age ms</span><span id="age" class="num">-</span>
+    </div>
+
+    <div class="section">
+      <h2>recent runs</h2>
+      <div id="runs" class="runs">-</div>
     </div>
   </section>
 </main>

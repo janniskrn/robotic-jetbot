@@ -118,6 +118,8 @@ def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_onl
         return 'battery %.2f V is too low: charge first' % battery.volts, None
     if perception is None:
         perception = Perception(use_curve=use_curve and not baseline)
+    else:
+        perception.use_curve_model(use_curve and not baseline)  # a shared Perception: the models of a run of its own
     controller = Controller(baseline=baseline, use_curve=use_curve)
     decision = Decision(stop_only=stop_only, pass_side=pass_side, line_recovery=not baseline)
     robot = Robot()

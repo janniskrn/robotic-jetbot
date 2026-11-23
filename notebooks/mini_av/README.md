@@ -25,7 +25,7 @@ separate.
 | `safety.py`, `battery.py` | Camera watchdog, motor watchdog, battery guard; `battery.py` alone prints the charge |
 | `logger.py`, `recorder.py` | Run logs (`usb/logs/`) and camera frames (`usb/images/datasets/`) |
 | `dashboard.py` | Web cockpit on port 8080: page, live state (Server-Sent Events), video, start and stop |
-| `cockpit.py`, `streamer.py` | The cockpit's robot side (idle loop, runs of `drive.py`) and its MJPEG video |
+| `cockpit.py`, `streamer.py` | The cockpit's robot side (idle loop and jobs: `drive.py` runs, motion tests, cup distance) and its MJPEG video |
 | `web/` | The cockpit page (`index.html`, `style.css`, `app.js`) |
 | `01_record_dataset.ipynb` | Drive with the gamepad and record a session |
 | `04_drive.ipynb` | Start and stop buttons for `drive.py` |

@@ -7,7 +7,8 @@
                                                  # it should be about 90 degrees
 
 Saves every frame with time, phase and measurements to usb/images/datasets/<time>_<test>_test.
-Run inside the container from notebooks/mini_av.
+Start it from the cockpit (COCK1); the command line, inside the container from notebooks/mini_av, needs the
+cockpit service stopped.
 """
 
 import csv
@@ -26,9 +27,13 @@ from control import turn_speed
 from decision import lane_found, reached_horizontal
 from perception import Perception
 from recorder import DATASET_ROOT
-from safety import BatteryGuard, MotorWatchdog, wait_for_new_frame
+from safety import BatteryGuard, BatteryLow, CameraFrozen, MotorWatchdog, wait_for_new_frame
 
 HOLD_SECONDS = 2.0  # standing still after a move: the overshoot settles and can be seen in the frames
+
+
+class Stopped(Exception):
+    """STOP in the cockpit"""
 
 
 def spin(direction):
@@ -84,17 +89,21 @@ def save(out, shots):
                            '' if angle is None else '%.1f' % angle, int(found)])
 
 
-def main():
-    test = sys.argv[1] if len(sys.argv) > 1 else ''
-    if test not in TESTS:
-        raise SystemExit('test must be one of: %s' % ', '.join(TESTS))
-    repeats = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+def run(test, repeats=1, stop_event=None, on_step=None, perception=None, camera=None):
+    """Runs one test until its phases are done, a phase takes too long, a safety check fails or stop_event is set.
+    on_step(frame, values), perception and camera as in drive.run (the cockpit passes its own).
+    Returns the result and the folder of the saved frames"""
     battery = BatteryGuard()
     if not battery.start_ok():
-        raise SystemExit('battery %.2f V is too low: charge first' % battery.volts)
-    perception = Perception(use_curve=False)
+        return 'battery %.2f V is too low: charge first' % battery.volts, None
+    if perception is None:
+        perception = Perception(use_curve=False)
+    else:
+        perception.use_curve_model(False)  # a shared Perception: the models of a test of its own
     robot = Robot()
-    camera = Camera.instance()
+    own_camera = camera is None
+    if own_camera:
+        camera = Camera.instance()
     watchdog = MotorWatchdog(robot)
     out = os.path.join(DATASET_ROOT, time.strftime('%Y-%m-%d_%H-%M-%S') + '_%s_test' % test)
     os.makedirs(out)
@@ -108,11 +117,14 @@ def main():
             for name, wheels, done_when, limit in TESTS[test]:
                 since, done = time.time(), False
                 while not done:
+                    if stop_event is not None and stop_event.is_set():
+                        raise Stopped()
                     elapsed = time.time() - since
-                    battery.check()
+                    volts = battery.check()
                     frame = wait_for_new_frame(camera, frame)
                     angle = lane_mask.tape_angle(frame)
-                    found = lane_found(perception.observe(frame))
+                    percept = perception.observe(frame)
+                    found = lane_found(percept)
                     if limit is not None and elapsed >= limit:
                         raise RuntimeError('%s took too long' % name)
                     done = done_when(elapsed, angle, found)
@@ -121,17 +133,34 @@ def main():
                         robot.set_motors(left, right)
                     watchdog.feed()
                     shots.append((time.time() - start, name, left, right, angle, found, frame.copy()))
-    except KeyboardInterrupt:
+                    if on_step is not None:
+                        on_step(frame, dict(time=time.time() - start, mode='MOTION_TEST', phase='%s: %s' % (test, name),
+                                            left=left, right=right, lane_visible=percept['lane_visible'],
+                                            lane_x=percept['lane_x'], lane_aligned=int(percept['lane_aligned']),
+                                            battery_v=volts, inference_ms=percept['inference_ms']))
+    except (KeyboardInterrupt, Stopped):  # Ctrl-C or scripts/stop_robot.sh, or the cockpit's STOP
         result = 'stopped by hand'
-    except RuntimeError as error:
+    except CameraFrozen:
+        result = 'camera frozen'
+    except (BatteryLow, RuntimeError) as error:
         result = str(error)
     finally:
         watchdog.running = False
         with watchdog.lock:
             robot.stop()
-        camera.stop()
+        if own_camera:
+            camera.stop()
     save(out, shots)
-    print('%s: %d frames in %s, battery %.2f V' % (result, len(shots), out, battery.volts))
+    return '%s: %d frames, battery %.2f V' % (result, len(shots), battery.volts), out
+
+
+def main():
+    test = sys.argv[1] if len(sys.argv) > 1 else ''
+    if test not in TESTS:
+        raise SystemExit('test must be one of: %s' % ', '.join(TESTS))
+    repeats = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+    result, out = run(test, repeats)
+    print('%s, saved in %s' % (result, out))
 
 
 if __name__ == '__main__':
