@@ -118,11 +118,12 @@ def bends_our_way(percept, direction):
             and (turn > 0) == (direction == 'cw'))
 
 
-def bends_toward(percept, toward):
-    """True if the curve model sees the lane bend toward the pass side (toward: -1 left, 1 right): the road then comes
-    back early in the swerve's curve (ARC3)"""
+def curve_inside(percept):
+    """'left' or 'right': the inside of the curve the curve model sees, or None on a straight (PASS3)"""
     probs, turn = percept['curve_probs'], percept['curve_dir']
-    return probs[1] + probs[2] >= 0.5 and abs(turn) >= config.DIRECTION_MIN_DIR and turn * toward > 0
+    if probs[1] + probs[2] < 0.5 or abs(turn) < config.DIRECTION_MIN_DIR:
+        return None
+    return 'left' if turn < 0 else 'right'
 
 
 def count(frames, condition):
@@ -156,6 +157,7 @@ class Decision(object):
         self.tape_under = False   # the lane's border has been under the robot's nose during the curve
         self.arc_turned = 0.0     # seconds the curve has actually curved (ARC_TURN_MIN)
         self.arc_last = 0.0       # time of the last step in the curve
+        self.curve_side = None    # the inside of the curve the cup stands in, None on a straight (PASS3)
         self.cup_in_curve = False  # the cup stands in a curve bending toward the pass side (ARC3)
         self.crossed_at = None    # time the lane's border was crossed in the curve (ARC4)
         self.past_from = None     # the curve has ended: straight on until ARC_PAST after this time (ARC2, ARC4)
@@ -165,9 +167,12 @@ class Decision(object):
         self.backed = False       # backed up once in this stop
 
     def pass_side(self):
-        """Side to pass a cup on: the inside of the oval (PASS), left until the direction is known"""
+        """Side to pass a cup on: in a curve always its inside (PASS3), else the inside of the oval (PASS), left until
+        the direction is known"""
         if self.fixed_side:
             return self.fixed_side
+        if self.curve_side:
+            return self.curve_side
         return 'right' if self.direction == 'cw' else 'left'
 
     def avoid_action(self):
@@ -180,6 +185,7 @@ class Decision(object):
             self.avoid_phase, self.phase_since, self.edge_angle = AVOID_PHASES[0], now, None
             self.turn_cup_x, self.go_straight, self.tape_under = None, False, False
             self.turn_lane_at, self.cup_in_curve, self.crossed_at, self.past_from = None, False, None, None
+            self.curve_side = None  # decided at the end of the brake
         if state == STOP:
             self.stop_phase, self.phase_since, self.backed = STOP_PHASES[0], now, False
         if state == ROAD_RECOVERY:
@@ -296,7 +302,8 @@ class Decision(object):
             self.enter(ROAD_RECOVERY, now)
         elif done:
             if phase == 'brake':  # standing still before the turn: the curve model sees where the cup stands
-                self.cup_in_curve = bends_toward(percept, toward)
+                self.curve_side = curve_inside(percept)
+                self.cup_in_curve = self.curve_side is not None and self.pass_side() == self.curve_side
             self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(phase) + 1]
             self.phase_since = self.arc_last = now
             self.arc_turned = 0.0
