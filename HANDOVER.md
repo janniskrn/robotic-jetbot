@@ -19,6 +19,10 @@ DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), 
 - Then `ARC2` and `ARC3` (S1i, offline only, 118 checks): 5 cm on after the swerve curve; with the cup in a curve
   bending toward the pass side the curve ends on the earlier marks (the robot drove across the curved road).
   Next on the track: a cup on a straight and a cup in a curve, one run each way.
+- Track run `04-04-01` (S1i), then `ARC4`, `STEER3`, `SIT4` (S1j, offline only, 131 checks): the 5 cm on count
+  from the border crossing; calmer `ROAD_RECOVERY` (half P, 1 s handover, timeout only without the lane in view);
+  the search accepts the lane near its border. Next: track runs with cups, and the motion test `arc` (is 3.0 s of
+  curve about 90 degrees?).
 
 ## Start here (2026-11-22)
 

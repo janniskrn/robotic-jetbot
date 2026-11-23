@@ -49,7 +49,8 @@ TAPE_SLACK = 8        # image rows above the scan's lowest tape that still count
 NUDGES = 4            # extra turn pulses to reach that heading (the pulses are uneven)
 BOTTOM_ROW = 0.93     # fraction of the image height from which tape counts as at the robot's nose
 FOUND = ('undo', 'sweep', 'search', 'search_any')  # results of run() with the lane found ('search_any': any way)
-IN_LANE_CENTER = 0.7  # situation.py 'in lane' with the lane center this close to the nose counts as found (SIT2)
+IN_LANE_CENTER = 1.0  # situation.py 'in lane' with the lane center this close to the nose counts as found (SIT2, SIT4)
+IN_LANE_HEADING = 50.0  # and the lane running at most this many degrees off the robot's heading (SIT4)
 STOP_COLUMNS = ['stop', 'stage', 'heading', 'lane_visible', 'lane_x', 'lane_aligned', 'tape_row', 'tape_close', 'zone']
 
 
@@ -73,7 +74,8 @@ def in_lane(percept, frame):
     if percept['lane_visible'] < UNDO_SURE:
         return False
     seen = situation.situation(frame)
-    return seen['zone'] == 'in lane' and abs(seen['center']) <= IN_LANE_CENTER
+    return (seen['zone'] == 'in lane' and abs(seen['center']) <= IN_LANE_CENTER
+            and abs(seen['heading']) <= IN_LANE_HEADING)
 
 
 def tape_close(frame):

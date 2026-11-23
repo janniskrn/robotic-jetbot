@@ -196,6 +196,10 @@ step test from now on (slides).
       curve before the turn in (robot rejoined on the lane's border); `ARC3` with the cup in a curve bending toward the
       pass side the curve ends on the marks from before `ARC1` (it drove across the curved road). 118 offline checks.
       Track: a cup on a straight (where in the lane does it rejoin?) and a cup in a curve, one run each way.
+    - [ ] S1j (2026-11-22, user go) after the S1i track runs (`04-04-01`): `ARC4` the 5 cm on count from the border
+      crossing (the second straight swerve went too far); `STEER3` calmer `ROAD_RECOVERY` (wiggle after the curve
+      swerve); `SIT4` the search accepts the lane near its border (it turned 30 s while standing in the lane). 131
+      offline checks. Track: cups on a straight and in a curve, one run each way; motion test `arc` for `ARC_TURN_MIN`.
     - [ ] S1d3 (track) the swerve from that fixed start on the straight, at its start, middle and end. Pass: 8 of 10
       back to following without touching the cup.
     - [ ] S1d4 (offline, then track) turn out referred to the cup: turn until the cup band reaches the image edge
@@ -291,6 +295,7 @@ step test from now on (slides).
 
 | Date | Change |
 | :--- | :--- |
+| 2026-11-22 | S1j `ARC4` (5 cm on counted from the border crossing), `STEER3` (calmer ROAD_RECOVERY), `SIT4` (search accepts the lane near its border), offline only, 131 checks |
 | 2026-11-22 | S1i `ARC2` (5 cm on after the swerve curve), `ARC3` (cup in a curve: the curve ends on the earlier marks), offline only, 118 checks |
 | 2026-11-22 | Cockpit as the entry point (`COCK1`): drive modes and options, motion tests, cup distance, run history (`COCK2`); overlay 30 fps in idle (`SPEED1`). Motion tests and the S1h track runs now start from the cockpit |
 | 2026-11-19 | Code review: refactor `REF1`-`REF3`, repository structure `REPO1`, startup fix `FIX1` (offline checked, same behavior otherwise) |

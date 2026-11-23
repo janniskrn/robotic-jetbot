@@ -58,8 +58,9 @@ class Controller(object):
             return 0.0
         return self.curve_turn(curve_probs, curve_dir)
 
-    def update(self, lane_x, curve_probs, curve_dir, dt, speed_limit=None):
-        """Returns (left, right) wheel speeds; speed_limit caps the target speed (state SLOW_DOWN)"""
+    def update(self, lane_x, curve_probs, curve_dir, dt, speed_limit=None, kp_share=1.0):
+        """Returns (left, right) wheel speeds; speed_limit caps the target speed (state SLOW_DOWN); kp_share scales
+        the P gain (ROAD_RECOVERY, STEER3)"""
         if self.baseline:
             self.steering = config.STEERING_KP * lane_x
             self.speed = config.BASELINE_SPEED
@@ -71,7 +72,7 @@ class Controller(object):
         change = 0.0 if last is None else (self.d_lane_x - last) / dt
         # gain scheduling: the faster the robot, the more a correction moves it before the next frame
         schedule = config.STEERING_REF_SPEED / max(self.speed, config.STEERING_REF_SPEED)
-        wanted = (schedule * (config.STEERING_KP * lane_x + config.STEERING_KD * change)
+        wanted = (schedule * (kp_share * config.STEERING_KP * lane_x + config.STEERING_KD * change)
                   + self.feedforward(curve_probs, curve_dir))
         self.steering = limit_change(wanted, self.steering, config.STEERING_RATE, config.STEERING_RATE, dt)
         if self.use_curve:

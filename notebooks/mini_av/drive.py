@@ -71,7 +71,8 @@ def wheel_command(state, percept, decision, controller, dt, now):
         if not sees_lane(percept):  # short gap: lane_x is not trained on frames without a lane
             return controller.hold(percept['curve_probs'], percept['curve_dir'], dt)
         limit = config.SPEED_SHARP if state == SLOW_DOWN else None
-        return controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'], dt, limit)
+        kp_share = config.RECOVER_KP if state == ROAD_RECOVERY else 1.0  # onto the lane after a swerve: calmer (STEER3)
+        return controller.update(percept['lane_x'], percept['curve_probs'], percept['curve_dir'], dt, limit, kp_share)
     if state == OBSTACLE_AVOIDANCE:
         return controller.avoid(decision.avoid_action(), decision.pass_side(), now - decision.phase_since)
     if state == ROAD_RECOVERY:
