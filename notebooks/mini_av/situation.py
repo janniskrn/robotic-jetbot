@@ -52,6 +52,9 @@ def lane_width(row):
     return np.interp(row, WIDTH_ROWS, WIDTH_PX)
 
 
+WIDTH_AT_ROW = lane_width(np.arange(IMAGE_SIZE))  # the lane width of each image row, looked up once (SPEED1)
+
+
 def tape_mask(bgr):
     """Tape on the floor part of the image: a looser threshold far away"""
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
@@ -64,17 +67,27 @@ def tape_mask(bgr):
     return mask > 0
 
 
-def pieces(values, rows, widest=TAPE_SHARE[1]):
-    """Centers of the runs of True in values whose length fits tape; rows: the image row of each value;
-    widest: largest length as a share of the lane width"""
-    padded = np.concatenate(([False], values, [False]))
-    edges = np.flatnonzero(padded[1:] != padded[:-1])
+def runs(lines):
+    """For each row of a 2-D bool array, its runs of True as (start, end), end not included; all rows in one go"""
+    padded = np.zeros((lines.shape[0], lines.shape[1] + 2), dtype=bool)
+    padded[:, 1:-1] = lines
+    # row by row, so a run's start and end come in pairs; plain ints, as numpy numbers are slow one at a time
+    line, edge = (part.tolist() for part in np.nonzero(padded[:, 1:] != padded[:, :-1]))
+    found = [[] for _ in range(lines.shape[0])]
+    for i in range(0, len(edge), 2):
+        found[line[i]].append((edge[i], edge[i + 1]))
+    return found
+
+
+def pieces(spans, row=None, widest=TAPE_SHARE[1]):
+    """Centers of the runs (start, end) whose length fits tape; row: the image row of a traced row, None for a
+    traced column (the row is then the run's middle); widest: largest length as a share of the lane width"""
     found = []
-    for start, end in zip(edges[::2], edges[1::2]):
+    for start, end in spans:
         middle = (start + end - 1) / 2.0
-        row = rows[int(middle)]
-        width = lane_width(row)
-        narrowest = 1 if row < int(FAR_ROW) else TAPE_SHARE[0] * width  # far tape is 1-2 pixels thin
+        at = int(middle) if row is None else row
+        width = WIDTH_AT_ROW[at]
+        narrowest = 1 if at < int(FAR_ROW) else TAPE_SHARE[0] * width  # far tape is 1-2 pixels thin
         if narrowest <= end - start <= widest * width:
             found.append(middle)
     return found
@@ -126,10 +139,10 @@ def trace(bgr):
     mask = tape_mask(bgr)
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
     height, width = mask.shape
-    all_rows = np.arange(height)
-    by_row = [(row, pieces(mask[row], np.full(width, row)))
-              for row in range(height - 3, int(FAR_TOP * height), -STEP)]
-    by_column = [(column, pieces(mask[:, column], all_rows, ACROSS_MAX)) for column in range(2, width, STEP)]
+    rows, columns = list(range(height - 3, int(FAR_TOP * height), -STEP)), list(range(2, width, STEP))
+    by_row = [(row, pieces(spans, row)) for row, spans in zip(rows, runs(mask[rows]))]
+    by_column = [(column, pieces(spans, None, ACROSS_MAX))
+                 for column, spans in zip(columns, runs(mask[:, columns].T))]
     along = chains_of(by_row, lambda point: point[0] < FAR_ROW)
     near = set((int(row) // SAME, int(x) // SAME) for chain in along for row, x in chain)
     across = [chain for chain in chains_of(by_column, lambda point: point[1] < FAR_ROW)  # only tape the rows did not

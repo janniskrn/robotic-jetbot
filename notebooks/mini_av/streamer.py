@@ -1,7 +1,7 @@
 """Video for the cockpit (MJPEG): each picture is encoded once, in one thread, and sent to every viewer.
 
 raw: read straight from the camera, so it runs at the camera rate whatever the driving loop does.
-overlay: situation.picture of the latest camera frame (about 31 ms of CPU), so it runs at a lower rate.
+overlay: situation.picture of the latest camera frame (about 13 ms of CPU with the encoding, SPEED1).
 Nothing is encoded while nobody watches.
 """
 
@@ -15,7 +15,7 @@ import situation
 from safety import CameraFrozen, wait_for_new_frame
 
 JPEG_QUALITY = 85
-OVERLAY_HZ = {'IDLE': 15, 'DRIVING': 5}  # overlay pictures per second: less while driving, the loop needs the CPU
+OVERLAY_HZ = {'IDLE': 30, 'DRIVING': 10}  # overlay pictures per second: less while driving, the loop needs the CPU
 WAIT = 1.0         # seconds a thread or a viewer waits for a new picture before it checks again
 NO_VIEWER = 0.05   # seconds between checks whether someone watches
 
