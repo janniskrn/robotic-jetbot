@@ -16,6 +16,10 @@ DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), 
 - Tested live with the motors off only. Not yet seen: a drive run, a motion test, a cup distance run with pulses, and
   the overlay at 10 fps during a drive (watch the loop Hz in the cockpit: about 20).
 
+- Then `ARC2` and `ARC3` (S1i, offline only, 118 checks): 5 cm on after the swerve curve; with the cup in a curve
+  bending toward the pass side the curve ends on the earlier marks (the robot drove across the curved road).
+  Next on the track: a cup on a straight and a cup in a curve, one run each way.
+
 ## Start here (2026-11-22)
 
 - Everything is committed and pushed on `master`; no open branches or worktrees.

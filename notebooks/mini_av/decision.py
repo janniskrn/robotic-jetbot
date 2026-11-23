@@ -118,6 +118,13 @@ def bends_our_way(percept, direction):
             and (turn > 0) == (direction == 'cw'))
 
 
+def bends_toward(percept, toward):
+    """True if the curve model sees the lane bend toward the pass side (toward: -1 left, 1 right): the road then comes
+    back early in the swerve's curve (ARC3)"""
+    probs, turn = percept['curve_probs'], percept['curve_dir']
+    return probs[1] + probs[2] >= 0.5 and abs(turn) >= config.DIRECTION_MIN_DIR and turn * toward > 0
+
+
 def count(frames, condition):
     """Steps in a row with the condition true"""
     return frames + 1 if condition else 0
@@ -148,6 +155,8 @@ class Decision(object):
         self.tape_under = False   # the lane's border has been under the robot's nose during the curve
         self.arc_turned = 0.0     # seconds the curve has actually curved (ARC_TURN_MIN)
         self.arc_last = 0.0       # time of the last step in the curve
+        self.cup_in_curve = False  # the cup stands in a curve bending toward the pass side (ARC3)
+        self.arc_ended_at = None  # time the curve's end mark was seen: straight on ARC_PAST from then (ARC2)
         self.turn_lane_at = None  # last time the lane was seen in turn_in
         # the stop (stop_only)
         self.stop_phase = STOP_PHASES[0]
@@ -168,7 +177,7 @@ class Decision(object):
         if state == OBSTACLE_AVOIDANCE:
             self.avoid_phase, self.phase_since, self.edge_angle = AVOID_PHASES[0], now, None
             self.turn_cup_x, self.go_straight, self.tape_under = None, False, False
-            self.turn_lane_at = None
+            self.turn_lane_at, self.cup_in_curve, self.arc_ended_at = None, False, None
         if state == STOP:
             self.stop_phase, self.phase_since, self.backed = STOP_PHASES[0], now, False
 
@@ -280,6 +289,8 @@ class Decision(object):
             self.centered_frames = self.close_frames = 0  # the cup that started this swerve does not count again
             self.enter(ROAD_RECOVERY, now)
         elif done:
+            if phase == 'brake':  # standing still before the turn: the curve model sees where the cup stands
+                self.cup_in_curve = bends_toward(percept, toward)
             self.avoid_phase = AVOID_PHASES[AVOID_PHASES.index(phase) + 1]
             self.phase_since = self.arc_last = now
             self.arc_turned = 0.0
@@ -300,25 +311,35 @@ class Decision(object):
         return done
 
     def arc_done(self, percept, now, elapsed, toward):
-        """Only after about 90 degrees of curve (ARC1: before that a line ahead is another one): the lane's border was
-        crossed, the lane is found, or the edge ahead looks horizontal or has left the image"""
+        """The lane's border was crossed, the lane is found, or the edge ahead looks horizontal or has left the image;
+        then straight on for ARC_PAST (ARC2). On a straight only after about 90 degrees of curve (ARC1: before that a
+        line ahead is another one); with the cup in a curve bending toward the pass side the road comes back early,
+        so the earlier marks count (ARC3)"""
         angle, band = percept['tape_angle'], near_band(percept)
         if cup_in_the_way(band):
             self.enter(HALT, now)
             return False
+        if self.arc_ended_at is not None:
+            return now - self.arc_ended_at >= config.ARC_PAST
         if not self.go_straight:  # the wheels curved since the last step
             self.arc_turned += now - self.arc_last
         self.arc_last = now
         turned = self.arc_turned >= config.ARC_TURN_MIN
-        self.go_straight = cup_beside_curve(band, toward) or (turned and elapsed >= config.ARC_STRAIGHT_AFTER)
+        self.go_straight = cup_beside_curve(band, toward) or (
+            elapsed >= config.ARC_STRAIGHT_AFTER and (turned or self.cup_in_curve))
         under = percept['tape_row'] >= config.TAPE_UNDER_ROW
         self.tape_under = self.tape_under or (under and elapsed >= config.ARC_MIN)  # at the start it is the old lane
         crossed = self.tape_under and percept['tape_row'] < config.TAPE_PAST_ROW
-        done = turned and (crossed or lane_found(percept, config.TURN_IN_CENTERED)
-                           or reached_horizontal(angle, -toward, config.ARC_EARLY)
-                           or edge_left_view(self.edge_angle, angle, -toward))
+        lane = lane_found(percept, config.TURN_IN_CENTERED)
+        facing = reached_horizontal(angle, -toward, config.ARC_EARLY) or edge_left_view(self.edge_angle, angle, -toward)
         self.edge_angle = angle
-        return done
+        if self.cup_in_curve:
+            ended = crossed or (lane and elapsed >= config.ARC_LANE_MIN) or (facing and elapsed >= config.ARC_MIN)
+        else:
+            ended = turned and (crossed or lane or facing)
+        if ended:
+            self.arc_ended_at, self.go_straight = now, True
+        return False
 
     def turn_in_done(self, percept, now, elapsed, toward):
         """The lane is found along it, or seen sure and bending our way (TURN2). Lost again after it was seen: the

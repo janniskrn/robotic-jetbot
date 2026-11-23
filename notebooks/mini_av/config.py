@@ -86,6 +86,9 @@ ARC_STOP_X = 0.5           # |band x| below which that band counts as in the mid
 ARC_TURN_MIN = 3.0         # seconds of curving before the curve may end: about 90 degrees (ARC1, estimate; measure with
                            # `tools/motion_test.py arc`)
 ARC_MIN = 1.0              # seconds of curve before tape under the nose counts (at the start it is the old lane)
+ARC_LANE_MIN = 2.5         # cup in a curve (ARC3): seconds of curve before the lane found ends it
+ARC_PAST = 0.2             # seconds straight on after the curve ended, about 5 cm (ARC2): the turn in then puts the
+                           # robot nearer the lane's middle, not on its border
 ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends
 TAPE_UNDER_ROW = 215 / 224.0  # lowest tape at this row: the lane's border is under the robot's nose
 TAPE_PAST_ROW = 175 / 224.0   # lowest tape back above this row: the border is crossed
