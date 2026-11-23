@@ -1,9 +1,24 @@
-# Handover (2026-11-09, end of session)
+# Handover (2026-11-22, end of session)
 
-For the next Claude session. Read this, then `CLAUDE.md`, `DECISIONS.md` (newest: OBST8, OBST9, AVOID4, LEARN1, LINE1,
-LINE2), `PLAN.md` section 6 step S1, `notebooks/mini_av/STATE_MACHINE.md`.
+For the next Claude session. Read this, then `CLAUDE.md` (section 6.1b: where what is), `DECISIONS.md` (newest:
+DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), `PLAN.md` section 6 step S1h,
+`notebooks/mini_av/STATE_MACHINE.md`.
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
+
+## Start here (2026-11-22)
+
+- Everything is committed and pushed on `master`; no open branches or worktrees.
+- Offline checks: `python3 -B /home/jetbot/usb/logs/test_avoid.py ~/jetbot/notebooks/mini_av` -> 109 of 109.
+- The cockpit runs as the service `jetbot-cockpit` at `http://<robot-ip>:8080` (live video 30 fps, state by
+  Server-Sent Events). Stop it before notebooks, tools that use the camera, training or TensorRT.
+- Not yet driven since 2026-11-19: the swerve fixes `ARC1`/`TURN2` (S1h), the refactor (`REF1`-`REF3`, same behavior
+  offline) and the startup fix `FIX1`. Next on the track, with the user:
+  1. `sudo systemctl stop jetbot-cockpit`, then
+     `docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 tools/motion_test.py arc`: does the
+     curve turn about 90 degrees? If not, scale `ARC_TURN_MIN` (config.py). Start the service again.
+  2. Cockpit runs with cups, one just before a curve; judge S1h (swerve comes back on its own lane).
+- Open choice for the user: the cockpit allows runs up to 600 s (`cockpit.MAX_SECONDS`); the review suggested 120 s.
 
 ## Update 2026-11-19, cockpit (WEB3, SVC1)
 
