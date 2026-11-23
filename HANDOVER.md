@@ -11,7 +11,8 @@ DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), 
 - The cockpit is the entry point for every run and test (`COCK1`, CLAUDE.md 6.1c). It starts drive runs (adaptive,
   baseline, no curve; seconds; cups avoid or stop; pass side; name), motion tests (`arc`, `turn`, `swerve`) and the cup
   distance survey, and lists the last 10 jobs with result and folder (`COCK2`). The tools keep their command line.
-- Overlay: 30 fps in idle (was 15), 10 while driving (was 5); `situation()` 19 -> 7 ms with the same results (`SPEED1`).
+- Overlay: 30 fps in idle and while driving (was 15 and 5), drawn in its own process (`SPEED2`); `situation()`
+  19 -> 7 ms with the same results (`SPEED1`).
 - Tested live with the motors off only. Not yet seen: a drive run, a motion test, a cup distance run with pulses, and
   the overlay at 10 fps during a drive (watch the loop Hz in the cockpit: about 20).
 

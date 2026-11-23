@@ -172,7 +172,7 @@ class Cockpit(object):
             traceback.print_exc()
             print('camera does not open: exit for a restart', flush=True)
             os._exit(EXIT_CAMERA_DEAD)
-        self.streamer = Streamer(self.camera, lambda: self.shared.mode)
+        self.streamer = Streamer(self.camera)
         self.lock = threading.Lock()
         self.idle, self.idle_stop = None, None
         self.job_thread, self.job_stop, self.job_title = None, None, None
