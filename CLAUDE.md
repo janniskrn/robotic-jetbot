@@ -110,7 +110,7 @@ Code style:
 | `notebooks/mini_av/` | The driving program: `drive.py` (main loop) -> `perception.py` -> `decision.py` (state machine) -> `control.py`; `config.py` holds every tuning value; `find_lane.py` is LINE_RECOVERY; `lane_mask.py`, `cup_mask.py`, `situation.py` are the color-mask measurements |
 | `notebooks/mini_av/tools/` | Labeling, training, TensorRT, replay, run analysis, motion tests, cup survey; run as `python3 tools/<name>.py` from `notebooks/mini_av` |
 | `notebooks/mini_av/STATE_MACHINE.md` | State table and diagram; change it together with `decision.py` |
-| `notebooks/mini_av/dashboard.py`, `cockpit.py`, `streamer.py`, `web/` | Web cockpit on port 8080: HTTP server, robot side, MJPEG video, page. Runs always as the systemd service `jetbot-cockpit` (`scripts/jetbot-cockpit.service`, installed with `scripts/install_cockpit_service.sh`; log `journalctl -u jetbot-cockpit`); it owns the camera, so stop it (`sudo systemctl stop jetbot-cockpit`) before a notebook or script uses the camera, and start it again afterwards |
+| `notebooks/mini_av/dashboard.py`, `cockpit.py`, `streamer.py`, `web/` | Web cockpit on port 8080, the entry point for every run and test (6.1c): HTTP server, robot side, MJPEG video, page. Runs always as the systemd service `jetbot-cockpit` (`scripts/jetbot-cockpit.service`, installed with `scripts/install_cockpit_service.sh`; log `journalctl -u jetbot-cockpit`); it owns the camera, so stop it (`sudo systemctl stop jetbot-cockpit`) before a notebook or script uses the camera, and start it again afterwards |
 | `PLAN.md`, `DECISIONS.md`, `HANDOVER.md`, `STORAGE.md` | Plan, decision log, latest handover, storage rules |
 | `guide/` | Course material: project guides, `GOAL.md`, `WEEKLY.md` |
 | `presentation/`, `diagrams/`, `design/`, `results/` | Presentations, diagrams, the look, result tables |
@@ -120,10 +120,25 @@ Code style:
 | `/home/jetbot/usb/` (not in git) | `images/datasets/` (camera frames), `logs/` (run logs, the offline check `test_avoid.py`), `videos/` |
 
 How to run and check (inside the container `jetbot_jupyter`, which sees the repository as `/workspace/jetbot`):
-- Drive: the web cockpit (always running), or with the service stopped `04_drive.ipynb` or
+- Drive and test: the web cockpit (always running, see 6.1c). Only for debugging, with the service stopped:
+  `04_drive.ipynb` or
   `echo 'jetbot' | sudo -S -p '' docker exec -w /workspace/jetbot/notebooks/mini_av jetbot_jupyter python3 drive.py --name <name> --seconds 60`.
 - Offline checks (host, no robot needed): `python3 -B /home/jetbot/usb/logs/test_avoid.py <code folder>`; all must pass
   before a driving change is proposed for the track.
+
+### 6.1c The Cockpit Is the Entry Point (COCK1)
+
+- Every run, feature test and robot test is started, watched and stopped from the web cockpit, not from a
+  terminal or a notebook. Results and stop reasons are read there too.
+- A new driving feature or robot test is not finished until it can be started and controlled from the cockpit
+  (mode, options, Start, Stop). Plan the cockpit part as part of the step.
+- Programs that move the motors take the cockpit's camera, perception and stop event and report each step
+  (like `drive.run(..., stop_event, on_step, perception, camera)`): one process owns the camera and the models.
+- Stays outside the cockpit: offline tools (replay, labeling, analysis, offline checks) and heavy jobs (training,
+  TensorRT), which need the service stopped (9b).
+- Connect: `ssh -L 8080:localhost:8080 jetbot@<robot-ip>`, then `http://localhost:8080` (on the lab Wi-Fi also
+  `http://<robot-ip>:8080`). Service: `sudo systemctl start|stop|restart jetbot-cockpit`,
+  log `journalctl -u jetbot-cockpit -f`.
 
 ### 6.2 The Plan (Milestones)
 
