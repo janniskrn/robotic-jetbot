@@ -1,12 +1,38 @@
-# Handover (2026-11-22, end of session)
+# Handover (2026-11-22, end of the evening session)
 
-For the next Claude session. Read this, then `CLAUDE.md` (section 6.1b: where what is), `DECISIONS.md` (newest:
-DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), `PLAN.md` section 6 step S1h,
-`notebooks/mini_av/STATE_MACHINE.md`.
+For the next Claude session. Read this, then `CLAUDE.md` (6.1b where what is, 6.1c the cockpit is the entry point),
+`DECISIONS.md` (newest: COCK1-2, SPEED1-2, ARC2-6, PASS3, RECOV3, SIT4, STEER3 undone), `PLAN.md` section 6 (S1i,
+S1j), `notebooks/mini_av/STATE_MACHINE.md`.
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
-## Update 2026-11-22, evening (COCK1, COCK2, SPEED1)
+## Start here (2026-11-22, end of session)
+
+- Everything is committed and pushed on `master`. A worktree `.claude/worktrees/presentation-week` exists from another
+  session (branch `worktree-presentation-week`, at an older commit): not ours, leave it.
+- Offline checks: `python3 -B /home/jetbot/usb/logs/test_avoid.py ~/jetbot/notebooks/mini_av` -> 141 of 141.
+- Every run and test starts in the cockpit (`http://<robot-ip>:8080`, service `jetbot-cockpit`, always on): drive
+  modes and options, motion tests, cup distance survey, last runs. Overlay 30 fps, drawn in its own process.
+- Driven and good (run `04-44-53`, 90 s clockwise): a cup in a curve is passed on its inside (`PASS3`), the curve
+  finds the road again (`ARC3`), the rejoin hands over in under 0.7 s (`RECOV3`), no line recovery.
+- Not driven yet: `ARC5` (on a straight the turn in starts 0.5 s, about 12 cm, after the border crossing; the user saw
+  the robot rejoin at the lane's edge) and `ARC6` (sharper swerve curve 0.37 / 0.31, `ARC_TURN_MIN` 2.5 s,
+  `ARC_STRAIGHT_AFTER` 2.9 s, `ARC_LANE_MIN` 2.1 s).
+- Next on the track, with the user:
+  1. Cockpit, motion test `arc`: about 90 degrees in `ARC_TURN_MIN`? If not, scale `ARC_TURN_MIN` (and with it
+     `ARC_STRAIGHT_AFTER`, `ARC_LANE_MIN`).
+  2. A cup on a straight: rejoin in the middle? Tune `ARC_PAST` (0.5 s; 0.85 s was too far, 0.0-0.3 s at the edge).
+  3. A cup in a curve, both directions; counterclockwise is not tested yet. Measure the swing after each rejoin with
+     `usb/logs/session_tools_2026-11-22/wiggle.py <log folder>`.
+- Week 4 deck (`presentation/week4.html`, `week4.pdf`, 11 pages): simplified on 2026-11-22 (`DECK4`), quotes the
+  current code. After a code change run `python3 /home/jetbot/usb/logs/session_tools_2026-11-22/check_week4_code.py
+  presentation/week4.html notebooks/mini_av` (`check.py` does not check this deck's code rows), then
+  `python3 presentation/print_week4.py`.
+- Analysis tools of this session (USB stick, `usb/logs/session_tools_2026-11-22/`): `seq.py` (states of a run),
+  `detail.py` (steps in a time window), `wiggle.py`, `check_week4_code.py`, `rebuild_week4.py`.
+- Open choice for the user: the cockpit allows runs up to 600 s (`cockpit.MAX_SECONDS`); the review suggested 120 s.
+
+## Session log 2026-11-22, evening
 
 - The cockpit is the entry point for every run and test (`COCK1`, CLAUDE.md 6.1c). It starts drive runs (adaptive,
   baseline, no curve; seconds; cups avoid or stop; pass side; name), motion tests (`arc`, `turn`, `swerve`) and the cup
@@ -33,9 +59,9 @@ DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), 
 - Then `ARC5` (on a straight the turn in starts 0.5 s after the border crossing: the robot rejoined at the edge in
   `04-48-35`) and `ARC6` (swerve curve 0.37 / 0.31, `ARC_TURN_MIN` 2.5 s, `ARC_STRAIGHT_AFTER` 2.9 s, `ARC_LANE_MIN`
   2.1 s). 141 offline checks, not driven yet. First on the track: motion test `arc` (about 90 degrees?), then cups on
-  a straight and in a curve. The week 4 deck quotes the old values on slides 4 and 6.
+  a straight and in a curve. The week 4 deck was updated afterwards (`DECK4`).
 
-## Start here (2026-11-22)
+## Start notes of the morning (2026-11-22, superseded above)
 
 - Everything is committed and pushed on `master`; no open branches or worktrees.
 - Offline checks: `python3 -B /home/jetbot/usb/logs/test_avoid.py ~/jetbot/notebooks/mini_av` -> 109 of 109.
