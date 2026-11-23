@@ -9,8 +9,7 @@ them. Chosen 2026-10-26. Licences: `THIRD-PARTY-LICENSES.md`.
 | `slop-humanizer` | blader/humanizer via KornLabs/truss | the stricter rewrite pass. Use one of the two per text, not both (they over-correct together) |
 | `slop-diagrams` | cathrynlavery/diagram-design via KornLabs/truss | static diagrams and charts (HTML/SVG/PNG) for the slides: state machine, system flow, results. Imports Mermaid |
 | `diagrams-archify` | tt-a1i/archify via KornLabs/truss | the explorable code visualization: architecture (perception -> decision -> control) and lifecycle (state machine), with links to file and line |
-| `presentation-html` | our own, from the skill author's earlier decks | build the final presentation as one self-contained HTML file: deck mode, doc mode, PDF print. Running order, honest-numbers rules, static checks, correction rounds. Worked example in `examples/jetbot/` |
-| `design-directions` | our own | choose the look (colors, fonts) of the deck by clicking through finished options in an Artifact, then lock it in a theme file. Its `ledger.md` and the deck `decks-ledger.md` start empty |
+| `design-directions` | our own | choose the look (colors, fonts) of the deck by clicking through finished options in an Artifact, then lock it in a theme file. Its `ledger.md` starts empty |
 | `writing-like-human` | our own, English translation of the skill author's German original | write or revise text (slide text, report, README) so it does not read as AI: build before words, voice profile, `check.py` for stock phrases, `invisible_chars.py` for hidden Unicode. Hands word-level edits to `slop-prose` or `slop-humanizer` |
 | `systematic-debugging` | obra/superpowers | root cause before a fix (driving problems, model regressions); matches our "rule out the code first" lessons (AB1) |
 | `verification-before-completion` | obra/superpowers | evidence before "done": a step is approved only after a test run (CLAUDE.md 6.1) |
@@ -35,6 +34,7 @@ directly.
 
 ## Notes
 
+- Removed 2026-11-22: `presentation-html` (no longer needed; the decks in `presentation/` stay as they are).
 - Imported skill files are kept verbatim (licence, easy update), so a few contain emoji. The no-emoji rule
   (CLAUDE.md 10) applies to everything we write, including text these skills produce.
 - `slop-diagrams` asks once about a style guide before its first diagram; it may then edit its own

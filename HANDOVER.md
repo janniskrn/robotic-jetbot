@@ -8,8 +8,8 @@ S1j), `notebooks/mini_av/STATE_MACHINE.md`.
 
 ## Start here (2026-11-22, end of session)
 
-- Everything is committed and pushed on `master`. A worktree `.claude/worktrees/presentation-week` exists from another
-  session (branch `worktree-presentation-week`, at an older commit): not ours, leave it.
+- Everything is committed and pushed on `master`; no other branches of ours, no worktrees. The skill
+  `presentation-html` was removed by the user (`.claude/SKILLS.md`).
 - Offline checks: `python3 -B /home/jetbot/usb/logs/test_avoid.py ~/jetbot/notebooks/mini_av` -> 141 of 141.
 - Every run and test starts in the cockpit (`http://<robot-ip>:8080`, service `jetbot-cockpit`, always on): drive
   modes and options, motion tests, cup distance survey, last runs. Overlay 30 fps, drawn in its own process.
@@ -29,7 +29,7 @@ S1j), `notebooks/mini_av/STATE_MACHINE.md`.
   presentation/week4.html notebooks/mini_av` (`check.py` does not check this deck's code rows), then
   `python3 presentation/print_week4.py`.
 - Analysis tools of this session (USB stick, `usb/logs/session_tools_2026-11-22/`): `seq.py` (states of a run),
-  `detail.py` (steps in a time window), `wiggle.py`, `check_week4_code.py`, `rebuild_week4.py`.
+  `detail.py` (steps in a time window), `wiggle.py` (lane swing after rejoins), `check_week4_code.py`.
 - Open choice for the user: the cockpit allows runs up to 600 s (`cockpit.MAX_SECONDS`); the review suggested 120 s.
 
 ## Session log 2026-11-22, evening
