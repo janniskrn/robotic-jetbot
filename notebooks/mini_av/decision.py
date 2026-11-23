@@ -145,7 +145,7 @@ class Decision(object):
         self.close_frames = 0     # steps in a row with a close cup
         self.clear_frames = 0     # steps in a row with the cup gone (STOP)
         self.centered_frames = 0  # steps in a row with the lane found (ROAD_RECOVERY)
-        self.recover_seen_at = None  # last time the lane was seen in ROAD_RECOVERY
+        self.recover_seen_at = None  # last time the lane was seen in ROAD_RECOVERY (RECOV3)
         self.direction = None     # 'cw' or 'ccw', from the first sharp curve, kept for the run (DIR1)
         self.sharp_steps = 0      # steps in a row with a sharp curve the same way: + right, - left
         # the swerve
@@ -189,7 +189,12 @@ class Decision(object):
         if state == STOP:
             self.stop_phase, self.phase_since, self.backed = STOP_PHASES[0], now, False
         if state == ROAD_RECOVERY:
-            self.recover_seen_at = now
+            self.recover_seen_at = None
+
+    def short_gap(self, now):
+        """True if ROAD_RECOVERY saw the lane within LANE_LOST_TIMEOUT: a flicker, held into the curve like in
+        following, not the search turn away from the pass side (RECOV3)"""
+        return self.recover_seen_at is not None and now - self.recover_seen_at <= config.LANE_LOST_TIMEOUT
 
     def lane_gone(self, now):
         """The lane is lost: find it again, or end the run"""
@@ -283,7 +288,7 @@ class Decision(object):
         if self.centered_frames >= config.RECOVER_FRAMES:
             self.lost_since, self.close_frames = None, 0
             self.enter(ROAD_FOLLOWING, now)
-        elif now - self.recover_seen_at > config.RECOVER_TIMEOUT:  # steering onto a seen lane may take long (STEER3)
+        elif now - self.state_since > config.RECOVER_TIMEOUT:
             self.lane_gone(now)
 
     # --- OBSTACLE_AVOIDANCE: each phase ends on a camera mark (no encoders), or after its time limit ---

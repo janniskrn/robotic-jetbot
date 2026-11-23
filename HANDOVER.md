@@ -23,6 +23,10 @@ DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), 
   from the border crossing; calmer `ROAD_RECOVERY` (half P, 1 s handover, timeout only without the lane in view);
   the search accepts the lane near its border. Next: track runs with cups, and the motion test `arc` (is 3.0 s of
   curve about 90 degrees?).
+- Track run `04-21-11`, then `PASS3` (a cup in a curve is always passed on its inside) and `RECOV3` (in
+  `ROAD_RECOVERY` a short lane gap is held into the curve); `STEER3` undone (it kept the robot in `ROAD_RECOVERY`
+  through a sharp curve, steering against it). 137 offline checks, not driven yet. The wiggle after a curve swerve
+  is open again: measure it after the next runs (`usb/logs/session_tools_2026-11-22/wiggle.py`).
 
 ## Start here (2026-11-22)
 

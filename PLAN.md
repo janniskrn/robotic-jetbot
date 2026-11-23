@@ -295,6 +295,7 @@ step test from now on (slides).
 
 | Date | Change |
 | :--- | :--- |
+| 2026-11-22 | `PASS3` (in a curve pass on its inside), `RECOV3` (lane gaps in ROAD_RECOVERY held into the curve), `STEER3` undone; offline only, 137 checks |
 | 2026-11-22 | S1j `ARC4` (5 cm on counted from the border crossing), `STEER3` (calmer ROAD_RECOVERY), `SIT4` (search accepts the lane near its border), offline only, 131 checks |
 | 2026-11-22 | S1i `ARC2` (5 cm on after the swerve curve), `ARC3` (cup in a curve: the curve ends on the earlier marks), offline only, 118 checks |
 | 2026-11-22 | Cockpit as the entry point (`COCK1`): drive modes and options, motion tests, cup distance, run history (`COCK2`); overlay 30 fps in idle (`SPEED1`). Motion tests and the S1h track runs now start from the cockpit |
