@@ -139,10 +139,10 @@ svg.arrows circle{fill:var(--accent)}
   <div class="agenda">
     <div><span class="n">01</span><span class="t">The cockpit</span><span class="d">One page starts, watches and stops every run and test</span></div>
     <div><span class="n">02</span><span class="t">Cockpit code</span><span class="d">Five files, and the path from Start to the wheels</span></div>
-    <div><span class="n">03</span><span class="t">Swerve</span><span class="d">Rejoins nearer the middle of the lane, not on its border</span></div>
+    <div><span class="n">03</span><span class="t">Swerve</span><span class="d">Rejoins nearer the middle; in curves passes inside and finds the road again</span></div>
     <div><span class="n">04</span><span class="t">How the code decides</span><span class="d">Loop, models, decisions, states: four slides of real code</span></div>
   </div>
-  <span class="pg">1 / 8</span>
+  <span class="pg">1 / 11</span>
 </section>
 
 <!-- 2 cockpit -->
@@ -169,7 +169,7 @@ svg.arrows circle{fill:var(--accent)}
     <div class="fact"><div class="n">19 → 7 ms</div><div class="l">overlay measurement per frame, same results on 379 frames</div></div>
     <div class="fact"><div class="n">3 jobs</div><div class="l">drive run, motion test, cup distance survey: one Start button</div></div>
   </div>
-  <span class="pg">2 / 8</span>
+  <span class="pg">2 / 11</span>
 </section>
 
 <!-- 3 cockpit code -->
@@ -205,7 +205,7 @@ svg.arrows circle{fill:var(--accent)}
       <div class="hw">After <b>every step</b> the values go to <code>Shared.publish</code> and on to the page as an event: state and phase live.</div>
     </div>
   </div>
-  <span class="pg">3 / 8</span>
+  <span class="pg">3 / 11</span>
 </section>
 
 <!-- 4 swerve -->
@@ -246,26 +246,30 @@ svg.arrows circle{fill:var(--accent)}
         <text x="330" y="204" style="fill:#2F6F5E">then turn in,</text>
         <text x="330" y="218" style="fill:#2F6F5E">nearer the middle</text>
       </svg>
-      <p class="src">The curve's end mark no longer ends the phase: it starts a 0.2 s clock and drives straight on
-        (line 341). Line 323 then ends the phase and the turn in begins.</p>
+      <p class="src">The curve's end mark no longer ends the phase: the robot drives straight on until 0.2 s after
+        the border crossing (lines 363 to 365; after run 04-04-01 counted from the crossing, ARC4). Line 341 then ends
+        the phase and the turn in begins.</p>
     </div>
     <div class="codes">
       <div class="code sm">
         <div class="cf">config.py · one new value</div>
         <div class="r add"><span class="ln">90</span><span class="sg">+</span><span class="tx">ARC_PAST = 0.2  # seconds straight on after the curve ended ...</span></div>
         <div class="cf" style="border-top:1px solid var(--rule-soft); padding-top:6px; margin-top:6px">decision.py · arc_done(), the end of the curve</div>
-        <div class="r"><span class="ln">313</span><span class="sg"> </span><span class="tx">def arc_done(self, percept, now, elapsed, toward):</span></div>
+        <div class="r"><span class="ln">331</span><span class="sg"> </span><span class="tx">def arc_done(self, percept, now, elapsed, toward):</span></div>
         <div class="r el"><span class="ln"></span><span class="sg"> </span><span class="tx">    ...</span></div>
-        <div class="r add"><span class="ln">322</span><span class="sg">+</span><span class="tx">    if self.arc_ended_at is not None:</span></div>
-        <div class="r add"><span class="ln">323</span><span class="sg">+</span><span class="tx">        return now - self.arc_ended_at &gt;= config.ARC_PAST</span></div>
+        <div class="r add"><span class="ln">340</span><span class="sg">+</span><span class="tx">    if self.past_from is not None:</span></div>
+        <div class="r add"><span class="ln">341</span><span class="sg">+</span><span class="tx">        return now - self.past_from &gt;= config.ARC_PAST</span></div>
         <div class="r el"><span class="ln"></span><span class="sg"> </span><span class="tx">    ...</span></div>
         <div class="r del"><span class="ln"></span><span class="sg">-</span><span class="tx">    done = turned and (crossed or lane_found(...) or ...)</span></div>
         <div class="r del"><span class="ln"></span><span class="sg">-</span><span class="tx">    return done</span></div>
-        <div class="r el"><span class="ln"></span><span class="sg"> </span><span class="tx">    ...  336 to 338: a cup in a curve ends earlier (ARC3)</span></div>
-        <div class="r add"><span class="ln">339</span><span class="sg">+</span><span class="tx">        ended = turned and (crossed or lane or facing)</span></div>
-        <div class="r add"><span class="ln">340</span><span class="sg">+</span><span class="tx">    if ended:</span></div>
-        <div class="r add"><span class="ln">341</span><span class="sg">+</span><span class="tx">        self.arc_ended_at, self.go_straight = now, True</span></div>
-        <div class="r add"><span class="ln">342</span><span class="sg">+</span><span class="tx">    return False</span></div>
+        <div class="r el"><span class="ln"></span><span class="sg"> </span><span class="tx">    ...  356 to 358: a cup in a curve ends earlier (ARC3)</span></div>
+        <div class="r add"><span class="ln">359</span><span class="sg">+</span><span class="tx">        ended = turned and (crossed or lane or facing)</span></div>
+        <div class="r el"><span class="ln"></span><span class="sg"> </span><span class="tx">    ...  360 to 361: the far line ahead: turn in at once (ARC4)</span></div>
+        <div class="r add"><span class="ln">362</span><span class="sg">+</span><span class="tx">    if ended:</span></div>
+        <div class="r add"><span class="ln">363</span><span class="sg">+</span><span class="tx">        self.past_from = now if self.crossed_at is None else self.crossed_at  # ...</span></div>
+        <div class="r add"><span class="ln">364</span><span class="sg">+</span><span class="tx">        self.go_straight = True</span></div>
+        <div class="r add"><span class="ln">365</span><span class="sg">+</span><span class="tx">        return now - self.past_from &gt;= config.ARC_PAST</span></div>
+        <div class="r add"><span class="ln">366</span><span class="sg">+</span><span class="tx">    return False</span></div>
       </div>
     </div>
   </div>
@@ -273,10 +277,135 @@ svg.arrows circle{fill:var(--accent)}
     <div class="rbox r-ok"><span class="rl">Checked offline</span><span class="rt">118 offline checks pass. In the swerve replay the turn in starts 7 frames later, as intended.</span></div>
     <div class="rbox r-open"><span class="rl">First track run, 04-04-01</span><span class="rt">2 of 3 swerves back to lane following. The third did not find the lane within its 2.2 s turn in. More runs next.</span></div>
   </div>
-  <span class="pg">4 / 8</span>
+  <span class="pg">4 / 11</span>
 </section>
 
-<!-- 5 the loop -->
+<!-- 5 pass inside in curves -->
+<section class="slide">
+  <h2>In a curve the robot now always passes on the inside</h2>
+  <p class="lead" style="max-width:none">Run <code>04-21-11</code>: the first two cups stood in a right curve. The driving direction was not known yet, so the robot passed left, on the outside, and the second swerve ended in line recovery. <b>Fix: while the robot brakes, the curve model picks the inside of the curve</b>, both ways round (PASS3).</p>
+  <div class="cw" style="margin-top:12px">
+    <div class="codes">
+      <div class="code sm">
+        <div class="cf">decision.py · curve_inside() · lines 121 to 126</div>
+        <div class="r"><span class="ln">121</span><span class="tx">def curve_inside(percept):</span></div>
+        <div class="r"><span class="ln">123</span><span class="tx">    probs, turn = percept['curve_probs'], percept['curve_dir']</span></div>
+        <div class="r hl" data-k="a"><span class="ln">124</span><span class="tx">    if probs[1] + probs[2] &lt; 0.5 or abs(turn) &lt; config.DIRECTION_MIN_DIR:</span></div>
+        <div class="r"><span class="ln">125</span><span class="tx">        return None</span></div>
+        <div class="r hl" data-k="b"><span class="ln">126</span><span class="tx">    return 'left' if turn &lt; 0 else 'right'</span></div>
+      </div>
+      <div class="code sm">
+        <div class="cf">decision.py · pass_side() · lines 169 to 176, shortened</div>
+        <div class="r"><span class="ln">169</span><span class="tx">def pass_side(self):</span></div>
+        <div class="r hl" data-k="c"><span class="ln">174</span><span class="tx">    if self.curve_side:</span></div>
+        <div class="r"><span class="ln">175</span><span class="tx">        return self.curve_side</span></div>
+        <div class="r hl" data-k="d"><span class="ln">176</span><span class="tx">    return 'right' if self.direction == 'cw' else 'left'</span></div>
+      </div>
+      <div class="code sm">
+        <div class="cf">decision.py · update_avoidance() · lines 309 to 311, at the end of the brake</div>
+        <div class="r hl" data-k="e"><span class="ln">309</span><span class="tx">if phase == 'brake':  # standing still before the turn: ...</span></div>
+        <div class="r"><span class="ln">310</span><span class="tx">    self.curve_side = curve_inside(percept)</span></div>
+        <div class="r hl" data-k="f"><span class="ln">311</span><span class="tx">    self.cup_in_curve = self.curve_side is not None and self.pass_side() == self.curve_side</span></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="note" data-k="a"><span class="nn">124</span><span class="nt"><b>Curve model:</b> gentle plus sharp at least 0.5 and a clear direction.</span></div>
+      <div class="note" data-k="b"><span class="nn">126</span><span class="nt">Bending left: inside is left. Clockwise and counterclockwise alike.</span></div>
+      <div class="note" data-k="c"><span class="nn">174</span><span class="nt">In a curve its inside <b>always wins</b>, also before the direction is known.</span></div>
+      <div class="note" data-k="d"><span class="nn">176</span><span class="nt">Straight: the inside of the oval, as before.</span></div>
+      <div class="note" data-k="e"><span class="nn">309</span><span class="nt">Decided once, while the robot stands still.</span></div>
+      <div class="note" data-k="f"><span class="nn">311</span><span class="nt">The curve rule of the next slide applies in every curve.</span></div>
+    </div>
+  </div>
+  <div class="result">
+    <div class="rbox r-ok"><span class="rl">Track run 04-44-53, 90 s clockwise</span><span class="rt">All 6 cups stood in a right curve: all 6 passed on the right, the inside, and all 6 back to lane following.</span></div>
+    <div class="rbox r-open"><span class="rl">Checked offline</span><span class="rt">5 new checks for both curves and both directions; 137 checks pass. Of 98 recorded swerves, 7 now change side.</span></div>
+  </div>
+  <span class="pg">5 / 11</span>
+</section>
+
+<!-- 6 curve swerve finds the road -->
+<section class="slide">
+  <h2>Around a cup in a curve, the robot now finds the road again</h2>
+  <p class="lead" style="max-width:none">Runs <code>03-23-36</code> and <code>03-24-51</code>: the curve around the cup had to last 3 s, a rule made for straights (ARC1). In a curve the road bends back toward the robot, so it crossed the whole road and lost it; in <code>03-24-51</code> the lane was seen, sure and centered, 0.5 to 1.9 s into the curve and ignored. <b>Fix: with the cup in a curve, the earlier marks end the curve</b> (ARC3).</p>
+  <div class="cw" style="margin-top:12px">
+    <div class="codes">
+      <div class="code sm">
+        <div class="cf">config.py · two values</div>
+        <div class="r hl" data-k="a"><span class="ln">86</span><span class="tx">ARC_TURN_MIN = 3.0  # seconds of curving before the curve may end: ...</span></div>
+        <div class="r hl" data-k="b"><span class="ln">89</span><span class="tx">ARC_LANE_MIN = 2.5  # cup in a curve (ARC3): seconds of curve before ...</span></div>
+      </div>
+      <div class="code sm">
+        <div class="cf">decision.py · arc_done() · lines 345 to 359, shortened</div>
+        <div class="r"><span class="ln">345</span><span class="tx">turned = self.arc_turned &gt;= config.ARC_TURN_MIN</span></div>
+        <div class="r hl" data-k="c"><span class="ln">350</span><span class="tx">crossed = self.tape_under and percept['tape_row'] &lt; config.TAPE_PAST_ROW</span></div>
+        <div class="r"><span class="ln">353</span><span class="tx">lane = lane_found(percept, config.TURN_IN_CENTERED)</span></div>
+        <div class="r"><span class="ln">354</span><span class="tx">facing = reached_horizontal(angle, -toward, config.ARC_EARLY) or ...</span></div>
+        <div class="r hl" data-k="d"><span class="ln">356</span><span class="tx">if self.cup_in_curve:</span></div>
+        <div class="r hl" data-k="e"><span class="ln">357</span><span class="tx">    ended = crossed or (lane and elapsed &gt;= config.ARC_LANE_MIN) or (facing and elapsed &gt;= config.ARC_MIN)</span></div>
+        <div class="r"><span class="ln">358</span><span class="tx">else:</span></div>
+        <div class="r hl" data-k="f"><span class="ln">359</span><span class="tx">    ended = turned and (crossed or lane or facing)</span></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="note" data-k="a"><span class="nn">86</span><span class="nt"><b>Straights:</b> about 90 degrees of curve first (ARC1).</span></div>
+      <div class="note" data-k="b"><span class="nn">89</span><span class="nt"><b>Curves:</b> the lane found counts after 2.5 s.</span></div>
+      <div class="note" data-k="c"><span class="nn">350</span><span class="nt">Border crossed: tape under the nose, then behind it.</span></div>
+      <div class="note" data-k="d"><span class="nn">356</span><span class="nt">Set at the brake: a cup in a curve, passed on its inside.</span></div>
+      <div class="note" data-k="e"><span class="nn">357</span><span class="nt"><b>In a curve:</b> border crossed, lane found or facing the lane ends the curve.</span></div>
+      <div class="note" data-k="f"><span class="nn">359</span><span class="nt">Straight: only after the minimum turn.</span></div>
+    </div>
+  </div>
+  <div class="result">
+    <div class="rbox r-ok"><span class="rl">Track since ARC3, runs 04-04-01 to 04-44-53</span><span class="rt">12 of 12 swerves in a curve back to lane following.</span></div>
+    <div class="rbox r-open"><span class="rl">Before</span><span class="rt">Cup in a curve, passed inside: 23 of 28 back to lane following before ARC1 (4 runs ended right after), 0 of 2 with ARC1.</span></div>
+  </div>
+  <span class="pg">6 / 11</span>
+</section>
+
+<!-- 7 rejoin after the swerve -->
+<section class="slide">
+  <h2>Wiggle after a curve swerve: the first fix failed, the second holds the curve</h2>
+  <p class="lead" style="max-width:none">Run <code>04-04-01</code>: after the curve swerve the robot wiggled. Our first fix (STEER3: half steering, 1 s before normal following) made it worse in <code>04-21-11</code>: the robot stayed 6 s in ROAD_RECOVERY in a sharp left curve, and at every frame without the lane it turned <b>right</b>, against the curve. Undone. <b>Fix: a short gap is held into the curve</b>, as in lane following (RECOV3).</p>
+  <div class="cw" style="margin-top:12px">
+    <div class="codes">
+      <div class="code sm">
+        <div class="cf">drive.py · wheel_command() · lines 68 to 78, shortened</div>
+        <div class="r"><span class="ln">68</span><span class="tx">def wheel_command(state, percept, decision, controller, dt, now):</span></div>
+        <div class="r el"><span class="ln"></span><span class="tx">    ...</span></div>
+        <div class="r hl" data-k="a"><span class="ln">70</span><span class="tx">    if state in FOLLOWING or (state == ROAD_RECOVERY and (sees_lane(percept) or decision.short_gap(now))):</span></div>
+        <div class="r"><span class="ln">71</span><span class="tx">        if not sees_lane(percept):  # short gap: ...</span></div>
+        <div class="r hl" data-k="b"><span class="ln">72</span><span class="tx">            return controller.hold(percept['curve_probs'], percept['curve_dir'], dt)</span></div>
+        <div class="r el"><span class="ln"></span><span class="tx">        ...</span></div>
+        <div class="r"><span class="ln">77</span><span class="tx">    if state == ROAD_RECOVERY:</span></div>
+        <div class="r hl" data-k="c"><span class="ln">78</span><span class="tx">        return controller.recover(decision.pass_side())</span></div>
+      </div>
+      <div class="code sm">
+        <div class="cf">decision.py · short_gap() and update_recovery()</div>
+        <div class="r"><span class="ln">194</span><span class="tx">def short_gap(self, now):</span></div>
+        <div class="r el"><span class="ln"></span><span class="tx">    ...</span></div>
+        <div class="r hl" data-k="d"><span class="ln">197</span><span class="tx">    return self.recover_seen_at is not None and now - self.recover_seen_at &lt;= config.LANE_LOST_TIMEOUT</span></div>
+        <div class="r el"><span class="ln"></span><span class="tx">...</span></div>
+        <div class="r"><span class="ln">286</span><span class="tx">    if sees_lane(percept):</span></div>
+        <div class="r hl" data-k="e"><span class="ln">287</span><span class="tx">        self.recover_seen_at = now</span></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="note" data-k="a"><span class="nn">70</span><span class="nt"><b>New:</b> after a swerve, a frame without the lane is a gap if the lane was seen just before.</span></div>
+      <div class="note" data-k="b"><span class="nn">72</span><span class="nt">A gap keeps turning <b>into the curve</b>, the same as in lane following.</span></div>
+      <div class="note" data-k="c"><span class="nn">78</span><span class="nt">Only before the lane is seen, or after a longer gap: slowly on, away from the pass side. Before RECOV3 every flicker came here.</span></div>
+      <div class="note" data-k="d"><span class="nn">197</span><span class="nt">Seen within 0.5 s: the same gap normal following allows.</span></div>
+      <div class="note" data-k="e"><span class="nn">287</span><span class="nt">Every frame with the lane restarts that clock.</span></div>
+    </div>
+  </div>
+  <div class="result">
+    <div class="rbox r-ok"><span class="rl">Track run 04-44-53</span><span class="rt">6 rejoins back to lane following in 0.3 to 0.7 s, no line recovery in 90 s. Swing after a rejoin 0.11 to 0.32, once 0.42 (04-04-01: 0.46 for 4 s).</span></div>
+    <div class="rbox r-open"><span class="rl">Checked offline, still open</span><span class="rt">Lost frame in a sharp left curve: old code turns right (0.34 / 0.28), new into the curve (0.26 / 0.36). Open: a curve swerve counterclockwise.</span></div>
+  </div>
+  <span class="pg">7 / 11</span>
+</section>
+
+<!-- 8 the loop -->
 <section class="slide">
   <div class="rail"><span class="on">drive.py · the loop</span><i>:</i><span>camera</span><i>→</i><span>perception.py · models</span><i>→</i><span>decision.py · state</span><i>→</i><span>control.py · wheels</span><i>→</i><span>motors</span></div>
   <h2>One camera frame, four calls: drive.py</h2>
@@ -316,10 +445,10 @@ svg.arrows circle{fill:var(--accent)}
       <div class="note" data-k="g"><span class="nn">204</span><span class="nt"><b>Cockpit:</b> every step is shown live.</span></div>
     </div>
   </div>
-  <span class="pg">5 / 8</span>
+  <span class="pg">8 / 11</span>
 </section>
 
-<!-- 6 models -->
+<!-- 9 models -->
 <section class="slide">
   <div class="rail"><span>drive.py · the loop</span><i>:</i><span>camera</span><i>→</i><span class="on">perception.py · models</span><i>→</i><span>decision.py · state</span><i>→</i><span>control.py · wheels</span><i>→</i><span>motors</span></div>
   <h2>Models recognize, color masks measure: perception.py</h2>
@@ -359,10 +488,10 @@ svg.arrows circle{fill:var(--accent)}
       <div class="note" data-k="f"><span class="nn">97</span><span class="nt"><b>Cup mask:</b> red bands. Their size gives the distance, not the model.</span></div>
     </div>
   </div>
-  <span class="pg">6 / 8</span>
+  <span class="pg">9 / 11</span>
 </section>
 
-<!-- 7 decisions -->
+<!-- 10 decisions -->
 <section class="slide">
   <div class="rail"><span>drive.py · the loop</span><i>:</i><span>camera</span><i>→</i><span>perception.py · models</span><i>→</i><span class="on">decision.py · state</span><i>→</i><span>control.py · wheels</span><i>→</i><span>motors</span></div>
   <h2>Decisions: model numbers become tests, tests change the state</h2>
@@ -376,41 +505,41 @@ svg.arrows circle{fill:var(--accent)}
         <div class="r hl" data-k="b"><span class="ln">57</span><span class="tx">            and cup is not None and band_cm(cup) &lt;= config.OBSTACLE_CM)</span></div>
       </div>
       <div class="code">
-        <div class="cf">decision.py · update_driving() · lines 205 to 227, shortened</div>
-        <div class="r"><span class="ln">205</span><span class="tx">def update_driving(self, percept, now):</span></div>
-        <div class="r hl" data-k="c"><span class="ln">206</span><span class="tx">    self.close_frames = count(self.close_frames, cup_close(percept))</span></div>
+        <div class="cf">decision.py · update_driving() · lines 220 to 242, shortened</div>
+        <div class="r"><span class="ln">220</span><span class="tx">def update_driving(self, percept, now):</span></div>
+        <div class="r hl" data-k="c"><span class="ln">221</span><span class="tx">    self.close_frames = count(self.close_frames, cup_close(percept))</span></div>
         <div class="r el"><span class="ln"></span><span class="tx">    ...</span></div>
-        <div class="r"><span class="ln">211</span><span class="tx">    elif self.close_frames &gt;= config.OBSTACLE_FRAMES:</span></div>
-        <div class="r hl" data-k="d"><span class="ln">212</span><span class="tx">        self.enter(OBSTACLE_AVOIDANCE, now)</span></div>
-        <div class="r hl" data-k="e"><span class="ln">213</span><span class="tx">        return</span></div>
-        <div class="r"><span class="ln">214</span><span class="tx">    p_sharp, near = percept['curve_probs'][2], cup_near(percept)</span></div>
-        <div class="r hl" data-k="f"><span class="ln">215</span><span class="tx">    if self.state == ROAD_FOLLOWING and (p_sharp &gt; config.SLOW_DOWN_ENTER or near):</span></div>
-        <div class="r"><span class="ln">216</span><span class="tx">        self.enter(SLOW_DOWN, now)</span></div>
-        <div class="r hl" data-k="g"><span class="ln">217</span><span class="tx">    elif self.state == SLOW_DOWN and p_sharp &lt; config.SLOW_DOWN_EXIT and not near:</span></div>
-        <div class="r"><span class="ln">218</span><span class="tx">        self.enter(ROAD_FOLLOWING, now)</span></div>
+        <div class="r"><span class="ln">226</span><span class="tx">    elif self.close_frames &gt;= config.OBSTACLE_FRAMES:</span></div>
+        <div class="r hl" data-k="d"><span class="ln">227</span><span class="tx">        self.enter(OBSTACLE_AVOIDANCE, now)</span></div>
+        <div class="r hl" data-k="e"><span class="ln">228</span><span class="tx">        return</span></div>
+        <div class="r"><span class="ln">229</span><span class="tx">    p_sharp, near = percept['curve_probs'][2], cup_near(percept)</span></div>
+        <div class="r hl" data-k="f"><span class="ln">230</span><span class="tx">    if self.state == ROAD_FOLLOWING and (p_sharp &gt; config.SLOW_DOWN_ENTER or near):</span></div>
+        <div class="r"><span class="ln">231</span><span class="tx">        self.enter(SLOW_DOWN, now)</span></div>
+        <div class="r hl" data-k="g"><span class="ln">232</span><span class="tx">    elif self.state == SLOW_DOWN and p_sharp &lt; config.SLOW_DOWN_EXIT and not near:</span></div>
+        <div class="r"><span class="ln">233</span><span class="tx">        self.enter(ROAD_FOLLOWING, now)</span></div>
         <div class="r el"><span class="ln"></span><span class="tx">    ...</span></div>
-        <div class="r"><span class="ln">222</span><span class="tx">    if sees_lane(percept):</span></div>
-        <div class="r"><span class="ln">223</span><span class="tx">        self.lost_since = None</span></div>
+        <div class="r"><span class="ln">237</span><span class="tx">    if sees_lane(percept):</span></div>
+        <div class="r"><span class="ln">238</span><span class="tx">        self.lost_since = None</span></div>
         <div class="r el"><span class="ln"></span><span class="tx">    ...</span></div>
-        <div class="r hl" data-k="h"><span class="ln">226</span><span class="tx">    elif now - self.lost_since &gt;= config.LANE_LOST_TIMEOUT:</span></div>
-        <div class="r"><span class="ln">227</span><span class="tx">        self.lane_gone(now)</span></div>
+        <div class="r hl" data-k="h"><span class="ln">241</span><span class="tx">    elif now - self.lost_since &gt;= config.LANE_LOST_TIMEOUT:</span></div>
+        <div class="r"><span class="ln">242</span><span class="tx">        self.lane_gone(now)</span></div>
       </div>
     </div>
     <div class="notes">
       <div class="note" data-k="a"><span class="nn">56</span><span class="nt">The <b>obstacle model</b> says a cup is there (at least 0.5) ...</span></div>
       <div class="note" data-k="b"><span class="nn">57</span><span class="nt">... and the <b>cup mask</b> says how far: within 40 cm.</span></div>
-      <div class="note" data-k="c"><span class="nn">206</span><span class="nt">Counts frames in a row: one noisy frame changes nothing.</span></div>
-      <div class="note" data-k="d"><span class="nn">212</span><span class="nt">4 frames in a row: <b>OBSTACLE_AVOIDANCE</b>. Every change of state goes through <code>enter()</code>.</span></div>
-      <div class="note" data-k="e"><span class="nn">213</span><span class="nt"><b>Priority is order:</b> the swerve returns, nothing below can overrule it.</span></div>
-      <div class="note" data-k="f"><span class="nn">215</span><span class="nt"><b>Curve model</b> sure of a sharp curve (over 0.5), or a cup within 65 cm: <b>SLOW_DOWN</b>.</span></div>
-      <div class="note" data-k="g"><span class="nn">217</span><span class="nt">Back only below 0.3: the gap stops the state from flickering.</span></div>
-      <div class="note" data-k="h"><span class="nn">226</span><span class="nt"><b>Lane model</b> sees no lane for 0.5 s: <b>LINE_RECOVERY</b>.</span></div>
+      <div class="note" data-k="c"><span class="nn">221</span><span class="nt">Counts frames in a row: one noisy frame changes nothing.</span></div>
+      <div class="note" data-k="d"><span class="nn">227</span><span class="nt">4 frames in a row: <b>OBSTACLE_AVOIDANCE</b>. Every change of state goes through <code>enter()</code>.</span></div>
+      <div class="note" data-k="e"><span class="nn">228</span><span class="nt"><b>Priority is order:</b> the swerve returns, nothing below can overrule it.</span></div>
+      <div class="note" data-k="f"><span class="nn">230</span><span class="nt"><b>Curve model</b> sure of a sharp curve (over 0.5), or a cup within 65 cm: <b>SLOW_DOWN</b>.</span></div>
+      <div class="note" data-k="g"><span class="nn">232</span><span class="nt">Back only below 0.3: the gap stops the state from flickering.</span></div>
+      <div class="note" data-k="h"><span class="nn">241</span><span class="nt"><b>Lane model</b> sees no lane for 0.5 s: <b>LINE_RECOVERY</b>.</span></div>
     </div>
   </div>
-  <span class="pg">7 / 8</span>
+  <span class="pg">10 / 11</span>
 </section>
 
-<!-- 8 states act -->
+<!-- 11 states act -->
 <section class="slide">
   <div class="rail"><span>drive.py · the loop</span><i>:</i><span>camera</span><i>→</i><span>perception.py · models</span><i>→</i><span class="on">decision.py · state</span><i>→</i><span class="on">control.py · wheels</span><i>→</i><span>motors</span></div>
   <h2>The state decides who reads the frame and what the wheels do</h2>
@@ -418,21 +547,21 @@ svg.arrows circle{fill:var(--accent)}
     <div class="codes">
       <div class="code">
         <div class="cf">decision.py · update() · the state machine's entry, called every frame</div>
-        <div class="r"><span class="ln">193</span><span class="tx">def update(self, percept, now):</span></div>
+        <div class="r"><span class="ln">208</span><span class="tx">def update(self, percept, now):</span></div>
         <div class="r el"><span class="ln"></span><span class="tx">    ...</span></div>
-        <div class="r hl" data-k="a"><span class="ln">195</span><span class="tx">    if self.state == OBSTACLE_AVOIDANCE:</span></div>
-        <div class="r"><span class="ln">196</span><span class="tx">        self.update_avoidance(percept, now)</span></div>
-        <div class="r"><span class="ln">197</span><span class="tx">    elif self.state == ROAD_RECOVERY:</span></div>
-        <div class="r"><span class="ln">198</span><span class="tx">        self.update_recovery(percept, now)</span></div>
-        <div class="r hl" data-k="b"><span class="ln">199</span><span class="tx">    elif self.state not in (HALT, LINE_RECOVERY):</span></div>
-        <div class="r"><span class="ln">200</span><span class="tx">        self.update_driving(percept, now)</span></div>
-        <div class="r hl" data-k="c"><span class="ln">201</span><span class="tx">    return self.state</span></div>
+        <div class="r hl" data-k="a"><span class="ln">210</span><span class="tx">    if self.state == OBSTACLE_AVOIDANCE:</span></div>
+        <div class="r"><span class="ln">211</span><span class="tx">        self.update_avoidance(percept, now)</span></div>
+        <div class="r"><span class="ln">212</span><span class="tx">    elif self.state == ROAD_RECOVERY:</span></div>
+        <div class="r"><span class="ln">213</span><span class="tx">        self.update_recovery(percept, now)</span></div>
+        <div class="r hl" data-k="b"><span class="ln">214</span><span class="tx">    elif self.state not in (HALT, LINE_RECOVERY):</span></div>
+        <div class="r"><span class="ln">215</span><span class="tx">        self.update_driving(percept, now)</span></div>
+        <div class="r hl" data-k="c"><span class="ln">216</span><span class="tx">    return self.state</span></div>
       </div>
       <div class="code">
         <div class="cf">drive.py · wheel_command() · lines 68 to 81, shortened</div>
         <div class="r"><span class="ln">68</span><span class="tx">def wheel_command(state, percept, decision, controller, dt, now):</span></div>
         <div class="r el"><span class="ln"></span><span class="tx">    ...</span></div>
-        <div class="r"><span class="ln">70</span><span class="tx">    if state in FOLLOWING or (state == ROAD_RECOVERY and sees_lane(percept)):</span></div>
+        <div class="r"><span class="ln">70</span><span class="tx">    if state in FOLLOWING or (state == ROAD_RECOVERY and (sees_lane(percept) or ...)):</span></div>
         <div class="r el"><span class="ln"></span><span class="tx">        ...</span></div>
         <div class="r hl" data-k="d"><span class="ln">73</span><span class="tx">        limit = config.SPEED_SHARP if state == SLOW_DOWN else None</span></div>
         <div class="r"><span class="ln">74</span><span class="tx">        return controller.update(percept['lane_x'], ..., dt, limit)</span></div>
@@ -445,15 +574,15 @@ svg.arrows circle{fill:var(--accent)}
       </div>
     </div>
     <div class="notes">
-      <div class="note" data-k="a"><span class="nn">195</span><span class="nt">The <b>current state</b> picks which method looks at the frame. In the swerve only the swerve's own marks count.</span></div>
-      <div class="note" data-k="b"><span class="nn">199</span><span class="nt">During LINE_RECOVERY the search owns the robot; it reports back to the state machine when it ends.</span></div>
-      <div class="note" data-k="c"><span class="nn">201</span><span class="nt">One state per frame goes back to the loop.</span></div>
+      <div class="note" data-k="a"><span class="nn">210</span><span class="nt">The <b>current state</b> picks which method looks at the frame. In the swerve only the swerve's own marks count.</span></div>
+      <div class="note" data-k="b"><span class="nn">214</span><span class="nt">During LINE_RECOVERY the search owns the robot; it reports back to the state machine when it ends.</span></div>
+      <div class="note" data-k="c"><span class="nn">216</span><span class="nt">One state per frame goes back to the loop.</span></div>
       <div class="note" data-k="d"><span class="nn">73</span><span class="nt"><b>SLOW_DOWN</b> is lane following with the speed capped at 0.31 (straight: up to 0.40).</span></div>
       <div class="note" data-k="e"><span class="nn">76</span><span class="nt"><b>OBSTACLE_AVOIDANCE</b>: the wheels follow the phase: brake, turn out, curve, straight on, turn in. Each phase ends on a camera mark.</span></div>
       <div class="note" data-k="f"><span class="nn">81</span><span class="nt">No wheels: <b>HALT</b>, the run ends and the motors stop.</span></div>
     </div>
   </div>
-  <span class="pg">8 / 8</span>
+  <span class="pg">11 / 11</span>
 </section>
 
 <script>

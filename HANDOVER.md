@@ -27,6 +27,9 @@ DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), 
   `ROAD_RECOVERY` a short lane gap is held into the curve); `STEER3` undone (it kept the robot in `ROAD_RECOVERY`
   through a sharp curve, steering against it). 137 offline checks, not driven yet. The wiggle after a curve swerve
   is open again: measure it after the next runs (`usb/logs/session_tools_2026-11-22/wiggle.py`).
+- Track run `04-44-53` (90 s clockwise, `PASS3` and `RECOV3`): 6 of 6 curve swerves on the inside, all back to
+  following in under 0.7 s, no line recovery; swing after a rejoin 0.11-0.32 (once 0.42). Still to drive: a curve
+  swerve counterclockwise. The week 4 deck has three new slides on this (5 to 7, 11 pages now).
 
 ## Start here (2026-11-22)
 

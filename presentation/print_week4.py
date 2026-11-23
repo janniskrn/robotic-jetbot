@@ -1,4 +1,4 @@
-"""Prints presentation/week4.html to week4.pdf with the robot's Chromium: 8 pages of 1280 x 720 px. The page is
+"""Prints presentation/week4.html to week4.pdf with the robot's Chromium: 11 pages of 1280 x 720 px. The page is
 sized in px (no cqw), so it prints as it shows. Needs the internet once for the fonts.
 
     python3 presentation/print_week4.py
