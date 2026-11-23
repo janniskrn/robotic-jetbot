@@ -79,20 +79,22 @@ TURN_BACK_MAX = 1.5        # seconds the turn the other way may take
 TURN_BACK_SURE = 0.6       # lane model value that ends a turn back without the two-line check (TURN1, TURN2)
 CUP_NEAR_CM = 50.0         # during a swerve only bands this close count (cups further back are not this one)
 CUP_EDGE = 0.6             # image x (0..1 toward the edge) from which a cup that is gone counts as left sideways
-ARC_WHEELS = (0.36, 0.31)  # outer and inner wheel in the curve around the cup: a circle of about 35 cm radius
+ARC_WHEELS = (0.37, 0.31)  # outer and inner wheel in the curve around the cup: 20 % faster turn than 0.36, a tighter
+                           # circle (ARC6); the inner wheel stays at the slowest speed that moves the robot
 ARC_STRAIGHT = 0.335       # both wheels while the cup is in view during the curve: drive on past it
 ARC_STOP_CM = 16.0         # a band this close in the middle of the image during the curve: stop
 ARC_STOP_X = 0.5           # |band x| below which that band counts as in the middle
-ARC_TURN_MIN = 3.0         # seconds of curving before the curve may end: about 90 degrees (ARC1, estimate; measure with
-                           # `tools/motion_test.py arc`)
+ARC_TURN_MIN = 2.5         # seconds of curving before the curve may end: about 90 degrees (ARC1, ARC6; an estimate,
+                           # measure with the motion test `arc`)
 ARC_MIN = 1.0              # seconds of curve before tape under the nose counts (at the start it is the old lane)
-ARC_LANE_MIN = 2.5         # cup in a curve (ARC3): seconds of curve before the lane found ends it
-ARC_PAST = 0.2             # seconds straight on after the curve ended, about 5 cm (ARC2): the turn in then puts the
-                           # robot nearer the lane's middle, not on its border
+ARC_LANE_MIN = 2.1         # cup in a curve (ARC3, ARC6): seconds of curve before the lane found ends it
+ARC_PAST = 0.5             # straights: seconds straight on after the lane's border was crossed before the turn in,
+                           # about 12 cm: the robot turns in near the lane's middle, not on its border (ARC5)
+ARC_PAST_CURVE = 0.2       # the same with the cup in a curve, about 5 cm (ARC2, ARC4)
 ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends
 TAPE_UNDER_ROW = 215 / 224.0  # lowest tape at this row: the lane's border is under the robot's nose
 TAPE_PAST_ROW = 175 / 224.0   # lowest tape back above this row: the border is crossed
-ARC_STRAIGHT_AFTER = 3.5   # seconds after which the curve goes straight (after ARC_TURN_MIN): no circling on the floor
+ARC_STRAIGHT_AFTER = 2.9   # seconds after which the curve goes straight (after ARC_TURN_MIN): no circling (ARC6)
 ARC_MAX = 8.0              # seconds the curve may take in all
 
 # Road recovery

@@ -330,15 +330,17 @@ class Decision(object):
 
     def arc_done(self, percept, now, elapsed, toward):
         """The lane's border was crossed, the lane is found, or the edge ahead looks horizontal or has left the image;
-        then straight on until ARC_PAST after the border crossing (ARC2, ARC4), not at all with the far line ahead.
+        then straight on until ARC_PAST after the border crossing (ARC2, ARC4, ARC5; in a curve ARC_PAST_CURVE, and
+        not at all with the far line ahead).
         On a straight only after about 90 degrees of curve (ARC1: before that a line ahead is another one); with the
         cup in a curve bending toward the pass side the road comes back early, so the earlier marks count (ARC3)"""
         angle, band = percept['tape_angle'], near_band(percept)
         if cup_in_the_way(band):
             self.enter(HALT, now)
             return False
+        past = config.ARC_PAST_CURVE if self.cup_in_curve else config.ARC_PAST
         if self.past_from is not None:
-            return now - self.past_from >= config.ARC_PAST
+            return now - self.past_from >= past
         if not self.go_straight:  # the wheels curved since the last step
             self.arc_turned += now - self.arc_last
         self.arc_last = now
@@ -357,12 +359,12 @@ class Decision(object):
             ended = crossed or (lane and elapsed >= config.ARC_LANE_MIN) or (facing and elapsed >= config.ARC_MIN)
         else:
             ended = turned and (crossed or lane or facing)
-        if ended and facing:
-            return True  # the far line is ahead: the robot is in the lane already (ARC4)
+        if ended and facing and self.cup_in_curve:
+            return True  # in a curve the far line is ahead: the robot is in the lane already (ARC4)
         if ended:
-            self.past_from = now if self.crossed_at is None else self.crossed_at  # 5 cm past the border (ARC4)
+            self.past_from = now if self.crossed_at is None else self.crossed_at  # counted from the border (ARC4)
             self.go_straight = True
-            return now - self.past_from >= config.ARC_PAST
+            return now - self.past_from >= past
         return False
 
     def turn_in_done(self, percept, now, elapsed, toward):

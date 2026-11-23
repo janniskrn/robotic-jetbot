@@ -30,6 +30,10 @@ DIR1, TURN1, RECOV2, ARC1, TURN2, WEB2, REF1-3, REPO1, FIX1, WEB3, SVC1, REV1), 
 - Track run `04-44-53` (90 s clockwise, `PASS3` and `RECOV3`): 6 of 6 curve swerves on the inside, all back to
   following in under 0.7 s, no line recovery; swing after a rejoin 0.11-0.32 (once 0.42). Still to drive: a curve
   swerve counterclockwise. The week 4 deck has three new slides on this (5 to 7, 11 pages now).
+- Then `ARC5` (on a straight the turn in starts 0.5 s after the border crossing: the robot rejoined at the edge in
+  `04-48-35`) and `ARC6` (swerve curve 0.37 / 0.31, `ARC_TURN_MIN` 2.5 s, `ARC_STRAIGHT_AFTER` 2.9 s, `ARC_LANE_MIN`
+  2.1 s). 141 offline checks, not driven yet. First on the track: motion test `arc` (about 90 degrees?), then cups on
+  a straight and in a curve. The week 4 deck quotes the old values on slides 4 and 6.
 
 ## Start here (2026-11-22)
 
