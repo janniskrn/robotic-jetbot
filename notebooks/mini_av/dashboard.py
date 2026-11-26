@@ -26,8 +26,6 @@ import time
 import traceback
 import urllib.parse
 
-from cockpit import Cockpit, parse_start
-
 PORT = 8080
 EVENT_HZ = 30          # most state events per second and viewer (the driving loop runs at about 20 Hz)
 KEEPALIVE = 5.0        # seconds without a new state before an event stream sends a comment line
@@ -71,7 +69,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 with open(os.path.join(HERE, 'web', name), 'rb') as f:
                     self.send_bytes(f.read(), content_type)
             elif url.path == '/state.json':
-                self.send_json(self.server.cockpit.state())
+                self.send_json(self.robot().state())
             elif url.path == '/events':
                 self.events()
             elif url.path == '/stream.mjpg':
@@ -81,9 +79,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except OSError:
             pass  # the browser went away, or stopped reading (timeout)
 
+    def robot(self):
+        """The robot side; after a start it loads for about a minute (camera, models) while the port is already open,
+        so a viewer waits here instead of getting 'connection refused' (COCK3)"""
+        self.server.ready.wait()
+        return self.server.cockpit
+
     def events(self):
         """One event with the full state after each new state, at most EVENT_HZ per second"""
-        cockpit = self.server.cockpit
+        cockpit = self.robot()
         self.start_stream('text/event-stream')
         cockpit.shared.watch(1)
         try:
@@ -103,7 +107,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def video(self, overlay):
         """MJPEG: every new picture of the feed, as soon as it is encoded"""
-        feed = self.server.cockpit.streamer.feed(overlay)
+        feed = self.robot().streamer.feed(overlay)
         self.start_stream('multipart/x-mixed-replace; boundary=frame')
         feed.watch(1)
         try:
@@ -125,7 +129,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 # a page from elsewhere cannot send this without asking first (CORS), so it cannot start the robot
                 self.send_json({'error': 'Content-Type must be application/json'}, 415)
                 return
-            if self.path == '/stop':
+            if not self.server.ready.is_set():
+                self.send_json({'error': 'the cockpit is starting: try again in a minute'}, 503)
+            elif self.path == '/stop':
                 cockpit.stop_job()
                 self.send_json({'ok': True})
             elif self.path == '/start':
@@ -133,7 +139,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     length = int(self.headers.get('Content-Length', 0))
                     if not 0 <= length <= MAX_BODY:
                         raise ValueError('body too large')
-                    job = parse_start(json.loads(self.rfile.read(length).decode() or 'null'))
+                    job = self.server.parse_start(json.loads(self.rfile.read(length).decode() or 'null'))
                 except ValueError as error:  # bad JSON or bad values
                     self.send_json({'error': str(error)}, 400)
                     return
@@ -158,14 +164,21 @@ def raise_interrupt(signum, frame):
 
 def main():
     signal.signal(signal.SIGTERM, raise_interrupt)
-    cockpit = Cockpit()
-    code = 0
+    cockpit, code = None, 0
     try:
         server = Server(('0.0.0.0', PORT), Handler)
+        server.ready = threading.Event()  # set once the robot side runs
+        threading.Thread(target=server.serve_forever, daemon=True).start()  # the port answers at once (COCK3)
+        print('cockpit on port %d, loading camera and models: open http://<robot-ip>:%d/' % (PORT, PORT), flush=True)
+        from cockpit import Cockpit, parse_start  # torch and the models take seconds: only once the port is open
+        server.parse_start = parse_start
+        cockpit = Cockpit()
         server.cockpit = cockpit
         cockpit.start()
-        print('cockpit on port %d: open http://<robot-ip>:%d/' % (PORT, PORT), flush=True)
-        server.serve_forever()
+        server.ready.set()
+        print('cockpit ready', flush=True)
+        while True:
+            time.sleep(1)  # Ctrl-C and SIGTERM arrive here
     except KeyboardInterrupt:
         pass
     except Exception:  # for example the port is taken: exit, the service starts it again
@@ -174,9 +187,10 @@ def main():
     finally:
         signal.signal(signal.SIGINT, signal.SIG_IGN)  # a second Ctrl-C must not cut the clean stop short
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
-        stopper = threading.Thread(target=cockpit.shutdown, daemon=True)  # a dead camera can hang its stop
-        stopper.start()
-        stopper.join(SHUTDOWN_MAX)
+        if cockpit is not None:
+            stopper = threading.Thread(target=cockpit.shutdown, daemon=True)  # a dead camera can hang its stop
+            stopper.start()
+            stopper.join(SHUTDOWN_MAX)
     os._exit(code)  # the camera's capture thread must not keep the process alive
 
 

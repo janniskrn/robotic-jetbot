@@ -10,7 +10,7 @@ S1j), `notebooks/mini_av/STATE_MACHINE.md`.
 
 - Everything is committed and pushed on `master`; no other branches of ours, no worktrees. The skill
   `presentation-html` was removed by the user (`.claude/SKILLS.md`).
-- Offline checks: `python3 -B /home/jetbot/usb/logs/test_avoid.py ~/jetbot/notebooks/mini_av` -> 147 of 147.
+- Offline checks: `python3 -B /home/jetbot/usb/logs/test_avoid.py ~/jetbot/notebooks/mini_av` -> 148 of 148.
 - Every run and test starts in the cockpit (`http://<robot-ip>:8080`, service `jetbot-cockpit`, always on): drive
   modes and options, motion tests, cup distance survey, last runs. Overlay 30 fps, drawn in its own process.
 - Driven and good (run `04-44-53`, 90 s clockwise): a cup in a curve is passed on its inside (`PASS3`), the curve
@@ -18,7 +18,10 @@ S1j), `notebooks/mini_av/STATE_MACHINE.md`.
 - Driven 2026-11-24 (`ARC5`, `ARC6`): straights rejoined a little or way too far (3 of 13 lost the lane), curves
   mostly right. `ARC7` (turn in when the far border reaches `TAPE_MIDDLE_ROW` 185 of 224) driven 2026-11-26 (run
   `04-59-58`): straights good (user), curves too early. `ARC8` (not driven yet): the mark only on straights; in a curve
-  the turn in is again 0.2 s (`ARC_PAST_CURVE`) after the crossing, right about 80 % before `ARC7`.
+  the turn in is again 0.2 s (`ARC_PAST_CURVE`) after the crossing, and a lane edge leaving the image (the near
+  border under the nose: 2 of 4 curve swerves turned in on the edge) no longer ends the curve there.
+- `COCK3`: the cockpit opens port 8080 at once; after a restart the page waits about a minute for camera and models
+  instead of 'connection refused' in the SSH tunnel.
 - Next on the track, with the user:
   1. A cup in a curve: rejoin in the middle (`ARC8`)? Too early: raise `ARC_PAST_CURVE` (0.2 s). Straights: too
      far: lower `TAPE_MIDDLE_ROW`; at the edge: raise it. `usb/logs/session_tools_2026-11-22/swerves.py <log folders>` lists every swerve; `swerve_frames.py` the

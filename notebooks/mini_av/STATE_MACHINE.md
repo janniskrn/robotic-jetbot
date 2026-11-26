@@ -45,7 +45,7 @@ stateDiagram-v2
         turn_out --> arc: cup left the image (without a cup: lane edge horizontal or out of view)
         arc --> pass: cup in view on the curve's side
         pass --> arc: cup out of view
-        arc --> turn_in: border crossed, lane found, or lane edge ahead horizontal or out of view (on a straight only after about 90 degrees), then on until the far border is near (straight, ARC7) or 0.2 s (curve, ARC8)
+        arc --> turn_in: border crossed, lane found, or lane edge ahead horizontal or out of view (on a straight only after about 90 degrees), then on until the far border is near (straight, ARC7) or 0.2 s after the crossing (curve, ARC8: an edge leaving the image does not end it there)
         turn_in --> [*]: lane found
         turn_in --> turn_back: lane seen, then out of view 0.5 s (turned past it)
         turn_back --> [*]: lane near the middle
