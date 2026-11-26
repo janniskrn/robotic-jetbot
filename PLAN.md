@@ -295,6 +295,7 @@ step test from now on (slides).
 
 | Date | Change |
 | :--- | :--- |
+| 2026-11-25 | `ARC7` (turn in when the far border comes as near as from the lane's middle, not after a time); offline only, 147 checks |
 | 2026-11-22 | `ARC5` (straights: turn in 0.5 s after the border crossing), `ARC6` (sharper swerve curve 0.37 / 0.31, angle limits scaled); offline only, 141 checks |
 | 2026-11-22 | `PASS3` (in a curve pass on its inside), `RECOV3` (lane gaps in ROAD_RECOVERY held into the curve), `STEER3` undone; offline only, 137 checks |
 | 2026-11-22 | S1j `ARC4` (5 cm on counted from the border crossing), `STEER3` (calmer ROAD_RECOVERY), `SIT4` (search accepts the lane near its border), offline only, 131 checks |

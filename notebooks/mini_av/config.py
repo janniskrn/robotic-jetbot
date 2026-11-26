@@ -88,12 +88,14 @@ ARC_TURN_MIN = 2.5         # seconds of curving before the curve may end: about 
                            # measure with the motion test `arc`)
 ARC_MIN = 1.0              # seconds of curve before tape under the nose counts (at the start it is the old lane)
 ARC_LANE_MIN = 2.1         # cup in a curve (ARC3, ARC6): seconds of curve before the lane found ends it
-ARC_PAST = 0.5             # straights: seconds straight on after the lane's border was crossed before the turn in,
-                           # about 12 cm: the robot turns in near the lane's middle, not on its border (ARC5)
-ARC_PAST_CURVE = 0.2       # the same with the cup in a curve, about 5 cm (ARC2, ARC4)
+ARC_PAST = 0.5             # straights: seconds straight on after the lane's border was crossed before the turn in at
+                           # the latest, when the far border is not seen coming (ARC5, ARC7)
+ARC_PAST_CURVE = 0.2       # the same with the cup in a curve (ARC2, ARC4, ARC7)
 ARC_EARLY = 5.0            # tape angle (degrees) before horizontal at which the curve ends
 TAPE_UNDER_ROW = 215 / 224.0  # lowest tape at this row: the lane's border is under the robot's nose
 TAPE_PAST_ROW = 175 / 224.0   # lowest tape back above this row: the border is crossed
+TAPE_MIDDLE_ROW = 185 / 224.0  # after the crossing, the far border down to this row: the robot is in the lane's middle
+                               # and turns in (ARC7; the border the turn out faces from the middle is at rows 170-200)
 ARC_STRAIGHT_AFTER = 2.9   # seconds after which the curve goes straight (after ARC_TURN_MIN): no circling (ARC6)
 ARC_MAX = 8.0              # seconds the curve may take in all
 

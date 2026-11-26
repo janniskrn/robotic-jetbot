@@ -330,41 +330,43 @@ class Decision(object):
 
     def arc_done(self, percept, now, elapsed, toward):
         """The lane's border was crossed, the lane is found, or the edge ahead looks horizontal or has left the image;
-        then straight on until ARC_PAST after the border crossing (ARC2, ARC4, ARC5; in a curve ARC_PAST_CURVE, and
-        not at all with the far line ahead).
-        On a straight only after about 90 degrees of curve (ARC1: before that a line ahead is another one); with the
-        cup in a curve bending toward the pass side the road comes back early, so the earlier marks count (ARC3)"""
+        then straight on until the far border comes as near as from the lane's middle (ARC7), at most ARC_PAST after the
+        border crossing (ARC2, ARC4, ARC5; in a curve ARC_PAST_CURVE, and not at all with the far line ahead).
+        On a straight only after about 90 degrees of curve (ARC1: before that a line ahead is another one) or once the
+        crossing brought the far border that near (ARC7); with the cup in a curve bending toward the pass side the road
+        comes back early, so the earlier marks count (ARC3)"""
         angle, band = percept['tape_angle'], near_band(percept)
         if cup_in_the_way(band):
             self.enter(HALT, now)
             return False
         past = config.ARC_PAST_CURVE if self.cup_in_curve else config.ARC_PAST
+        under = percept['tape_row'] >= config.TAPE_UNDER_ROW
+        self.tape_under = self.tape_under or (under and elapsed >= config.ARC_MIN)  # at the start it is the old lane
+        crossed = self.tape_under and percept['tape_row'] < config.TAPE_PAST_ROW
+        if crossed and self.crossed_at is None:
+            self.crossed_at = now
+        middle = self.crossed_at is not None and percept['tape_row'] >= config.TAPE_MIDDLE_ROW  # far border near (ARC7)
         if self.past_from is not None:
-            return now - self.past_from >= past
+            return middle or now - self.past_from >= past
         if not self.go_straight:  # the wheels curved since the last step
             self.arc_turned += now - self.arc_last
         self.arc_last = now
         turned = self.arc_turned >= config.ARC_TURN_MIN
         self.go_straight = cup_beside_curve(band, toward) or (
             elapsed >= config.ARC_STRAIGHT_AFTER and (turned or self.cup_in_curve))
-        under = percept['tape_row'] >= config.TAPE_UNDER_ROW
-        self.tape_under = self.tape_under or (under and elapsed >= config.ARC_MIN)  # at the start it is the old lane
-        crossed = self.tape_under and percept['tape_row'] < config.TAPE_PAST_ROW
-        if crossed and self.crossed_at is None:
-            self.crossed_at = now
         lane = lane_found(percept, config.TURN_IN_CENTERED)
         facing = reached_horizontal(angle, -toward, config.ARC_EARLY) or edge_left_view(self.edge_angle, angle, -toward)
         self.edge_angle = angle
         if self.cup_in_curve:
             ended = crossed or (lane and elapsed >= config.ARC_LANE_MIN) or (facing and elapsed >= config.ARC_MIN)
         else:
-            ended = turned and (crossed or lane or facing)
+            ended = middle or (turned and (crossed or lane or facing))  # crossed into the lane's middle: done (ARC7)
         if ended and facing and self.cup_in_curve:
             return True  # in a curve the far line is ahead: the robot is in the lane already (ARC4)
         if ended:
             self.past_from = now if self.crossed_at is None else self.crossed_at  # counted from the border (ARC4)
             self.go_straight = True
-            return now - self.past_from >= past
+            return middle or now - self.past_from >= past
         return False
 
     def turn_in_done(self, percept, now, elapsed, toward):

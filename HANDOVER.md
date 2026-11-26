@@ -1,35 +1,37 @@
-# Handover (2026-11-22, end of the evening session)
+# Handover (2026-11-25)
 
 For the next Claude session. Read this, then `CLAUDE.md` (6.1b where what is, 6.1c the cockpit is the entry point),
-`DECISIONS.md` (newest: COCK1-2, SPEED1-2, ARC2-6, PASS3, RECOV3, SIT4, STEER3 undone), `PLAN.md` section 6 (S1i,
+`DECISIONS.md` (newest: COCK1-2, SPEED1-2, ARC2-7, PASS3, RECOV3, SIT4, STEER3 undone), `PLAN.md` section 6 (S1i,
 S1j), `notebooks/mini_av/STATE_MACHINE.md`.
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
-## Start here (2026-11-22, end of session)
+## Start here (2026-11-25)
 
 - Everything is committed and pushed on `master`; no other branches of ours, no worktrees. The skill
   `presentation-html` was removed by the user (`.claude/SKILLS.md`).
-- Offline checks: `python3 -B /home/jetbot/usb/logs/test_avoid.py ~/jetbot/notebooks/mini_av` -> 141 of 141.
+- Offline checks: `python3 -B /home/jetbot/usb/logs/test_avoid.py ~/jetbot/notebooks/mini_av` -> 147 of 147.
 - Every run and test starts in the cockpit (`http://<robot-ip>:8080`, service `jetbot-cockpit`, always on): drive
   modes and options, motion tests, cup distance survey, last runs. Overlay 30 fps, drawn in its own process.
 - Driven and good (run `04-44-53`, 90 s clockwise): a cup in a curve is passed on its inside (`PASS3`), the curve
   finds the road again (`ARC3`), the rejoin hands over in under 0.7 s (`RECOV3`), no line recovery.
-- Not driven yet: `ARC5` (on a straight the turn in starts 0.5 s, about 12 cm, after the border crossing; the user saw
-  the robot rejoin at the lane's edge) and `ARC6` (sharper swerve curve 0.37 / 0.31, `ARC_TURN_MIN` 2.5 s,
-  `ARC_STRAIGHT_AFTER` 2.9 s, `ARC_LANE_MIN` 2.1 s).
+- Driven 2026-11-24 (`ARC5`, `ARC6`): straights rejoined a little or way too far (3 of 13 lost the lane), curves
+  mostly right. Fix `ARC7` (2026-11-25, not driven yet): after the border crossing the robot turns in when the far
+  border reaches `TAPE_MIDDLE_ROW` (185 of 224); the times `ARC_PAST` are only the latest turn in.
 - Next on the track, with the user:
-  1. Cockpit, motion test `arc`: about 90 degrees in `ARC_TURN_MIN`? If not, scale `ARC_TURN_MIN` (and with it
-     `ARC_STRAIGHT_AFTER`, `ARC_LANE_MIN`).
-  2. A cup on a straight: rejoin in the middle? Tune `ARC_PAST` (0.5 s; 0.85 s was too far, 0.0-0.3 s at the edge).
-  3. A cup in a curve, both directions; counterclockwise is not tested yet. Measure the swing after each rejoin with
-     `usb/logs/session_tools_2026-11-22/wiggle.py <log folder>`.
+  1. A cup on a straight and in a curve: rejoin in the middle? Too far: lower `TAPE_MIDDLE_ROW`; at the edge: raise
+     it. `usb/logs/session_tools_2026-11-22/swerves.py <log folders>` lists every swerve; `swerve_frames.py` the
+     saved frames with their tape row (`tape_row` is not in `steps.csv`).
+  2. Counterclockwise is not tested yet. Measure the swing after each rejoin with `wiggle.py <log folder>`.
+  3. Motion test `arc` (about 90 degrees in `ARC_TURN_MIN`?), lower priority now that the turn in is on a mark.
 - Week 4 deck (`presentation/week4.html`, `week4.pdf`, 11 pages): simplified on 2026-11-22 (`DECK4`), quotes the
   current code. After a code change run `python3 /home/jetbot/usb/logs/session_tools_2026-11-22/check_week4_code.py
   presentation/week4.html notebooks/mini_av` (`check.py` does not check this deck's code rows), then
-  `python3 presentation/print_week4.py`.
+  `python3 presentation/print_week4.py`. Since `ARC7` the deck's `arc_done` code rows are out of date (15 rows);
+  not updated yet (not asked).
 - Analysis tools of this session (USB stick, `usb/logs/session_tools_2026-11-22/`): `seq.py` (states of a run),
-  `detail.py` (steps in a time window), `wiggle.py` (lane swing after rejoins), `check_week4_code.py`.
+  `detail.py` (steps in a time window), `wiggle.py` (lane swing after rejoins), `swerves.py` (one line per swerve), `swerve_frames.py` (saved
+  frames of each swerve with tape row and angle; run from `notebooks/mini_av`), `check_week4_code.py`.
 - Open choice for the user: the cockpit allows runs up to 600 s (`cockpit.MAX_SECONDS`); the review suggested 120 s.
 
 ## Session log 2026-11-22, evening
