@@ -1,12 +1,12 @@
-# Handover (2026-11-25)
+# Handover (2026-11-26)
 
 For the next Claude session. Read this, then `CLAUDE.md` (6.1b where what is, 6.1c the cockpit is the entry point),
-`DECISIONS.md` (newest: COCK1-2, SPEED1-2, ARC2-7, PASS3, RECOV3, SIT4, STEER3 undone), `PLAN.md` section 6 (S1i,
+`DECISIONS.md` (newest: COCK1-2, SPEED1-2, ARC2-8, PASS3, RECOV3, SIT4, STEER3 undone), `PLAN.md` section 6 (S1i,
 S1j), `notebooks/mini_av/STATE_MACHINE.md`.
 
 **The team wants fast progress and simple solutions. Do not start the next step without the user's go.**
 
-## Start here (2026-11-25)
+## Start here (2026-11-26)
 
 - Everything is committed and pushed on `master`; no other branches of ours, no worktrees. The skill
   `presentation-html` was removed by the user (`.claude/SKILLS.md`).
@@ -16,11 +16,12 @@ S1j), `notebooks/mini_av/STATE_MACHINE.md`.
 - Driven and good (run `04-44-53`, 90 s clockwise): a cup in a curve is passed on its inside (`PASS3`), the curve
   finds the road again (`ARC3`), the rejoin hands over in under 0.7 s (`RECOV3`), no line recovery.
 - Driven 2026-11-24 (`ARC5`, `ARC6`): straights rejoined a little or way too far (3 of 13 lost the lane), curves
-  mostly right. Fix `ARC7` (2026-11-25, not driven yet): after the border crossing the robot turns in when the far
-  border reaches `TAPE_MIDDLE_ROW` (185 of 224); the times `ARC_PAST` are only the latest turn in.
+  mostly right. `ARC7` (turn in when the far border reaches `TAPE_MIDDLE_ROW` 185 of 224) driven 2026-11-26 (run
+  `04-59-58`): straights good (user), curves too early. `ARC8` (not driven yet): the mark only on straights; in a curve
+  the turn in is again 0.2 s (`ARC_PAST_CURVE`) after the crossing, right about 80 % before `ARC7`.
 - Next on the track, with the user:
-  1. A cup on a straight and in a curve: rejoin in the middle? Too far: lower `TAPE_MIDDLE_ROW`; at the edge: raise
-     it. `usb/logs/session_tools_2026-11-22/swerves.py <log folders>` lists every swerve; `swerve_frames.py` the
+  1. A cup in a curve: rejoin in the middle (`ARC8`)? Too early: raise `ARC_PAST_CURVE` (0.2 s). Straights: too
+     far: lower `TAPE_MIDDLE_ROW`; at the edge: raise it. `usb/logs/session_tools_2026-11-22/swerves.py <log folders>` lists every swerve; `swerve_frames.py` the
      saved frames with their tape row (`tape_row` is not in `steps.csv`).
   2. Counterclockwise is not tested yet. Measure the swing after each rejoin with `wiggle.py <log folder>`.
   3. Motion test `arc` (about 90 degrees in `ARC_TURN_MIN`?), lower priority now that the turn in is on a mark.

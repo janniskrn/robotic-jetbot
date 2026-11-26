@@ -331,7 +331,8 @@ class Decision(object):
     def arc_done(self, percept, now, elapsed, toward):
         """The lane's border was crossed, the lane is found, or the edge ahead looks horizontal or has left the image;
         then straight on until the far border comes as near as from the lane's middle (ARC7), at most ARC_PAST after the
-        border crossing (ARC2, ARC4, ARC5; in a curve ARC_PAST_CURVE, and not at all with the far line ahead).
+        border crossing (ARC2, ARC4, ARC5); in a curve ARC_PAST_CURVE after it, and not at all with the far line ahead
+        (ARC8: in a curve neither the far border mark nor an edge leaving the image, both turned in on the edge).
         On a straight only after about 90 degrees of curve (ARC1: before that a line ahead is another one) or once the
         crossing brought the far border that near (ARC7); with the cup in a curve bending toward the pass side the road
         comes back early, so the earlier marks count (ARC3)"""
@@ -345,7 +346,8 @@ class Decision(object):
         crossed = self.tape_under and percept['tape_row'] < config.TAPE_PAST_ROW
         if crossed and self.crossed_at is None:
             self.crossed_at = now
-        middle = self.crossed_at is not None and percept['tape_row'] >= config.TAPE_MIDDLE_ROW  # far border near (ARC7)
+        middle = (not self.cup_in_curve and self.crossed_at is not None  # straights only: in a curve too early (ARC8)
+                  and percept['tape_row'] >= config.TAPE_MIDDLE_ROW)  # far border near (ARC7)
         if self.past_from is not None:
             return middle or now - self.past_from >= past
         if not self.go_straight:  # the wheels curved since the last step
@@ -355,13 +357,14 @@ class Decision(object):
         self.go_straight = cup_beside_curve(band, toward) or (
             elapsed >= config.ARC_STRAIGHT_AFTER and (turned or self.cup_in_curve))
         lane = lane_found(percept, config.TURN_IN_CENTERED)
-        facing = reached_horizontal(angle, -toward, config.ARC_EARLY) or edge_left_view(self.edge_angle, angle, -toward)
+        ahead = reached_horizontal(angle, -toward, config.ARC_EARLY)
+        facing = ahead or edge_left_view(self.edge_angle, angle, -toward)
         self.edge_angle = angle
-        if self.cup_in_curve:
-            ended = crossed or (lane and elapsed >= config.ARC_LANE_MIN) or (facing and elapsed >= config.ARC_MIN)
+        if self.cup_in_curve:  # an edge leaving the image is the near border under the nose: wait for the crossing (ARC8)
+            ended = crossed or (lane and elapsed >= config.ARC_LANE_MIN) or (ahead and elapsed >= config.ARC_MIN)
         else:
             ended = middle or (turned and (crossed or lane or facing))  # crossed into the lane's middle: done (ARC7)
-        if ended and facing and self.cup_in_curve:
+        if ended and ahead and self.cup_in_curve:
             return True  # in a curve the far line is ahead: the robot is in the lane already (ARC4)
         if ended:
             self.past_from = now if self.crossed_at is None else self.crossed_at  # counted from the border (ARC4)
