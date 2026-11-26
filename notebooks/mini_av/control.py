@@ -102,7 +102,9 @@ class Controller(object):
         toward = -1.0 if side == 'left' else 1.0  # positive turns right
         if phase == 'arc':
             outer, inner = config.ARC_WHEELS
-            return (inner, outer) if toward > 0 else (outer, inner)
+            left, right = (inner, outer) if toward > 0 else (outer, inner)
+            # the left motor is stronger: without the trim the curve to the left was much wider (ARC9)
+            return round(left + config.MOTOR_TRIM, 3), round(right - config.MOTOR_TRIM, 3)
         spin = toward * turn_speed(elapsed)
         if phase == 'turn_back':
             spin = -spin

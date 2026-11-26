@@ -295,6 +295,7 @@ step test from now on (slides).
 
 | Date | Change |
 | :--- | :--- |
+| 2026-11-26 | `ARC9` (swerve curve with the motor trim: passing right 0.29 / 0.39, as tight as passing left), `tape_row` in `steps.csv`; offline 149 checks, track tests follow |
 | 2026-11-26 | `ARC8` part 2 (in a curve a lane edge leaving the image no longer ends the curve: it was the near border), `COCK3` (port 8080 opens at once, the robot side loads behind it); offline only, 148 checks |
 | 2026-11-26 | `ARC8` (far border mark only on straights; in a curve 0.2 s after the crossing again); track: straights good with `ARC7`, curves too early; offline only, 147 checks |
 | 2026-11-25 | `ARC7` (turn in when the far border comes as near as from the lane's middle, not after a time); offline only, 147 checks |

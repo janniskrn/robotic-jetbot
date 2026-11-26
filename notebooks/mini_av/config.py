@@ -79,8 +79,8 @@ TURN_BACK_MAX = 1.5        # seconds the turn the other way may take
 TURN_BACK_SURE = 0.6       # lane model value that ends a turn back without the two-line check (TURN1, TURN2)
 CUP_NEAR_CM = 50.0         # during a swerve only bands this close count (cups further back are not this one)
 CUP_EDGE = 0.6             # image x (0..1 toward the edge) from which a cup that is gone counts as left sideways
-ARC_WHEELS = (0.37, 0.31)  # outer and inner wheel in the curve around the cup: 20 % faster turn than 0.36, a tighter
-                           # circle (ARC6); the inner wheel stays at the slowest speed that moves the robot
+ARC_WHEELS = (0.38, 0.30)  # outer and inner wheel in the curve around the cup, before MOTOR_TRIM: passing left
+                           # 0.37 / 0.31 (ARC6), passing right 0.29 / 0.39, so both curves are alike (ARC9)
 ARC_STRAIGHT = 0.335       # both wheels while the cup is in view during the curve: drive on past it
 ARC_STOP_CM = 16.0         # a band this close in the middle of the image during the curve: stop
 ARC_STOP_X = 0.5           # |band x| below which that band counts as in the middle

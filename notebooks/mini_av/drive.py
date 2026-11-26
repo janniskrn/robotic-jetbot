@@ -99,7 +99,8 @@ def step_values(t, dt, state, percept, decision, controller, left, right, volts)
                 lane_aligned=int(percept['lane_aligned']), tape_angle=percept['tape_angle'],
                 band_x=ahead[0] if ahead else None, band_row=ahead[1] if ahead else None,
                 band_cm=band_cm(ahead) if ahead else None, bands=len(percept['cup_bands']),
-                phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''))
+                phase={OBSTACLE_AVOIDANCE: decision.avoid_action(), STOP: decision.stop_phase}.get(state, ''),
+                tape_row=percept['tape_row'])
 
 
 def run(name, seconds, baseline=False, use_curve=True, stop_event=None, stop_only=False, pass_side=None, on_step=None,

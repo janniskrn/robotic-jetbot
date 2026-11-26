@@ -23,7 +23,7 @@ from jetbot import Camera, Robot
 
 import config
 import lane_mask
-from control import turn_speed
+from control import Controller, turn_speed
 from decision import lane_found, reached_horizontal
 from perception import Perception
 from recorder import DATASET_ROOT
@@ -46,7 +46,7 @@ def still(elapsed):
 
 
 def curve(elapsed):
-    return config.ARC_WHEELS  # curves right
+    return Controller().avoid('arc', 'left', elapsed)  # curves right, as when passing on the left (ARC9: with the trim)
 
 
 def held(elapsed, angle, found):
